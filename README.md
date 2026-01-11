@@ -49,7 +49,7 @@ Protibeshi aims to eliminate the gap in trusted, neighborhood-level digital comm
 ## UI Design
 
 Figma Design Link:
-[https://www.figma.com/make/7LT5OS1Q5JLhysiOv8YFaj/Enhance-Protibeshi-Features](https://www.figma.com/make/7LT5OS1Q5JLhysiOv8YFaj/Enhance-Protibeshi-Features)
+https://www.figma.com/make/7LT5OS1Q5JLhysiOv8YFaj/Enhance-Protibeshi-Features?fullscreen=1&t=euv09oris19hKT0K-1
 
 ### Core UI Screens
 
