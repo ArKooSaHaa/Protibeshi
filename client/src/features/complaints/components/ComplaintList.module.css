@@ -1,0 +1,50 @@
+.listWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.listHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.listHeader h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.listHeader span {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.emptyState {
+  border-radius: 16px;
+  border: 1px dashed #cbd5e1;
+  background: #ffffff;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #475569;
+}
+
+.emptyState h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.emptyState p {
+  margin: 0;
+  font-size: 12px;
+}

@@ -1,0 +1,250 @@
+.card {
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+  position: relative;
+}
+
+.urgent {
+  border-left: 4px solid #dc2626;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.complaintId {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.category {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.headerRow h4 {
+  margin: 6px 0 0;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.badgeStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.status,
+.priority {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.statusPending {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.statusUnderReview {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.statusInProgress {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.statusResolved {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.statusRejected {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.priorityLow {
+  background: #f8fafc;
+  color: #475569;
+}
+
+.priorityMedium {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.priorityHigh {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.priorityUrgent {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.description {
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.infoRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.extraRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.reportedBy {
+  font-weight: 600;
+}
+
+.verified {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #ecfeff;
+  color: #0f766e;
+  font-weight: 600;
+}
+
+.visibility {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+}
+
+.resolved {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-weight: 600;
+}
+
+.footerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.counts {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: #475569;
+  font-size: 12px;
+}
+
+.counts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.actions button {
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 12px;
+  padding: 6px 10px;
+  color: #1e293b;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.actions button:last-child {
+  border-color: #cbd5f5;
+  background: #eef2ff;
+}
+
+.activeSupport {
+  border-color: #10b981;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.activeFollow {
+  border-color: #4f46e5;
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.footerLinks {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.linkButton {
+  border: none;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  padding: 0;
+  pointer-events: auto;
+}
+
+.linkMuted {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #94a3b8;
+}
+
+.divider {
+  width: 1px;
+  height: 12px;
+  background: #e2e8f0;
+}

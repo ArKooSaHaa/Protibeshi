@@ -1,0 +1,136 @@
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 260px;
+  height: 100vh;
+  background: white;
+  border-right: 1px solid var(--slate-200);
+  padding: 20px 16px;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+.logoSection {
+  margin-bottom: 32px;
+  padding: 0 8px;
+}
+
+.logo {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.logoIcon {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, var(--emerald-500), var(--emerald-600));
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.logoIconSvg {
+  color: white;
+  width: 26px;
+  height: 26px;
+}
+
+.logoText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.logoTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--slate-900);
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+
+.navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  perspective: 1200px;
+}
+
+.navWrapper {
+  width: 100%;
+}
+
+.navMotionWrapper {
+  display: block;
+  width: 100%;
+  transform-style: preserve-3d;
+  cursor: pointer;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--slate-600);
+  font-size: 14px;
+  font-weight: 500;
+  background: white;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.navItem:hover {
+  background: linear-gradient(135deg, var(--emerald-50), var(--slate-50));
+  color: var(--slate-800);
+  box-shadow: 0 8px 16px rgba(16, 185, 129, 0.12);
+}
+
+.navItemActive {
+  background: var(--emerald-50);
+  color: var(--emerald-700);
+}
+
+.navItemActive:hover {
+  background: var(--emerald-100);
+}
+
+.navIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--slate-100);
+  color: var(--slate-600);
+  transition: all 0.2s ease;
+}
+
+.navIconActive {
+  background: var(--emerald-500);
+  color: white;
+}
+
+.navLabel {
+  font-weight: 500;
+}
+
+@media (max-width: 1024px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .sidebar.open {
+    transform: translateX(0);
+  }
+}

@@ -1,0 +1,258 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+}
+
+/* Card Header */
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.headerIcon {
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.period {
+  margin-left: auto;
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* Safety Tips */
+.tipsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tipItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.bullet {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+/* Chart */
+.chart {
+  margin: 20px 0;
+}
+
+.barContainer {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 120px;
+  background: linear-gradient(180deg, #ecfdf5 0%, #f8fafc 100%);
+  border-radius: 12px;
+  padding: 12px 8px 8px;
+}
+
+.barWrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  gap: 4px;
+}
+
+.bar {
+  width: 100%;
+  background: linear-gradient(180deg, #10b981, #059669);
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.15);
+}
+
+.barLabel {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.trendInfo {
+  font-size: 13px;
+  color: #64748b;
+  text-align: center;
+  margin: 12px 0 0;
+}
+
+/* AI Assistant */
+.aiHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.aiAvatar {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ecfdf5;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.aiSubtitle {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 4px 0 0;
+}
+
+.aiContent {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.exampleQuestion {
+  font-size: 13px;
+  color: #475569;
+  margin: 0 0 8px;
+  padding-left: 8px;
+  border-left: 2px solid #10b981;
+  line-height: 1.4;
+}
+
+.exampleQuestion:last-child {
+  margin-bottom: 0;
+}
+
+/* Input Group */
+.inputGroup {
+  display: flex;
+  gap: 8px;
+}
+
+.aiInput {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #0f172a;
+  background: white;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.aiInput::placeholder {
+  color: #cbd5e1;
+}
+
+.aiInput:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+}
+
+.sendButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+}
+
+.sendButton:hover {
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+@media (max-width: 1024px) {
+  .panel {
+    gap: 16px;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  .cardTitle {
+    font-size: 15px;
+  }
+
+  .tipItem {
+    font-size: 12px;
+  }
+
+  .barContainer {
+    height: 100px;
+  }
+}
+
+@media (max-width: 768px) {
+  .panel {
+    gap: 16px;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  .inputGroup {
+    gap: 6px;
+  }
+
+  .aiInput {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .sendButton {
+    width: 36px;
+    height: 36px;
+  }
+
+  .sendButton svg {
+    width: 14px;
+    height: 14px;
+  }
+}

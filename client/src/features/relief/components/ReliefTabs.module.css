@@ -1,0 +1,109 @@
+/* ReliefTabs */
+.tabsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tabs {
+  display: flex;
+  background: var(--slate-100);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid var(--slate-200);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--slate-500);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+
+.tab.active {
+  background: #fff;
+  color: var(--slate-800);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.1);
+}
+
+.tab.requests.active {
+  color: #dc2626;
+}
+
+.tab.offers.active {
+  color: var(--emerald-600);
+}
+
+.count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 5px;
+  background: var(--slate-200);
+  color: var(--slate-600);
+}
+
+.tab.requests.active .count {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.tab.offers.active .count {
+  background: var(--emerald-100);
+  color: var(--emerald-700);
+}
+
+.filterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--slate-600);
+  border: 1.5px solid var(--slate-200);
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s;
+  position: relative;
+}
+
+.filterBtn:hover {
+  border-color: var(--slate-300);
+  background: var(--slate-50);
+}
+
+.filterBtn.active {
+  border-color: var(--emerald-500);
+  color: var(--emerald-700);
+  background: var(--emerald-50);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  background: var(--emerald-500);
+  color: #fff;
+}

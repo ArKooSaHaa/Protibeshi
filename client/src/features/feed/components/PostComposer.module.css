@@ -1,0 +1,62 @@
+.container {
+  display: flex;
+  gap: 14px;
+  padding: 18px;
+  background: linear-gradient(180deg, white, var(--slate-50));
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.05);
+  border: 1px solid var(--slate-200);
+}
+
+.composerPrompt {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--emerald-700);
+  margin-bottom: 8px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--emerald-500), var(--emerald-600));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.avatarText {
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.inputWrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.collapsedInput {
+  width: 100%;
+  padding: 14px 16px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--slate-200);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.collapsedInput:hover {
+  border-color: var(--emerald-500);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.placeholder {
+  color: var(--slate-600);
+  font-size: 15px;
+  font-weight: 500;
+}
