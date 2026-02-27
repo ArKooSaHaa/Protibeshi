@@ -1,0 +1,100 @@
+/* src/features/services/components/ServicesHero.module.css */ 
+.hero { 
+ position: relative; 
+ min-height: 250px; 
+ border-radius: 24px; 
+ padding: 36px 28px; 
+ background-image: linear-gradient(130deg, rgba(15, 23, 42, 0.9), 
+rgba(5, 150, 105, 0.78)), 
+   
+url('https://images.unsplash.com/photo-1521791055366-0d553872125f?auto=
+format&fit=crop&w=1400&q=80'); 
+ background-size: cover; 
+ background-position: center; 
+ box-shadow: 0 16px 28px rgba(15, 23, 42, 0.14); 
+ overflow: hidden; 
+} 
+ 
+.heroOverlay { 
+ position: absolute; 
+ inset: 0; 
+ background: linear-gradient(180deg, rgba(15, 23, 42, 0.35), rgba(15, 
+23, 42, 0.1)); 
+} 
+ 
+.content { 
+ position: relative; 
+ z-index: 1; 
+ display: flex; 
+ flex-direction: column; 
+ gap: 12px; 
+ max-width: 760px; 
+} 
+ 
+.kicker { 
+ display: inline-flex; 
+ align-items: center; 
+ gap: 8px; 
+ width: fit-content; 
+ padding: 6px 12px; 
+ border-radius: 999px; 
+ font-size: 12px; 
+ font-weight: 700; 
+ color: #ecfdf5; 
+ background: rgba(16, 185, 129, 0.22); 
+ border: 1px solid rgba(167, 243, 208, 0.4); 
+} 
+ 
+.title { 
+ margin: 0; 
+ font-size: clamp(1.8rem, 3vw, 2.6rem); 
+ line-height: 1.15; 
+ color: #f8fafc; 
+ letter-spacing: -0.02em; 
+} 
+ 
+.subtitle { 
+ margin: 0; 
+ color: #e2e8f0; 
+ font-size: 16px; 
+} 
+ 
+.actions { 
+ margin-top: 8px; 
+ display: flex; 
+ flex-wrap: wrap; 
+ gap: 10px; 
+ align-items: center; 
+} 
+ 
+.locationChip { 
+ display: inline-flex; 
+ align-items: center; 
+ gap: 6px; 
+ background: rgba(255, 255, 255, 0.95); 
+ color: #475569; 
+ border-radius: 999px; 
+ padding: 8px 14px; 
+ font-size: 13px; 
+ border: 1px solid #e6ebf2; 
+} 
+ 
+.offerButton { 
+ border: none; 
+ border-radius: 999px; 
+ padding: 10px 18px; 
+ font-size: 14px; 
+ font-weight: 700; 
+ color: white; 
+ background: linear-gradient(135deg, var(--emerald-500), 
+var(--emerald-600)); 
+ box-shadow: 0 12px 22px rgba(16, 185, 129, 0.25); 
+ cursor: pointer; 
+} 
+ 
+@media (max-width: 768px) { 
+ .hero { 
+   min-height: 220px; 
+   padding: 28px 18px; 
+ } 
+}
