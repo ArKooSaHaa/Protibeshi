@@ -1,0 +1,47 @@
+# Root-level ignores for monorepo
+
+# Node packages and logs (applies to root as well as client/server subfolders)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Client-specific build outputs and env files (relative to root)
+/client/dist/
+/client/build/
+/client/.vite/
+/client/*.log
+/client/.env.local
+/client/.env.development.local
+/client/.env.test.local
+/client/.env.production.local
+
+# Server (Laravel/PHP) artifacts
+/server/vendor/
+/server/node_modules/
+/server/.env
+/server/.env.*
+/server/Homestead.yaml
+/server/Homestead.json
+/server/storage/*.key
+/server/storage/*.log
+/server/storage/*.cache
+/server/public/hot
+/server/public/storage
+
+# System/OS
+.DS_Store
+Thumbs.db
+
+# IDE/editor
+.idea/
+.vscode/
+
+# Logs, databases, and temporary files
+logs/
+*.log
+*.sqlite
+*.sqlite3
+*.tmp
+*.temp

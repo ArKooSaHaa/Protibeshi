@@ -1,0 +1,27 @@
+# Laravel / PHP application ignores
+
+/vendor/
+/node_modules/
+
+# Environment
+.env
+.env.*
+
+# Homestead
+Homestead.yaml
+Homestead.json
+
+# Storage and cache
+/storage/*.key
+/storage/*.log
+/storage/*.cache
+/public/hot
+/public/storage
+
+# IDE/editor
+/.idea
+/.vscode
+
+# Misc
+.DS_Store
+Thumbs.db

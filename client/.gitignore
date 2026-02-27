@@ -1,0 +1,20 @@
+# Client-side (React/Vite) ignores
+
+# Dependencies
+node_modules/
+
+# Build output
+/dist
+/build
+/.vite
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+
+# Environment variables
+.env.local
+.env.*.local
+
+# Misc
+.DS_Store
