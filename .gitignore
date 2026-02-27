@@ -1,0 +1,87 @@
+# Laravel & PHP
+/vendor/
+/node_modules/
+/public/storage
+/storage/*.key
+.env
+Homestead.json
+Homestead.yaml
+.env.backup
+
+# Laravel Mix
+public/hot
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Vite
+/node_modules
+/.vite
+/dist
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs and editors
+/.idea
+/.vscode
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+/storage/logs
+/storage/framework/cache/data
+
+# Compiled files
+*.lock
+*.cache
+*.log
+
+# Ignore compiled JS/CSS
+/public/js/*.js
+/public/css/*.css
+
+# Laravel specific
+/storage/*.key
+/bootstrap/cache/*.php
+
+# Composer
+composer.lock
+
+# NPM
+package-lock.json
+yarn.lock
+
+# dotenv environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# PHPUnit
+phpunit.xml
+phpunit.xml.dist
+
+# Build files
+/dist
+
+# Misc
+*.sql
+*.sqlite
+
+
+# Laravel Telescope
+/storage/telescope
+
+# Vite
+node_modules/
+public/build/
+
+# npm
+npm-debug.log*
+yarn-debug.log*
+
+# others
+.idea/
+.vscode/
