@@ -1,0 +1,151 @@
+/*src/features/complaints/components/ComplaintForm.module.css*/ 
+.formCard { 
+ border-radius: 18px; 
+ border: 1px solid #e2e8f0; 
+ background: #ffffff; 
+ padding: 18px; 
+ display: flex; 
+ flex-direction: column;  gap: 16px; 
+ box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06); 
+} 
+ 
+.headerRow { 
+ display: flex; 
+ align-items: center; 
+ justify-content: space-between; 
+ gap: 12px; 
+} 
+ 
+.headerRow h2 { 
+ margin: 0; 
+ font-size: 18px;  color: #0f172a; 
+} 
+ 
+.requiredNote { 
+ font-size: 12px; 
+ color: #64748b; 
+} 
+
+ 
+.fieldGroup { 
+ display: flex; 
+ flex-direction: column;  gap: 6px; 
+} 
+ 
+.label { 
+ display: flex; 
+ flex-direction: column; 
+ gap: 8px;  font-size: 13px; 
+ font-weight: 600; 
+ color: #1e293b; 
+} 
+ 
+.input, 
+.select, 
+.textarea { 
+ border: 1px solid #dbe1ea; 
+ border-radius: 12px; 
+ padding: 10px 12px; 
+ font-size: 13px; 
+ color: #0f172a; 
+ background: #f8fafc;  outline: none; 
+ transition: border 0.2s ease, box-shadow 0.2s ease; 
+} 
+ 
+.input:focus, 
+.select:focus, 
+.textarea:focus {  border-color: #94a3b8; 
+ box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.25); 
+} 
+ 
+.textarea { 
+ min-height: 120px; 
+ resize: vertical; } 
+ 
+.gridRow { 
+ display: grid; 
+
+ grid-template-columns: repeat(2, minmax(0, 1fr)); 
+ gap: 12px; 
+} 
+ 
+.helperRow { 
+ display: flex; 
+ justify-content: space-between; 
+ font-size: 12px; 
+ color: #64748b; 
+} 
+ 
+.errorRow { 
+ display: flex; 
+ justify-content: space-between; 
+ gap: 12px; 
+} 
+ 
+.error {  color: #b91c1c; 
+ font-size: 12px; 
+} 
+ 
+.count { 
+ color: #64748b; 
+} 
+ 
+.uploadRow { 
+ display: flex; 
+ align-items: center; 
+ gap: 10px; 
+ flex-wrap: wrap; 
+} 
+ 
+.uploadButton { 
+ display: inline-flex; 
+ align-items: center; 
+ gap: 6px; 
+ border-radius: 10px; 
+ padding: 8px 10px;  font-size: 12px; 
+ border: 1px dashed #cbd5f5; 
+ background: #f8fafc; 
+ color: #1f2937; 
+
+ cursor: pointer; 
+} 
+ 
+.uploadButton input {  display: none; 
+} 
+ 
+.fileName { 
+ font-size: 12px; 
+ color: #64748b; 
+} 
+ 
+.noticeBox { 
+ display: flex; 
+ align-items: flex-start; 
+ gap: 10px; 
+ border-radius: 12px; 
+ padding: 10px 12px;  border: 1px solid #e2e8f0; 
+ background: #f8fafc; 
+ color: #475569; 
+ font-size: 12px; 
+ line-height: 1.5; 
+} 
+ 
+.noticeBox p { 
+ margin: 0; 
+} 
+ 
+.submitButton { 
+ border: none; 
+ border-radius: 12px;  padding: 12px 16px; 
+ background: linear-gradient(135deg, var(--emerald-500), 
+var(--emerald-600)); 
+ color: white; 
+ font-weight: 700; 
+ font-size: 14px; 
+ cursor: pointer; } 
+ 
+@media (max-width: 900px) { 
+ .gridRow { 
+   grid-template-columns: 1fr; 
+ } 
+} 
