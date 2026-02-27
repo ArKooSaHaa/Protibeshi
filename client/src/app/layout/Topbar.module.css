@@ -1,0 +1,154 @@
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 260px;
+  right: 0;
+  height: 72px;
+  background: white;
+  border-bottom: 1px solid var(--slate-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  z-index: 90;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  padding-left: 14px;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+}
+
+.brandTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--slate-800);
+  line-height: 1.2;
+  margin: 0;
+}
+
+.brandSubtitle {
+  font-size: 13px;
+  color: var(--slate-500);
+  line-height: 1.35;
+  margin: 2px 0 0;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--slate-100);
+  border-radius: 20px;
+  font-size: 13px;
+  color: var(--slate-600);
+}
+
+.locationIcon {
+  color: var(--emerald-500);
+}
+
+.locationText {
+  font-weight: 500;
+  color: var(--slate-700);
+}
+
+.locationDistance {
+  color: var(--slate-400);
+  font-size: 12px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.actionButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: none;
+  background: var(--slate-100);
+  color: var(--slate-600);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.actionButton:hover {
+  background: var(--slate-200);
+  color: var(--slate-800);
+}
+
+.user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 6px 6px 6px 16px;
+  background: var(--slate-100);
+  border-radius: 24px;
+  transition: all 0.2s ease;
+}
+
+.user:hover {
+  background: var(--slate-200);
+}
+
+.userName {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--slate-700);
+}
+
+.userAvatar {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--emerald-500), var(--emerald-600));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (max-width: 1024px) {
+  .topbar {
+    left: 0;
+  }
+  
+  .brand {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    padding: 0 16px;
+  }
+  
+  .locationText {
+    display: none;
+  }
+  
+  .userName {
+    display: none;
+  }
+}

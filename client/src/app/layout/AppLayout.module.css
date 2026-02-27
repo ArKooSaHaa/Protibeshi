@@ -1,0 +1,34 @@
+.layout {
+  min-height: 100vh;
+  background: var(--slate-50);
+}
+
+.container {
+  display: flex;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding-top: 72px;
+  position: relative;
+}
+
+.main {
+  flex: 1;
+  margin-left: 260px;
+  height: calc(100vh - 72px);
+  padding: 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+@media (max-width: 1024px) {
+  .main {
+    margin-left: 0;
+    padding: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .main {
+    padding: 12px;
+  }
+}
