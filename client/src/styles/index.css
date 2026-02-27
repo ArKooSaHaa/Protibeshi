@@ -1,0 +1,40 @@
+:root {
+  font-family: 'Josefin Sans', serif;
+  line-height: 1.5;
+  font-weight: 400;
+}
+body {
+  font-family: 'Josefin Sans', serif;
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+header {
+  padding: 1em;
+}
+
+main {
+  flex: 1;
+  padding: 1em;
+}
+footer {
+  padding: 1em;
+  text-align: center;
+}
+
+@media (min-width: 576px) {
+  .w-lg-400 {
+    width: 400px;
+  }
+}
+
+@media (min-width: 576px) {
+  .navbar-mx {
+    padding-left: 300px;
+    padding-right: 300px;
+  }
+}
