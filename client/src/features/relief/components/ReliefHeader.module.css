@@ -1,99 +1,102 @@
- 
-/*  src/features/relief/components/ReliefHeader.module.css */ 
-.header { 
- background: linear-gradient(135deg, #fff9f0 0%, #fff 60%); 
- border: 1px solid var(--slate-200); 
- border-radius: 16px; 
- padding: 24px 28px; 
- display: flex; 
- flex-direction: column; 
- gap: 16px; 
-} 
- 
-.top { 
- display: flex; 
- flex-direction: column; 
- gap: 6px; 
-} 
- 
-.locationRow { 
- display: flex; 
- align-items: center; 
- gap: 6px; 
- margin-bottom: 2px; 
-} 
- 
-.locationChip { 
- display: inline-flex; 
- align-items: center; 
- gap: 5px; 
- background: var(--emerald-50); 
- color: var(--emerald-700); 
- border: 1px solid var(--emerald-100); 
- border-radius: 999px; 
- padding: 3px 10px; 
- font-size: 12px; 
- font-weight: 600; 
-} 
- 
-.title { 
- font-size: 22px; 
- font-weight: 800; 
- color: var(--slate-900); 
- letter-spacing: -0.4px; 
- line-height: 1.15; 
-} 
- 
-.subtitle { 
- font-size: 13.5px; 
- color: var(--slate-500); 
- font-weight: 400; 
- max-width: 480px; 
-} 
- 
-.actions { 
- display: flex; 
- align-items: center; 
- gap: 10px; 
- flex-wrap: wrap; 
-} 
- 
-.btnRequest { 
- display: inline-flex; 
- align-items: center; 
- gap: 7px; 
- padding: 9px 18px; 
- border-radius: 10px; 
- font-size: 13.5px; 
- font-weight: 700; 
- border: none; 
- cursor: pointer; 
- background: linear-gradient(135deg, #ef4444, #dc2626); 
- color: #fff; 
- box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3); 
- transition: box-shadow 0.2s, transform 0.15s; 
-} 
- 
-.btnRequest:hover { 
- box-shadow: 0 6px 20px rgba(239, 68, 68, 0.38); 
-} 
- 
-.btnOffer { 
- display: inline-flex; 
- align-items: center; 
- gap: 7px; 
- padding: 9px 18px; 
- border-radius: 10px; 
- font-size: 13.5px; 
- font-weight: 700; 
- border: 1.5px solid var(--emerald-500); 
- cursor: pointer; 
- background: var(--emerald-50); 
- color: var(--emerald-700); 
- transition: background 0.18s, box-shadow 0.18s; 
-} 
- 
-.btnOffer:hover { 
- background: var(--emerald-100); 
- box-shadow: 0 4px 12px rgba(16, 185, 129, 0.18); 
-} 
+/*  src/features/relief/components/ReliefHeader.module.css */
+.header {
+  background: linear-gradient(135deg, #fff9f0 0%, #fff 60%);
+  border: 1px solid var(--slate-200);
+  border-radius: 16px;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.top {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.locationRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.locationChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--emerald-50);
+  color: var(--emerald-700);
+  border: 1px solid var(--emerald-100);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--slate-900);
+  letter-spacing: -0.4px;
+  line-height: 1.15;
+}
+
+.subtitle {
+  font-size: 13.5px;
+  color: var(--slate-500);
+  font-weight: 400;
+  max-width: 480px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btnRequest {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+  transition:
+    box-shadow 0.2s,
+    transform 0.15s;
+}
+
+.btnRequest:hover {
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.38);
+}
+
+.btnOffer {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: 1.5px solid var(--emerald-500);
+  cursor: pointer;
+  background: var(--emerald-50);
+  color: var(--emerald-700);
+  transition:
+    background 0.18s,
+    box-shadow 0.18s;
+}
+
+.btnOffer:hover {
+  background: var(--emerald-100);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.18);
+}
