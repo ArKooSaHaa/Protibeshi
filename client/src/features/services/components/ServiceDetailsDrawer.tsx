@@ -1,3 +1,4 @@
+// src/features/services/components/ServiceDetailsDrawer.tsx
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useRef, useState } from 'react';
@@ -62,9 +63,8 @@ export const ServiceDetailsDrawer = ({
             <div
               ref={scrollRef}
               onScroll={handleScroll}
-              className={`${styles.scrollContent} ${
-                atBottom ? styles.atBottom : ''
-              }`}
+              className={`${styles.scrollContent} ${atBottom ? styles.atBottom : ''
+                }`}
             >
               <div className={styles.providerRow}>
                 <img

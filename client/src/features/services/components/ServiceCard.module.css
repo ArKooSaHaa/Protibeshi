@@ -1,185 +1,184 @@
-/* src/features/services/components/ServiceCard.module.css */ 
-.card { 
- background: #fff; 
- border-radius: 18px; 
- border: 1px solid #e5e7eb; 
- box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06); 
- padding: 14px; 
- display: flex; 
- flex-direction: column; 
- gap: 10px; 
-} 
- 
-.topRow { 
- display: flex; 
- justify-content: space-between; 
- align-items: flex-start; 
- gap: 10px; 
-} 
- 
-.profileWrap { 
- display: flex; 
- gap: 10px; 
- align-items: center; 
-} 
- 
-.avatar { 
- width: 42px; 
- height: 42px; 
- border-radius: 50%; 
- object-fit: cover; 
-} 
- 
-.providerName { 
- font-size: 14px; 
- font-weight: 700; 
- color: #0f172a; 
-} 
- 
-.metaLine { 
- margin-top: 2px; 
- font-size: 12px; 
- color: #64748b; 
- display: flex; 
- gap: 6px; 
- align-items: center; 
-} 
- 
-.verifiedBadge { 
- display: inline-flex; 
- align-items: center; 
- gap: 4px; 
- color: var(--emerald-700); 
- font-weight: 600; 
-} 
- 
-.iconButton { 
- border: 1px solid #e2e8f0; 
- background: #fff; 
- color: #475569; 
- width: 30px; 
- height: 30px; 
- border-radius: 10px; 
- cursor: pointer; 
-} 
- 
-.ratingRow { 
- display: flex; 
- align-items: center; 
- gap: 8px; 
- color: #64748b; 
- font-size: 12px; 
-} 
- 
-.rating { 
- display: inline-flex; 
- align-items: center; 
- gap: 4px; 
- color: #0f172a; 
- font-weight: 700; 
-} 
- 
-.title { 
- margin: 0; 
- color: #0f172a; 
- font-size: 17px; 
-} 
- 
-.description { 
- margin: 0; 
- color: #475569; 
- font-size: 13px; 
- line-height: 1.5; 
-} 
- 
-.tagRow { 
- display: flex; 
- flex-wrap: wrap; 
- gap: 8px; 
-} 
- 
-.categoryTag, 
-.availabilityTag { 
- padding: 5px 9px; 
- font-size: 12px; 
- border-radius: 999px; 
-} 
- 
-.categoryTag { 
- background: #ecfdf5; 
- color: var(--emerald-700); 
-} 
- 
-.availabilityTag { 
- background: #eff6ff; 
- color: #1d4ed8; 
-} 
- 
-.priceRow { 
- display: flex; 
- justify-content: space-between; 
- align-items: center; 
- color: #0f172a; 
- font-size: 13px; 
-} 
- 
-.responseTime { 
- font-size: 12px; 
- color: #64748b; 
-} 
- 
-.actionRow { 
- display: grid; 
- grid-template-columns: 1fr 1fr; 
- gap: 8px; 
-} 
- 
-.primaryButton, 
-.secondaryButton { 
- border-radius: 10px; 
- padding: 8px 10px; 
- border: none; 
- font-size: 13px; 
- font-weight: 600; 
- cursor: pointer; 
-} 
- 
-.primaryButton { 
- background: linear-gradient(135deg, var(--emerald-500), 
-var(--emerald-600)); 
- color: white; 
-} 
- 
-.secondaryButton { 
- background: #f1f5f9; 
- color: #0f172a; 
- display: inline-flex; 
- justify-content: center; 
- align-items: center; 
- gap: 6px; 
-} 
- 
-.trustRow { 
- display: flex; 
- align-items: center; 
- justify-content: space-between; 
- gap: 10px; 
-} 
- 
-.textButton { 
- border: none; 
- background: none; 
- padding: 0; 
- color: #b91c1c; 
- font-size: 12px; 
- display: inline-flex; 
- align-items: center; 
- gap: 4px; 
- cursor: pointer; 
-} 
- 
-.tooltipText { 
- font-size: 12px; 
- color: #64748b; 
- text-decoration: underline dotted; 
+/* src/features/services/components/ServiceCard.module.css */
+.card {
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.topRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.profileWrap {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.providerName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.metaLine {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #64748b;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.verifiedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--emerald-700);
+  font-weight: 600;
+}
+
+.iconButton {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.ratingRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 17px;
+}
+
+.description {
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.categoryTag,
+.availabilityTag {
+  padding: 5px 9px;
+  font-size: 12px;
+  border-radius: 999px;
+}
+
+.categoryTag {
+  background: #ecfdf5;
+  color: var(--emerald-700);
+}
+
+.availabilityTag {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.priceRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.responseTime {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.actionRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.primaryButton,
+.secondaryButton {
+  border-radius: 10px;
+  padding: 8px 10px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, var(--emerald-500), var(--emerald-600));
+  color: white;
+}
+
+.secondaryButton {
+  background: #f1f5f9;
+  color: #0f172a;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.trustRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.textButton {
+  border: none;
+  background: none;
+  padding: 0;
+  color: #b91c1c;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.tooltipText {
+  font-size: 12px;
+  color: #64748b;
+  text-decoration: underline dotted;
 }
