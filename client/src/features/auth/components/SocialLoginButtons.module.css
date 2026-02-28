@@ -1,0 +1,55 @@
+/*src/features/auth/components/SocialLoginButtons.module.css*/
+.row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.02);
+  color: #d4dde8;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.52rem 0.45rem;
+  transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
+}
+
+.button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(0, 200, 255, 0.46);
+  background: rgba(0, 200, 255, 0.08);
+}
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 200, 255, 0.24);
+}
+
+.button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  background: linear-gradient(145deg, rgba(0, 255, 178, 0.2), rgba(0, 200, 255, 0.2));
+  color: #ddffef;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+}

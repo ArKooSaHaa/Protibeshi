@@ -1,0 +1,250 @@
+/*src/features/auth/components/SignInForm.module.css*/
+.container {
+  padding: clamp(1.25rem, 3vw, 2rem);
+  color: #e2ecf8;
+}
+
+.header {
+  margin-bottom: 1.25rem;
+}
+
+.kicker {
+  margin: 0;
+  color: #00c8ff;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.title {
+  margin: 0.35rem 0 0;
+  color: #f6fbff;
+  font-size: clamp(1.45rem, 4vw, 2rem);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  text-shadow:
+    0 0 12px rgba(0, 255, 178, 0.18),
+    0 0 22px rgba(139, 92, 246, 0.12);
+  animation: glitch-once 0.85s ease-out 1;
+}
+
+.subtitle {
+  margin: 0.55rem 0 0;
+  color: #a6b6ca;
+  font-size: 0.9rem;
+}
+
+.form {
+  display: grid;
+  gap: 0.95rem;
+}
+
+.fieldWrap {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.label {
+  font-size: 0.83rem;
+  color: #d4deea;
+  letter-spacing: -0.01em;
+}
+
+.input {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background: rgba(15, 23, 42, 0.58);
+  color: #f8fafc;
+  font-size: 0.93rem;
+  padding: 0.72rem 0.8rem;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.input::placeholder {
+  color: #7f93ab;
+}
+
+.input:hover {
+  border-color: rgba(0, 200, 255, 0.42);
+}
+
+.input:focus-visible {
+  outline: none;
+  border-color: rgba(0, 255, 178, 0.62);
+  box-shadow: 0 0 0 2px rgba(0, 255, 178, 0.18);
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.input[aria-invalid='true'] {
+  border-color: rgba(255, 46, 136, 0.68);
+  box-shadow: 0 0 0 2px rgba(255, 46, 136, 0.17);
+}
+
+.passwordWrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.passwordWrap .input {
+  padding-right: 4.2rem;
+}
+
+.toggleButton {
+  position: absolute;
+  right: 0.45rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 0.6rem;
+  background: transparent;
+  color: #96afc7;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 0.35rem 0.45rem;
+}
+
+.toggleButton:hover {
+  color: #e4eeff;
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.toggleButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 200, 255, 0.24);
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.rememberMe {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #c4d2e3;
+  font-size: 0.85rem;
+}
+
+.checkbox {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #00ffb2;
+}
+
+.link {
+  font-size: 0.84rem;
+  color: #00c8ff;
+  text-decoration: none;
+}
+
+.link:hover {
+  color: #7ee7ff;
+}
+
+.link:focus-visible {
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.errorText {
+  margin: 0;
+  font-size: 0.76rem;
+  color: #ff80b3;
+}
+
+.errorBanner,
+.successBanner {
+  margin: 0;
+  border-radius: 0.7rem;
+  font-size: 0.82rem;
+  padding: 0.62rem 0.72rem;
+}
+
+.errorBanner {
+  border: 1px solid rgba(255, 46, 136, 0.42);
+  background: rgba(255, 46, 136, 0.12);
+  color: #ffc4dc;
+}
+
+.successBanner {
+  border: 1px solid rgba(0, 255, 178, 0.36);
+  background: rgba(0, 255, 178, 0.1);
+  color: #c9ffee;
+}
+
+.divider {
+  margin: 1rem 0 0.75rem;
+  position: relative;
+  text-align: center;
+  color: #8ea2b8;
+  font-size: 0.78rem;
+}
+
+.divider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px solid rgba(148, 163, 184, 0.28);
+}
+
+.divider span {
+  position: relative;
+  background: rgba(14, 20, 34, 0.92);
+  border-radius: 999px;
+  padding: 0 0.45rem;
+}
+
+@keyframes glitch-once {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+    filter: blur(4px);
+  }
+  38% {
+    opacity: 0.9;
+    transform: translate3d(0, 0, 0);
+    filter: blur(0);
+    text-shadow: 1px 0 rgba(0, 255, 178, 0.3), -1px 0 rgba(0, 200, 255, 0.3);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    filter: blur(0);
+    text-shadow:
+      0 0 12px rgba(0, 255, 178, 0.18),
+      0 0 22px rgba(139, 92, 246, 0.12);
+  }
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 1.1rem;
+  }
+
+  .metaRow {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title,
+  .input,
+  .toggleButton,
+  .link {
+    animation: none;
+    transition: none;
+  }
+}
