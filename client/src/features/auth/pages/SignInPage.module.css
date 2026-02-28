@@ -1,0 +1,6 @@
+/*src/features/auth/pages/SignInPage.module.css*/
+.page {
+  min-height: 100vh;
+  width: 100%;
+  background: #0b0f19;
+}
