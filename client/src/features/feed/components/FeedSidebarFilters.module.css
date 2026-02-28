@@ -1,0 +1,82 @@
+.container {
+  background: white;
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  width: 100%;
+  max-width: 260px;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.resetButton {
+  font-size: 12px;
+  font-weight: 600;
+  color: #10b981;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* Sections */
+.section {
+  margin-bottom: 18px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 6px;
+  display: block;
+}
+
+/* Slider */
+.slider {
+  width: 100%;
+  height: 4px;
+}
+
+/* Time buttons */
+.timeButton {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  border: none;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.timeButton:hover {
+  background: #e2e8f0;
+}
+
+.timeButtonActive {
+  background: #10b981;
+  color: white;
+}
+
+/* Select */
+.select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 12px;
+}

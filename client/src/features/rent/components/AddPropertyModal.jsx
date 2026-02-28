@@ -1,3 +1,4 @@
+// src/features/rent/components/AddPropertyModal.jsx
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Upload, X } from 'lucide-react';

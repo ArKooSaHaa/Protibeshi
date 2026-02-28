@@ -1,0 +1,293 @@
+/* src/features/relief/components/ReliefRequestCard.module.css */
+.card {
+  background: #fff;
+  border: 1px solid var(--slate-200);
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-left: 4px solid transparent;
+  transition:
+    box-shadow 0.2s,
+    border-color 0.2s;
+  cursor: default;
+}
+
+.card:hover {
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.08);
+}
+
+.card.urgent {
+  border-left-color: #f97316;
+  background: linear-gradient(to right, #fff7ed 0%, #fff 40px);
+}
+
+.card.critical {
+  border-left-color: #dc2626;
+  background: linear-gradient(to right, #fef2f2 0%, #fff 40px);
+}
+
+/* Header */
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.titleRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.helpTypeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--slate-100);
+  color: var(--slate-600);
+  border: 1px solid var(--slate-200);
+}
+
+/* Urgency badges */
+.urgBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.urgNormal {
+  background: #f1f5f9;
+  color: #475569;
+}
+.urgImportant {
+  background: #fefce8;
+  color: #a16207;
+  border: 1px solid #fef08a;
+}
+.urgUrgent {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+.urgCritical {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dotNormal {
+  background: #94a3b8;
+}
+.dotImportant {
+  background: #eab308;
+}
+.dotUrgent {
+  background: #f97316;
+}
+.dotCritical {
+  background: #ef4444;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--slate-900);
+  line-height: 1.3;
+}
+
+/* Status badge */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.statusOpen {
+  background: #dcfce7;
+  color: #15803d;
+}
+.statusVolunteers {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.statusInProgress {
+  background: #fef9c3;
+  color: #a16207;
+}
+.statusCompleted {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+.statusExpired {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* Meta */
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--slate-400);
+  flex-wrap: wrap;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Description */
+.description {
+  font-size: 13px;
+  color: var(--slate-600);
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Footer */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.volunteerInfo {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--slate-500);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btnVolunteer {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 13px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--emerald-500), var(--emerald-600));
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.25);
+  transition: box-shadow 0.18s;
+}
+
+.btnVolunteer:hover {
+  box-shadow: 0 5px 16px rgba(16, 185, 129, 0.33);
+}
+
+.btnDetails {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 13px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1.5px solid var(--slate-200);
+  cursor: pointer;
+  background: #fff;
+  color: var(--slate-600);
+  transition:
+    border-color 0.18s,
+    background 0.18s;
+}
+
+.btnDetails:hover {
+  border-color: var(--slate-300);
+  background: var(--slate-50);
+}
+
+/* Verified badge */
+.verifiedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--emerald-600);
+}
+
+/* Poster */
+.poster {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--slate-500);
+}
+
+.avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--emerald-100), var(--emerald-200));
+  color: var(--emerald-700);
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}

@@ -1,0 +1,169 @@
+/* src/features/services/components/ServiceDetailsDrawer.module.css */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  z-index: 60;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.drawer {
+  width: min(420px, 100%);
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  background: #fff;
+  padding: 18px;
+  box-sizing: border-box;
+  overflow: hidden;
+  box-shadow: -16px 0 28px rgba(15, 23, 42, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+}
+
+.scrollContent {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 4px;
+  padding-bottom: 18px;
+  position: relative; /* required */
+}
+
+/* Scroll hint fade */
+.scrollContent::after {
+  content: "";
+  position: sticky;
+  bottom: 0;
+  display: block;
+  height: 32px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 1)
+  );
+  pointer-events: none;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.closeButton {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.providerRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.providerRow img {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+}
+
+.providerRow p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 20px;
+}
+
+.body {
+  margin: 0;
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.metaGrid div {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.metaGrid span {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.metaGrid strong {
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.section h5 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.section ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.muted {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.contactButton {
+  margin-top: 2px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--emerald-500), var(--emerald-600));
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 11px 14px;
+  cursor: pointer;
+}
+
+@supports (padding: max(0px)) {
+  .contactButton {
+    margin-bottom: max(2px, env(safe-area-inset-bottom));
+  }
+}

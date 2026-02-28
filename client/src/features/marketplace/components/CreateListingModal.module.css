@@ -1,0 +1,355 @@
+/* =========================
+   CREATE LISTING MODAL
+   (src/features/marketplace/components/CreateListingModal.jsx)
+*/
+
+/* =========================
+   OVERLAY (Backdrop)
+========================= */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+  opacity: 0;
+  animation: overlayFade 0.25s ease forwards;
+}
+
+/* =========================
+   MODAL CONTAINER
+========================= */
+.modal {
+  position: relative;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.2);
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 9999;
+
+  /* Safety */
+  min-height: 180px;
+  margin: 0;
+}
+
+/* Decorative top bar */
+.modal::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 6px;
+  background: linear-gradient(135deg, var(--emerald-500), var(--emerald-600));
+  border-radius: 0 0 50px 50px;
+  z-index: 2;
+}
+
+/* =========================
+   HEADER
+========================= */
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid #f0f4f8;
+  position: sticky;
+  top: 0;
+  background: white;
+  border-radius: 16px 16px 0 0;
+  z-index: 3;
+}
+
+.modalTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
+}
+
+.modalSubtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* =========================
+   CLOSE BUTTON
+========================= */
+.closeButton {
+  background: #f3f4f6;
+  border: none;
+  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.closeButton:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+/* =========================
+   CONTENT
+========================= */
+.modalContent {
+  padding: 22px 24px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* =========================
+   FORM
+========================= */
+.formSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.fieldLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.required {
+  color: var(--emerald-500);
+  font-weight: 700;
+}
+
+/* =========================
+   INPUTS
+========================= */
+.textInput,
+.selectInput,
+.textareaInput {
+  padding: 11px 13px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 14px;
+  background: white;
+  color: #111827;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.textInput::placeholder,
+.textareaInput::placeholder {
+  color: #9ca3af;
+}
+
+.textInput:focus,
+.selectInput:focus,
+.textareaInput:focus {
+  outline: none;
+  border-color: var(--emerald-500);
+  background: #f9fafb;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+/* =========================
+   INPUT WITH ICON
+========================= */
+.inputWithIcon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 13px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.inputWithIcon:focus-within {
+  border-color: var(--emerald-500);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.inputWithIcon svg {
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.inputWithIcon input,
+.inputWithIcon select {
+  border: none;
+  padding: 11px 0;
+  background: transparent;
+  flex: 1;
+  font-size: 14px;
+}
+
+.inputWithIcon input:focus,
+.inputWithIcon select:focus {
+  outline: none;
+}
+
+/* =========================
+   TEXTAREA
+========================= */
+.textareaInput {
+  resize: none;
+  line-height: 1.5;
+}
+
+/* =========================
+   PHOTO UPLOAD
+========================= */
+.photoUploadArea {
+  border: 2px dashed #e5e7eb;
+  border-radius: 12px;
+  background: #f9fafb;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.photoUploadArea:hover {
+  border-color: var(--emerald-500);
+  background: #ecfdf5;
+}
+
+.uploadPrompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 10px;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.uploadPrompt:hover {
+  color: var(--emerald-500);
+}
+
+.photoPreview {
+  width: 100%;
+  height: 260px;
+}
+
+.photoPreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* =========================
+   FORM ROW
+========================= */
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* =========================
+   ACTIONS
+========================= */
+.modalActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.cancelButton,
+.submitButton {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancelButton {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+}
+
+.cancelButton:hover {
+  background: #e5e7eb;
+}
+
+.submitButton {
+  border: none;
+  color: white;
+  background: linear-gradient(135deg, var(--emerald-500), var(--emerald-600));
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.submitButton:hover {
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.3);
+}
+
+/* =========================
+   SCROLLBAR
+========================= */
+.modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 10px;
+}
+
+/* =========================
+   MOBILE
+========================= */
+@media (max-width: 480px) {
+  .modal {
+    width: 95%;
+    max-height: 95vh;
+    border-radius: 14px;
+  }
+
+  .modalHeader {
+    padding: 18px 16px;
+  }
+
+  .modalContent {
+    padding: 16px;
+  }
+
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+
+  .photoPreview {
+    height: 200px;
+  }
+}

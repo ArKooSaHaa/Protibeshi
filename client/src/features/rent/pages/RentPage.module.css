@@ -1,245 +1,245 @@
-/* src/features/rent/pages/RentPage.module.css */ 
-.rentPage { 
- width: 100%; 
- min-height: 100vh; 
- background: #f5f7fb; 
- padding: 24px; 
- box-sizing: border-box; 
-} 
- 
-/* ============================= */ 
-/* HEADER */ 
-/* ============================= */ 
- 
-.header { 
- width: 100%; 
- margin-bottom: 32px; 
- position: relative; 
- border-radius: 28px; 
- overflow: hidden; 
- min-height: 260px; 
- padding: 60px 24px; 
- display: flex; 
- align-items: center; 
- justify-content: center; 
- text-align: center; 
-} 
- 
-/* Video container */ 
-.headerMedia { 
- position: absolute; 
- inset: 0; 
- z-index: 0; 
- overflow: hidden; 
-} 
- 
-/* Video element */ 
-.headerVideo { 
- width: 100%; 
- height: 100%; 
- object-fit: cover; 
- transform: scale(1.05); /* subtle cinematic zoom */ 
- filter: saturate(1.05); 
-} 
- 
-/* Dark overlay */ 
-.headerOverlay { 
- position: absolute; 
- inset: 0; 
- background: linear-gradient( 
-   180deg, 
-   rgba(15, 23, 42, 0.65), 
-   rgba(15, 23, 42, 0.4) 
- ); 
-} 
- 
-/* Content */ 
-.headerContent { 
- position: relative; 
- z-index: 1; 
- max-width: 900px; 
-} 
- 
-/* Title */ 
-.title { 
- font-size: 48px; 
- font-weight: 800; 
- color: #ffffff; 
- margin: 0 0 12px; 
- letter-spacing: -0.02em; 
- text-shadow: 0 8px 24px rgba(15, 23, 42, 0.4); 
-} 
- 
-/* Subtitle */ 
-.subtitle { 
- font-size: 18px; 
- color: #e2e8f0; 
- margin-bottom: 20px; 
-} 
- 
-/* ============================= */ 
-/* CONTENT GRID */ 
-/* ============================= */ 
- 
-.contentGrid { 
- width: 100%; 
- max-width: 1400px; 
- margin: 0 auto; 
- display: grid; 
- grid-template-columns: 280px 1fr; 
- gap: 28px; 
-} 
- 
-/* ============================= */ 
-/* FILTER SIDEBAR */ 
-/* ============================= */ 
- 
-.filterSidebar { 
- position: sticky; 
- top: 100px; 
- 
- /* 
+/* src/features/rent/pages/RentPage.module.css */
+.rentPage {
+  width: 100%;
+  min-height: 100vh;
+  background: #f5f7fb;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+/* ============================= */
+/* HEADER */
+/* ============================= */
+
+.header {
+  width: 100%;
+  margin-bottom: 32px;
+  position: relative;
+  border-radius: 28px;
+  overflow: hidden;
+  min-height: 260px;
+  padding: 60px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Video container */
+.headerMedia {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* Video element */
+.headerVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.05); /* subtle cinematic zoom */
+  filter: saturate(1.05);
+}
+
+/* Dark overlay */
+.headerOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.65),
+    rgba(15, 23, 42, 0.4)
+  );
+}
+
+/* Content */
+.headerContent {
+  position: relative;
+  z-index: 1;
+  max-width: 900px;
+}
+
+/* Title */
+.title {
+  font-size: 48px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 12px;
+  letter-spacing: -0.02em;
+  text-shadow: 0 8px 24px rgba(15, 23, 42, 0.4);
+}
+
+/* Subtitle */
+.subtitle {
+  font-size: 18px;
+  color: #e2e8f0;
+  margin-bottom: 20px;
+}
+
+/* ============================= */
+/* CONTENT GRID */
+/* ============================= */
+
+.contentGrid {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 28px;
+}
+
+/* ============================= */
+/* FILTER SIDEBAR */
+/* ============================= */
+
+.filterSidebar {
+  position: sticky;
+  top: 100px;
+
+  /* 
 �
 �
- Critical fix */ 
- max-height: calc(100vh - 120px); 
- overflow-y: auto; 
- 
- scroll-behavior: smooth; 
- padding-right: 6px; 
-} 
- 
-/* Scrollbar styling */ 
-.filterSidebar::-webkit-scrollbar { 
- width: 6px; 
-} 
- 
-.filterSidebar::-webkit-scrollbar-thumb { 
- background: #cbd5e1; 
- border-radius: 10px; 
-} 
- 
-.filterSidebar::-webkit-scrollbar-track { 
- background: transparent; 
-} 
- 
-/* Filter card */ 
-.filterInner { 
- background: #ffffff; 
- border-radius: 20px; 
- padding: 20px; 
- box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06); 
-} 
- 
-/* ============================= */ 
-/* LISTINGS GRID */ 
-/* ============================= */ 
- 
-.listingsGrid { 
- display: grid; 
- grid-template-columns: repeat(2, minmax(0, 1fr)); 
- gap: 24px; 
-} 
- 
-/* ============================= */ 
-/* EMPTY STATE */ 
-/* ============================= */ 
- 
-.emptyState { 
- grid-column: 1 / -1; 
- text-align: center; 
- padding: 80px 20px; 
-} 
- 
-.emptyState h3 { 
- font-size: 22px; 
- font-weight: 700; 
- color: #0f172a; 
- margin-bottom: 10px; 
-} 
- 
-.emptyState p { 
- font-size: 16px; 
- color: #64748b; 
-} 
- 
-/* ============================= */ 
-/* FLOATING ADD PROPERTY BUTTON */ 
-/* ============================= */ 
- 
-.addPropertyButton { 
- position: fixed; 
- right: 32px; 
- bottom: 32px; 
- background: linear-gradient(135deg, #10b981, #059669); 
- color: white; 
- border: none; 
- border-radius: 999px; 
- padding: 14px 22px; 
- font-size: 15px; 
- font-weight: 700; 
- cursor: pointer; 
- box-shadow: 0 18px 36px rgba(16, 185, 129, 0.25); 
- z-index: 30; 
- transition: all 0.25s ease; 
- transform-style: preserve-3d; 
-} 
- 
-/* ============================= */ 
-/* RESPONSIVE */ 
-/* ============================= */ 
- 
-@media (max-width: 1200px) { 
- .contentGrid { 
-   grid-template-columns: 260px 1fr; 
-   gap: 20px; 
- } 
-} 
- 
-@media (max-width: 1024px) { 
- .contentGrid { 
-   grid-template-columns: 1fr; 
- } 
- 
- .filterSidebar { 
-   position: static; 
-   max-height: none; 
-   overflow: visible; 
- } 
- 
- .listingsGrid { 
-   grid-template-columns: repeat(2, 1fr); 
- } 
- 
- .title { 
-   font-size: 36px; 
- } 
-} 
- 
-@media (max-width: 768px) { 
- .rentPage { 
-   padding: 16px; 
- } 
- 
- .listingsGrid { 
-   grid-template-columns: 1fr; 
- } 
- 
- .title { 
-   font-size: 28px; 
- } 
- 
- .subtitle { 
-   font-size: 16px; 
- } 
-} 
- 
-@media (max-width: 480px) { 
- .rentPage { 
-   padding: 12px; 
- } 
- 
- .title { 
-   font-size: 24px; 
- } 
-} 
+ Critical fix */
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+
+  scroll-behavior: smooth;
+  padding-right: 6px;
+}
+
+/* Scrollbar styling */
+.filterSidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.filterSidebar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.filterSidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Filter card */
+.filterInner {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+}
+
+/* ============================= */
+/* LISTINGS GRID */
+/* ============================= */
+
+.listingsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+/* ============================= */
+/* EMPTY STATE */
+/* ============================= */
+
+.emptyState {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 80px 20px;
+}
+
+.emptyState h3 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 10px;
+}
+
+.emptyState p {
+  font-size: 16px;
+  color: #64748b;
+}
+
+/* ============================= */
+/* FLOATING ADD PROPERTY BUTTON */
+/* ============================= */
+
+.addPropertyButton {
+  position: fixed;
+  right: 32px;
+  bottom: 32px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 22px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 18px 36px rgba(16, 185, 129, 0.25);
+  z-index: 30;
+  transition: all 0.25s ease;
+  transform-style: preserve-3d;
+}
+
+/* ============================= */
+/* RESPONSIVE */
+/* ============================= */
+
+@media (max-width: 1200px) {
+  .contentGrid {
+    grid-template-columns: 260px 1fr;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .filterSidebar {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .listingsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .title {
+    font-size: 36px;
+  }
+}
+
+@media (max-width: 768px) {
+  .rentPage {
+    padding: 16px;
+  }
+
+  .listingsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .title {
+    font-size: 28px;
+  }
+
+  .subtitle {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .rentPage {
+    padding: 12px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+}
