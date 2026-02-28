@@ -1,95 +1,79 @@
-​
-/*src/features/feed/pages/FeedPage.module.css
-*/
 .feedPage {
   display: grid;
-  grid-template-columns: 256px minmax(0, 1.28fr) 336px;
-  gap: 20px;
-  max-width: 1450px;
-  margin: -8px auto 0;
+
+  /* Fixed left filter width */
+  grid-template-columns: 260px minmax(0, 2fr) minmax(0, 1fr);
+
+  gap: 40px;
+
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 24px 32px;
+
   align-items: start;
 }
-.leftColumn > *,
-.centerColumn > *,
-.rightColumn > * {
-  width: 100%;
-  box-sizing: border-box;
-}
+/* LEFT COLUMN */
 .leftColumn {
+  width: 100%;
+  max-width: 260px;
   position: sticky;
-  top: 96px;
-  height: fit-content;
-  align-self: flex-start;
-  opacity: 0.96;
+  top: 80px;
+  align-self: start;
 }
+
+/* CENTER */
 .centerColumn {
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  gap: 24px;
 }
-.centerScroll {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  max-height: calc(100vh - 104px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  padding-bottom: 8px;
-}
-.centerScroll::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-.rightColumn {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  position: sticky;
-  top: 96px;
-  height: fit-content;
-  align-self: flex-start;
-}
+
 .feedList {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
 }
+
+/* RIGHT */
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: sticky;
+  top: 80px;
+  height: fit-content;
+  width: 100%;     /* allow full width */
+  min-width: 0;
+}
+
 /* Tablet */
 @media (max-width: 1200px) {
   .feedPage {
-    grid-template-columns: 244px 1fr;
-    gap: 16px;
+    grid-template-columns: 240px 1fr;
+    padding: 20px;
   }
+
   .rightColumn {
     display: none;
   }
+
+  .leftColumn {
+    position: sticky;
+    top: 60px; /* move it more up */
+    height: fit-content;
+    align-self: start;
+
+  }
 }
+
 /* Mobile */
 @media (max-width: 768px) {
   .feedPage {
     grid-template-columns: 1fr;
-    gap: 16px;
-    margin-top: 0;
+    padding: 16px;
   }
+
   .leftColumn {
-    position: relative;
-    top: 0;
-    order: 2;
-  }
-  .centerColumn {
-    order: 1;
-  }
-  .centerScroll {
-    max-height: none;
-    overflow-y: visible;
-    padding-bottom: 0;
-  }
-  .rightColumn {
-    height: fit-content;
-  }
-  .feedList {
-    overflow: visible;
+    display: none;
   }
 }

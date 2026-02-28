@@ -1,23 +1,12 @@
 /*src/features/feed/components/UpcomingEventsPanel.module.css
 */
 .container {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.98),
-    rgba(248, 250, 252, 0.96)
-  );
+  width: 100%;
+  background: white;
   border-radius: 16px;
-  padding: 16px 20px 20px;
-  box-shadow:
-    0 14px 30px rgba(15, 23, 42, 0.09),
-    0 2px 8px rgba(15, 23, 42, 0.05);
-  border: 1px solid var(--slate-200);
-  position: relative;
-  overflow: hidden;
-  transition:
-    transform 0.28s ease,
-    box-shadow 0.28s ease,
-    border-color 0.28s ease;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
 }
 
 .container::before {
@@ -48,13 +37,11 @@
 }
 
 .title {
-  font-size: clamp(1.95rem, 1.6vw, 2.1rem);
+  font-size: 26px;
   font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-  color: var(--slate-800);
-  max-width: 100%;
-  margin: 0;
+  line-height: 1.2;
+  color: #1e293b;
+  margin: 0 0 16px 0;
 }
 
 .events {
@@ -121,11 +108,10 @@
 }
 
 .eventTitle {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
-  color: var(--slate-800);
-  line-height: 1.3;
-  flex: 1;
+  color: #1e293b;
+  line-height: 1.35;
 }
 
 .category {
