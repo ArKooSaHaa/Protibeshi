@@ -7,9 +7,7 @@ export const complaintsData: ComplaintItem[] = [
    title: 'Overflowing garbage near Gate 2', 
    category: 'Garbage', 
    description: 
-     'Garbage bins near Gate 2 have been overflowing for 3 days. The 
-waste is spilling onto the road and attracting stray dogs. Requesting 
-immediate cleanup and additional bins.', 
+     'Garbage bins near Gate 2 have been overflowing for 3 days. The waste is spilling onto the road and attracting stray dogs. Requesting immediate cleanup and additional bins.', 
    priority: 'High',    status: 'Under Review', 
    createdAt: '2026-02-21T09:20:00.000Z', 
    distance: 120, 
@@ -22,16 +20,14 @@ immediate cleanup and additional bins.',
    location: 'Gate 2, Motijheel', 
    updates: [ 
      { stage: 'Reported', date: '2026-02-21' }, 
-     { stage: 'Under Review', date: '2026-02-21', note: 'Ward office 
-acknowledged.' }, 
+     { stage: 'Under Review', date: '2026-02-21', note: 'Ward office acknowledged.' }, 
    ], 
    attachments: ['garbage-gate2.jpg'], 
    commentThread: [ 
      { 
        id: 'cmt-1', 
        author: 'Community Admin', 
-       message: 'Thank you. We have forwarded this to the sanitation 
-team.', 
+       message: 'Thank you. We have forwarded this to the sanitation team.', 
        createdAt: '2026-02-21T11:05:00.000Z', 
      }, 
    ], 
@@ -41,8 +37,7 @@ team.',
    title: 'Streetlight not working on Block C', 
    category: 'Electricity', 
    description: 
-     'The streetlight near Block C entrance has been off for a week. 
-Area is very dark at night and feels unsafe for residents returning late.', 
+     'The streetlight near Block C entrance has been off for a week. Area is very dark at night and feels unsafe for residents returning late.', 
    priority: 'Medium', 
    status: 'Pending', 
    createdAt: '2026-02-20T17:45:00.000Z', 
@@ -62,8 +57,7 @@ Area is very dark at night and feels unsafe for residents returning late.',
    category: 'Water supply', 
 
    description: 
-     'No water supply since last evening. Multiple households are 
-affected. Please share an update on repair timeline.', 
+     'No water supply since last evening. Multiple households are affected. Please share an update on repair timeline.', 
    priority: 'Urgent',    status: 'In Progress', 
    createdAt: '2026-02-19T07:30:00.000Z', 
    distance: 540, 
@@ -74,8 +68,7 @@ affected. Please share an update on repair timeline.',
    location: 'Lane 7, Motijheel', 
    updates: [ 
      { stage: 'Reported', date: '2026-02-19' }, 
-     { stage: 'Under Review', date: '2026-02-19', note: 'Utility team 
-assigned.' }, 
+     { stage: 'Under Review', date: '2026-02-19', note: 'Utility team assigned.' }, 
      { stage: 'In Progress', date: '2026-02-20', note: 'Repair work started.' }, 
    ], 
  }, 
@@ -83,8 +76,7 @@ assigned.' },
    id: 'CMP-2026-0015', 
    title: 'Broken sidewalk tile near community park', 
    category: 'Road damage',    description: 
-     'Sidewalk tiles near the community park are broken and uneven, 
-causing tripping hazards for elderly residents and children.', 
+     'Sidewalk tiles near the community park are broken and uneven, causing tripping hazards for elderly residents and children.', 
    priority: 'Low', 
    status: 'Resolved', 
    createdAt: '2026-02-15T12:10:00.000Z', 
@@ -107,8 +99,7 @@ causing tripping hazards for elderly residents and children.',
    id: 'CMP-2026-0016', 
    title: 'Late-night construction noise near Block A', 
    category: 'Noise', 
-   description:      'Construction work continues past 11 PM creating noise 
-disturbances. Please enforce the designated quiet hours.', 
+   description:      'Construction work continues past 11 PM creating noise disturbances. Please enforce the designated quiet hours.', 
    priority: 'Medium', 
    status: 'Under Review', 
    createdAt: '2026-02-18T21:10:00.000Z', 
@@ -120,16 +111,14 @@ disturbances. Please enforce the designated quiet hours.',
    location: 'Block A, Motijheel', 
    updates: [ 
      { stage: 'Reported', date: '2026-02-18' }, 
-     { stage: 'Under Review', date: '2026-02-19', note: 'Compliance 
-check scheduled.' }, 
+     { stage: 'Under Review', date: '2026-02-19', note: 'Compliance check scheduled.' }, 
    ], 
  }, 
  { 
    id: 'CMP-2026-0017', 
    title: 'Suspicious activity reported near grocery lane',    category: 'Safety', 
    description: 
-     'Several residents noticed suspicious activity late at night near 
-the grocery lane. Request additional patrols for the next few days.', 
+     'Several residents noticed suspicious activity late at night near the grocery lane. Request additional patrols for the next few days.', 
    priority: 'High', 
    status: 'In Progress', 
    createdAt: '2026-02-17T23:05:00.000Z',    distance: 670, 
@@ -141,8 +130,7 @@ the grocery lane. Request additional patrols for the next few days.',
    location: 'Grocery Lane, Motijheel', 
    updates: [      { stage: 'Reported', date: '2026-02-17' }, 
      { stage: 'Under Review', date: '2026-02-18' }, 
-     { stage: 'In Progress', date: '2026-02-19', note: 'Additional 
-patrols deployed.' }, 
+     { stage: 'In Progress', date: '2026-02-19', note: 'Additional patrols deployed.' }, 
    ], 
  }, 
 ]; 
