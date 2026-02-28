@@ -1,74 +1,79 @@
-/*src/features/complaints/components/ComplaintFilters.module.css*/ 
-.filterCard { 
- border-radius: 16px; 
- border: 1px solid #e2e8f0;  background: #ffffff; 
- padding: 14px; 
- display: flex; 
- flex-direction: column; 
- gap: 12px; 
- box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06); 
-} 
- 
-.header { 
- display: flex; 
- align-items: center; 
- gap: 8px; 
- font-size: 14px; 
- color: #1e293b; } 
- 
-.header h3 { 
- margin: 0; 
- font-size: 15px; 
-} 
- 
-.group { 
- display: flex; 
- flex-direction: column; 
- gap: 8px; 
-} 
- 
-.label {  font-size: 12px; 
- font-weight: 700; 
- color: #334155; 
-} 
- 
-.checkboxGrid { 
- display: grid;  gap: 6px; 
-} 
- 
-.checkboxLabel { 
- display: flex; 
- align-items: center; 
- gap: 8px; 
- font-size: 13px;  color: #475569; 
-} 
- 
-.slider { 
- width: 100%; 
- accent-color: var(--emerald-600); 
-} 
- 
-.helper { 
- font-size: 12px; 
- color: #64748b; 
-} 
- 
-.select { 
- border: 1px solid #dbe1ea; 
- border-radius: 10px; 
- padding: 8px 10px; 
- font-size: 13px; 
- background: #f8fafc; 
-} 
- 
-.toggle { 
- display: flex; 
- align-items: center; 
- gap: 8px; 
- font-size: 13px; 
- color: #334155; 
- padding: 10px 12px;  border-radius: 12px; 
- border: 1px solid #e2e8f0; 
- background: #f8fafc; 
-} 
- 
+/*src/features/complaints/components/ComplaintFilters.module.css*/
+.filterCard {
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.checkboxGrid {
+  display: grid;
+  gap: 6px;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.slider {
+  width: 100%;
+  accent-color: var(--emerald-600);
+}
+
+.helper {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.select {
+  border: 1px solid #dbe1ea;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: #f8fafc;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #334155;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}

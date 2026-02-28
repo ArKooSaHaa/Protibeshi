@@ -1,81 +1,105 @@
-/*src/features/complaints/components/ComplaintsHeader.module.css*/ 
-.header { 
- display: flex;  align-items: flex-start; 
- justify-content: space-between; 
- gap: 20px; 
- padding: 18px 20px; 
- background: #f8fafc; 
- border: 1px solid #e2e8f0; 
- border-radius: 18px; } 
- 
-.titleBlock { 
- max-width: 520px; 
-} 
- 
-.badgeRow { 
- display: inline-flex; 
- align-items: center; 
- gap: 6px; 
- padding: 4px 10px; 
- border-radius: 999px; 
- background: #e2e8f0; 
- color: #1e293b;  font-size: 12px; 
- font-weight: 600; 
- margin-bottom: 10px; 
-} 
- 
-.titleBlock h1 { 
+// src/features/complaints/components/ComplaintList.tsx 
+import { AnimatePresence, motion, type Variants } from 'framer-motion';
+import { AlertTriangle } from 'lucide-react';
+import { ComplaintItem } from '../types/complaint.types';
+import { ComplaintCard } from './ComplaintCard';
+import styles from './ComplaintList.module.css';
 
- margin: 0 0 6px; 
- font-size: 24px; 
- color: #0f172a; 
-} 
- 
-.titleBlock p { 
- margin: 0; 
- color: #475569; 
- font-size: 14px; 
- line-height: 1.5; 
-} 
- 
-.metaActions { 
- display: flex; 
- align-items: center; 
- gap: 12px; 
- flex-wrap: wrap; 
- justify-content: flex-end; } 
- 
-.locationChip { 
- display: inline-flex; 
- align-items: center; 
- gap: 6px; 
- padding: 8px 12px;  border-radius: 999px; 
- background: #eef2f7; 
- color: #1e293b; 
- font-size: 13px; 
- font-weight: 600; 
-} 
- 
-.submitButton { 
- border: none; 
- border-radius: 10px; 
- padding: 10px 16px; 
- font-size: 14px; 
- font-weight: 700; 
- color: #fff; 
- background: linear-gradient(135deg, var(--emerald-500), 
-var(--emerald-600)); 
- cursor: pointer; 
- box-shadow: 0 8px 20px rgba(16, 185, 129, 0.22); 
-} 
- 
-@media (max-width: 900px) { 
- .header { 
-   flex-direction: column; 
-   align-items: flex-start; 
- } 
- 
- .metaActions { 
-   width: 100%; 
-   justify-content: space-between;  } 
-} 
+interface ComplaintListProps {
+  complaints: ComplaintItem[];
+  onViewDetails: (complaint: ComplaintItem) => void;
+  onWhy: (complaint: ComplaintItem) => void;
+  onReport: (complaint: ComplaintItem) => void;
+}
+
+const listVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.07, delayChildren: 0.1 },
+  },
+};
+
+const easeOut: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 14 },
+
+  visible: {
+    opacity: 1, y: 0, transition: {
+      duration: 0.3, ease:
+        easeOut
+    }
+  },
+};
+
+export const ComplaintList = ({
+  complaints,
+  onViewDetails,
+  onWhy,
+  onReport,
+}: ComplaintListProps) => {
+  return (<div className={styles.listWrapper}>
+    <div className={styles.listHeader}>
+      <h2>Complaints Board</h2>
+      <span>{complaints.length} active records</span>
+    </div>
+
+    <motion.div className={styles.list} variants={listVariants} initial="hidden" animate="visible">
+      {complaints.map((complaint) => (
+        <motion.div key={complaint.id} variants={itemVariants}>
+          <ComplaintCard
+            complaint={complaint}
+            onViewDetails={onViewDetails}
+            onWhy={onWhy} onReport={onReport}
+          />
+        </motion.div>
+      ))}
+    </motion.div>
+
+    <AnimatePresence>
+      {complaints.length === 0 && (
+        <motion.div
+          className={styles.emptyState}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 8 }}
+        >
+          <AlertTriangle size={18} />
+          <div>
+            <h3>No complaints match your filters.</h3>
+            <p>Try adjusting status, category, or distance to view
+              more records.</p>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </div>
+  );
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
