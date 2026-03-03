@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import styles from './RentListingCard.module.css';
 
-const RentListingCard = ({ listing }) => {
+const RentListingCard = ({ listing, onViewDetails, onMessage }) => {
   const [isSaved, setIsSaved] = useState(false);
 
   const getBadgeLabel = (badge) => {
@@ -152,21 +152,23 @@ ${styles[`badge${badgeInfo.color}`]}`}>
         {/* Action Buttons */}
         <div className={styles.actions}>
           <motion.button
-            className={styles.primaryButton}
-            whileHover={{ y: -2, scale: 1.02 }}
-            whileTap={{ y: 1, scale: 0.98 }}
-            type="button"
-          >
-            View Details
-          </motion.button>
-          <motion.button
             className={styles.secondaryButton}
             whileHover={{ y: -2, scale: 1.02 }}
             whileTap={{ y: 1, scale: 0.98 }}
             type="button"
+            onClick={() => onMessage?.(listing)}
           >
             <MessageCircle size={16} />
             Message
+          </motion.button>
+          <motion.button
+            className={styles.primaryButton}
+            whileHover={{ y: -2, scale: 1.02 }}
+            whileTap={{ y: 1, scale: 0.98 }}
+            type="button"
+            onClick={() => onViewDetails?.(listing)}
+          >
+            View Details
           </motion.button>
         </div>
       </div>

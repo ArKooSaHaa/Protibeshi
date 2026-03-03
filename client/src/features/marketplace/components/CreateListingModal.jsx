@@ -1,7 +1,7 @@
 /// src/features/marketplace/components/CreateListingModal.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, DollarSign, Tag, FileText, Settings } from 'lucide-react';
+import { X, Upload, DollarSign, Tag, FileText, Settings, MapPin } from 'lucide-react';
 import styles from './CreateListingModal.module.css';
 
 const CATEGORIES = [
@@ -18,6 +18,7 @@ const CreateListingModal = ({ isOpen, onClose }) => {
         title: '',
         price: '',
         category: '',
+        location: '',
         photoUrl: '',
         details: '',
         options: '',
@@ -94,6 +95,7 @@ const CreateListingModal = ({ isOpen, onClose }) => {
             title: '',
             price: '',
             category: '',
+            location: '',
             photoUrl: '',
             details: '',
             options: '',
@@ -108,6 +110,7 @@ const CreateListingModal = ({ isOpen, onClose }) => {
             title: '',
             price: '',
             category: '',
+            location: '',
             photoUrl: '',
             details: '',
             options: '',
@@ -265,6 +268,25 @@ const CreateListingModal = ({ isOpen, onClose }) => {
                                             ))}
                                         </select>
                                     </div>
+                                </div>
+                            </div>
+
+                            <div className={styles.formSection}>
+                                <label htmlFor="location" className={styles.fieldLabel}>
+                                    Location <span className={styles.required}>*</span>
+                                </label>
+
+                                <div className={styles.inputWithIcon}>
+                                    <MapPin size={16} />
+                                    <input
+                                        id="location"
+                                        type="text"
+                                        name="location"
+                                        value={formData.location}
+                                        onChange={handleInputChange}
+                                        placeholder="e.g., Dhaka, Bangladesh"
+                                        required
+                                    />
                                 </div>
                             </div>
 

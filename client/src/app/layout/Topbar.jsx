@@ -1,9 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Bell, Settings } from 'lucide-react';
+import { MapPin, Bell, Settings, Menu } from 'lucide-react';
 import styles from './Topbar.module.css';
 
-export const Topbar = () => {
+export const Topbar = ({ onMenuClick }) => {
   return (
     <motion.header
       className={styles.topbar}
@@ -12,6 +12,16 @@ export const Topbar = () => {
       transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
     >
       <div className={styles.left}>
+        <motion.button
+          className={styles.menuButton}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={onMenuClick}
+          aria-label="Toggle navigation menu"
+        >
+          <Menu size={20} />
+        </motion.button>
+
         <div className={styles.brand}>
           <h2 className={styles.brandTitle}>My neighborhood</h2>
           <p className={styles.brandSubtitle}>Local feed & community updates</p>

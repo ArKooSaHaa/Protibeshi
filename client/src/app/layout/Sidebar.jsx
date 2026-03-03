@@ -64,10 +64,10 @@ const navItemVariants = {
   },
 };
 
-export const Sidebar = () => {
+export const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
   return (
     <motion.aside
-      className={styles.sidebar}
+      className={`${styles.sidebar} ${isOpen ? styles.open : ''}`}
       variants={containerVariants}
       initial="hidden"
       animate="visible"
@@ -109,6 +109,7 @@ export const Sidebar = () => {
                   <NavLink
                     to={item.path}
                     className={linkClass}
+                    onClick={onClose}
                   >
                     {({ isActive }) => (
                       <>

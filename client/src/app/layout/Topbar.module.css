@@ -17,6 +17,25 @@
   display: flex;
   align-items: center;
   padding-left: 14px;
+  gap: 10px;
+}
+
+.menuButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: none;
+  background: var(--slate-100);
+  color: var(--slate-700);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.menuButton:hover {
+  background: var(--slate-200);
 }
 
 .brand {
@@ -132,6 +151,10 @@
 @media (max-width: 1024px) {
   .topbar {
     left: 0;
+  }
+
+  .menuButton {
+    display: inline-flex;
   }
   
   .brand {

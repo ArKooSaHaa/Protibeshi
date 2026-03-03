@@ -1,24 +1,11 @@
 /// src/features/marketplace/components/ProductDetailsModal.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-    X,
-    MapPin,
-    MessageCircle,
-    Bookmark,
-    Flag,
-    MoreHorizontal,
-    ChevronLeft,
-    ChevronRight,
-} from 'lucide-react';
+import { X, MessageCircle } from 'lucide-react';
 import styles from './ProductDetailsModal.module.css';
 
 const ProductDetailsModal = ({ isOpen, onClose, product }) => {
-    const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [message, setMessage] = useState('');
-    const [isSaved, setIsSaved] = useState(false);
-    const [showReportConfirm, setShowReportConfirm] = useState(false);
-    const [showMenu, setShowMenu] = useState(false);
     const messageInputRef = useRef(null);
 
     /* ================= Scroll Lock ================= */
@@ -36,37 +23,9 @@ const ProductDetailsModal = ({ isOpen, onClose, product }) => {
 
     if (!product) return null;
 
-    const images = [product.image, product.image, product.image];
-
-    const nextImage = () =>
-        setCurrentImageIndex((prev) => (prev + 1) % images.length);
-
-    const prevImage = () =>
-        setCurrentImageIndex(
-            (prev) => (prev - 1 + images.length) % images.length
-        );
-
     /* ================= Actions ================= */
     const handleMessageClick = () => {
         messageInputRef.current?.focus();
-    };
-
-    const handleSaveToggle = () => {
-        setIsSaved((prev) => !prev);
-        console.log(isSaved ? 'Unsaved item' : 'Saved item');
-    };
-
-    const handleReport = () => {
-        setShowReportConfirm(true);
-    };
-
-    const confirmReport = () => {
-        console.log('Reported listing:', product.id);
-        setShowReportConfirm(false);
-    };
-
-    const handleMoreMenu = () => {
-        setShowMenu((prev) => !prev);
     };
 
     const handleSendMessage = (e) => {
@@ -110,50 +69,13 @@ const ProductDetailsModal = ({ isOpen, onClose, product }) => {
                             {/* ================= IMAGE SECTION ================= */}
                             <div className={styles.imageSection}>
                                 <div className={styles.mainImageContainer}>
-                                    <AnimatePresence mode="wait">
-                                        <motion.img
-                                            key={currentImageIndex}
-                                            src={images[currentImageIndex]}
-                                            alt={product.title}
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            exit={{ opacity: 0 }}
-                                            transition={{ duration: 0.2 }}
-                                        />
-                                    </AnimatePresence>
-
-                                    {images.length > 1 && (
-                                        <>
-                                            <button
-                                                className={`${styles.navButton} ${styles.navLeft}`}
-                                                onClick={prevImage}
-                                            >
-                                                <ChevronLeft size={22} />
-                                            </button>
-
-                                            <button
-                                                className={`${styles.navButton} ${styles.navRight}`}
-                                                onClick={nextImage}
-                                            >
-                                                <ChevronRight size={22} />
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-
-                                <div className={styles.thumbnails}>
-                                    {images.map((img, index) => (
-                                        <button
-                                            key={index}
-                                            className={`${styles.thumbnail} ${index === currentImageIndex
-                                                    ? styles.thumbnailActive
-                                                    : ''
-                                                }`}
-                                            onClick={() => setCurrentImageIndex(index)}
-                                        >
-                                            <img src={img} alt={`thumb-${index}`} />
-                                        </button>
-                                    ))}
+                                    <motion.img
+                                        src={product.image}
+                                        alt={product.title}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        transition={{ duration: 0.2 }}
+                                    />
                                 </div>
                             </div>
 
@@ -166,60 +88,32 @@ const ProductDetailsModal = ({ isOpen, onClose, product }) => {
                                         <span className={styles.price}>
                                             {product.price}
                                         </span>
-                                        <span className={styles.status}>• In stock</span>
                                     </div>
-
-                                    <div className={styles.location}>
-                                        <MapPin size={14} />
-                                        Listed in {product.location}
-                                    </div>
-                                </div>
-
-                                {/* ================= ACTIONS ================= */}
-                                <div className={styles.actions}>
-                                    <button
-                                        className={styles.messageButton}
-                                        onClick={handleMessageClick}
-                                    >
-                                        <MessageCircle size={18} />
-                                        Message
-                                    </button>
-
-                                    <button
-                                        className={styles.iconButton}
-                                        onClick={handleSaveToggle}
-                                    >
-                                        <Bookmark
-                                            size={18}
-                                            fill={isSaved ? '#1877f2' : 'none'}
-                                        />
-                                    </button>
-
-                                    <button
-                                        className={styles.iconButton}
-                                        onClick={handleReport}
-                                    >
-                                        <Flag size={18} />
-                                    </button>
                                 </div>
 
                                 {/* ================= CONTENT ================= */}
                                 <div className={styles.detailsContent}>
-                                    <h2 className={styles.sectionTitle}>Details</h2>
-
+                                    <h2 className={styles.sectionTitle}>Category</h2>
                                     <div className={styles.detailRow}>
-                                        <span>Condition</span>
-                                        <span>New</span>
+                                        <span className={styles.detailLabel}>Type</span>
+                                        <span className={styles.detailValue}>{product.category}</span>
                                     </div>
 
+                                    <h2 className={styles.sectionTitle}>Details</h2>
                                     <div className={styles.description}>
                                         <p>
-                                            High-quality product in excellent condition.
+                                            {product.title} is available for purchase at {product.price}.
                                         </p>
                                     </div>
 
-                                    <div className={styles.mapPlaceholder}>
-                                        <MapPin size={42} />
+                                    <h2 className={styles.sectionTitle}>Additional details</h2>
+                                    <div className={styles.detailRow}>
+                                        <span className={styles.detailLabel}>Listing tag</span>
+                                        <span className={styles.detailValue}>{product.badge}</span>
+                                    </div>
+                                    <div className={styles.detailRow}>
+                                        <span className={styles.detailLabel}>Location</span>
+                                        <span className={styles.detailValue}>{product.location}</span>
                                     </div>
 
                                     {/* ================= MESSAGE ================= */}
@@ -247,40 +141,6 @@ const ProductDetailsModal = ({ isOpen, onClose, product }) => {
                                 </div>
                             </div>
                         </div>
-
-                        {/* ================= REPORT CONFIRM ================= */}
-                        <AnimatePresence>
-                            {showReportConfirm && (
-                                <motion.div
-                                    className={styles.reportOverlay}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                >
-                                    <motion.div
-                                        className={styles.reportDialog}
-                                        initial={{ scale: 0.9, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
-                                        exit={{ scale: 0.9, opacity: 0 }}
-                                    >
-                                        <h3>Report Listing?</h3>
-                                        <p>This will notify moderators.</p>
-                                        <div>
-                                            <button
-                                                onClick={() =>
-                                                    setShowReportConfirm(false)
-                                                }
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button onClick={confirmReport}>
-                                                Report
-                                            </button>
-                                        </div>
-                                    </motion.div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
                     </motion.div>
                 </motion.div>
             )}
