@@ -1,7 +1,7 @@
 // src/features/marketplace/pages/MarketplacePage.jsx
 import React, { useRef, useState } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
-import { MapPin, Search, SlidersHorizontal, Sparkles, Tag, Loader } from 'lucide-react';
+import { AnimatePresence, motion, useScroll, useTransform } from 'framer-motion';
+import { ChevronDown, MapPin, Search, SlidersHorizontal, Sparkles, Loader, X } from 'lucide-react';
 import CreateListingModal from '../components/CreateListingModal';
 import ProductDetailsModal from '../components/ProductDetailsModal';
 import styles from './MarketplacePage.module.css';
@@ -185,6 +185,7 @@ export const MarketplacePage = () => {
     const [displayCount, setDisplayCount] = useState(12);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState(null);
+    const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
     const [selectedFilter, setSelectedFilter] = useState('for-you');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -285,6 +286,39 @@ export const MarketplacePage = () => {
                         Dhaka • 65 km
                     </div>
                 </div>
+
+                <div className={styles.heroCategoryWrap}>
+                    <motion.button
+                        type="button"
+                        className={`${styles.createPill} ${styles.heroCategoryButton}`}
+                        onClick={() => setIsCategoriesOpen(true)}
+                        aria-expanded={isCategoriesOpen}
+                        aria-controls="marketplace-category-modal"
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                    >
+                        <SlidersHorizontal size={14} />
+                        Categories
+                        <ChevronDown
+                            size={14}
+                            className={`${styles.panelToggleIcon} ${isCategoriesOpen ? styles.panelToggleIconOpen : ''}`}
+                            aria-hidden="true"
+                        />
+                    </motion.button>
+                </div>
+
+                <div className={styles.heroCreateWrap}>
+                    <motion.button
+                        type="button"
+                        className={`${styles.createPill} ${styles.heroCreateButton}`}
+                        onClick={() => setIsCreateModalOpen(true)}
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                    >
+                        <Sparkles size={14} />
+                        Create new listing
+                    </motion.button>
+                </div>
             </motion.div>
 
             {/* Toolbar */}
@@ -350,56 +384,11 @@ export const MarketplacePage = () => {
                         Verified
                     </motion.button>
 
-                    <motion.button
-                        type="button"
-                        className={styles.createPill}
-                        onClick={() => setIsCreateModalOpen(true)}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        <Sparkles size={14} />
-                        Create new listing
-                    </motion.button>
                 </div>
             </motion.div>
 
             {/* Content Grid */}
             <div className={styles.contentGrid}>
-                <aside className={styles.filtersPanel}>
-                    <div className={styles.panelHeader}>Categories</div>
-                    <div className={styles.categoryList}>
-                        {categories.map((category) => (
-                            <motion.button
-                                key={category}
-                                type="button"
-                                className={`${styles.categoryItem} ${selectedCategory === category
-                                        ? styles.categoryItemActive
-                                        : ''
-                                    }`}
-                                onClick={() =>
-                                    setSelectedCategory(
-                                        selectedCategory === category ? null : category
-                                    )
-                                }
-                                whileHover={{ x: 4 }}
-                                transition={{ duration: 0.2 }}
-                            >
-                                <Tag size={14} />
-                                {category}
-                            </motion.button>
-                        ))}
-                    </div>
-
-                    <div className={styles.panelHeader}>Price range</div>
-                    <div className={styles.priceGrid}>
-                        <input className={styles.priceInput} placeholder="Min" />
-                        <input className={styles.priceInput} placeholder="Max" />
-                        <button type="button" className={styles.priceApply}>
-                            Apply
-                        </button>
-                    </div>
-                </aside>
-
                 <motion.section
                     className={styles.cardsGrid}
                     variants={cardContainerVariants}
@@ -472,6 +461,75 @@ export const MarketplacePage = () => {
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
             />
+
+            <AnimatePresence>
+                {isCategoriesOpen && (
+                    <motion.div
+                        id="marketplace-category-modal"
+                        className={styles.categoryOverlay}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        onClick={() => setIsCategoriesOpen(false)}
+                    >
+                        <motion.div
+                            className={styles.categoryModal}
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            transition={{ duration: 0.3, ease: 'easeOut' }}
+                            onClick={(event) => event.stopPropagation()}
+                        >
+                            <div className={styles.categoryModalHeader}>
+                                <h3>Choose Category</h3>
+                                <button
+                                    type="button"
+                                    className={styles.categoryModalClose}
+                                    onClick={() => setIsCategoriesOpen(false)}
+                                    aria-label="Close category options"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            <div className={styles.categoryListWrapper}>
+                                <div className={styles.categoryList}>
+                                    {categories.map((category) => (
+                                        <motion.button
+                                            key={category}
+                                            type="button"
+                                            className={`${styles.categoryItem} ${selectedCategory === category
+                                                    ? styles.categoryItemActive
+                                                    : ''
+                                                }`}
+                                            aria-pressed={selectedCategory === category}
+                                            onClick={() =>
+                                                setSelectedCategory(
+                                                    selectedCategory === category ? null : category
+                                                )
+                                            }
+                                            whileHover={{ y: -1 }}
+                                            transition={{ duration: 0.18 }}
+                                        >
+                                            {category}
+                                        </motion.button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className={styles.panelHeader}>Price range</div>
+                            <div className={styles.priceGrid}>
+                                <input className={styles.priceInput} placeholder="Min" />
+                                <input className={styles.priceInput} placeholder="Max" />
+                                <button type="button" className={styles.priceApply}>
+                                    Apply
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <ProductDetailsModal
                 isOpen={!!selectedProduct}

@@ -1,15 +1,31 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import styles from './AppLayout.module.css';
 
 export const AppLayout = ({ children }) => {
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+  const location = useLocation();
+
+  React.useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [location.pathname]);
+
   return (
     <div className={styles.layout}>
-      <Topbar />
+      <Topbar onMenuClick={() => setIsSidebarOpen((prev) => !prev)} />
       <div className={styles.container}>
-        <Sidebar />
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+        {isSidebarOpen && (
+          <button
+            type="button"
+            className={styles.backdrop}
+            onClick={() => setIsSidebarOpen(false)}
+            aria-label="Close navigation menu"
+          />
+        )}
         <motion.main
           className={styles.main}
           initial={{ opacity: 0, y: 20 }}

@@ -86,7 +86,7 @@
   max-width: 1400px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 1fr;
   gap: 28px;
 }
 
@@ -107,6 +107,93 @@
 
   scroll-behavior: smooth;
   padding-right: 6px;
+}
+
+.openFiltersButton {
+  position: absolute;
+  left: 24px;
+  bottom: 24px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 14px 22px;
+  cursor: pointer;
+  box-shadow: 0 18px 36px rgba(16, 185, 129, 0.25);
+  z-index: 2;
+  transition: all 0.25s ease;
+}
+
+.openFiltersButton:hover {
+  box-shadow: 0 22px 42px rgba(16, 185, 129, 0.32);
+}
+
+.openFiltersButton:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
+}
+
+.filtersModalOverlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.22);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 90;
+}
+
+.filtersModal {
+  width: min(700px, 100%);
+  max-height: min(88vh, 860px);
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.24);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.filtersModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.filtersModalTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.filtersModalClose {
+  border: 1px solid #dbe4ef;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.filtersModalClose:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.filtersModalClose:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
 }
 
 /* Scrollbar styling */
@@ -137,7 +224,7 @@
 
 .listingsGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
 }
 
@@ -168,9 +255,9 @@
 /* ============================= */
 
 .addPropertyButton {
-  position: fixed;
-  right: 32px;
-  bottom: 32px;
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
   background: linear-gradient(135deg, #10b981, #059669);
   color: white;
   border: none;
@@ -180,7 +267,7 @@
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 18px 36px rgba(16, 185, 129, 0.25);
-  z-index: 30;
+  z-index: 2;
   transition: all 0.25s ease;
   transform-style: preserve-3d;
 }
@@ -191,7 +278,7 @@
 
 @media (max-width: 1200px) {
   .contentGrid {
-    grid-template-columns: 260px 1fr;
+    grid-template-columns: 1fr;
     gap: 20px;
   }
 }
@@ -199,12 +286,6 @@
 @media (max-width: 1024px) {
   .contentGrid {
     grid-template-columns: 1fr;
-  }
-
-  .filterSidebar {
-    position: static;
-    max-height: none;
-    overflow: visible;
   }
 
   .listingsGrid {
@@ -232,6 +313,27 @@
   .subtitle {
     font-size: 16px;
   }
+
+  .openFiltersButton,
+  .addPropertyButton {
+    bottom: 20px;
+  }
+
+  .openFiltersButton {
+    left: 20px;
+  }
+
+  .addPropertyButton {
+    right: 20px;
+  }
+
+  .filtersModalOverlay {
+    padding: 12px;
+  }
+
+  .filtersModal {
+    max-height: 92vh;
+  }
 }
 
 @media (max-width: 480px) {
@@ -241,5 +343,21 @@
 
   .title {
     font-size: 24px;
+  }
+
+  .openFiltersButton,
+  .addPropertyButton {
+    padding: 12px 16px;
+    font-size: 14px;
+    bottom: 14px;
+  }
+
+  .openFiltersButton {
+    left: 14px;
+  }
+
+  .addPropertyButton {
+    right: 14px;
+    bottom: 14px;
   }
 }

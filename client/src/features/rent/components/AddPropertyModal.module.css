@@ -2,22 +2,24 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(15, 23, 42, 0.22);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px 24px;
-  z-index: 40;
+  padding: 20px;
+  z-index: 90;
 }
 
 .modal {
-  width: min(860px, 96vw);
-  max-height: 88vh;
+  width: min(700px, 100%);
+  max-height: min(88vh, 860px);
   overflow-y: auto;
   background: #ffffff;
-  border-radius: 34px 34px 20px 20px;
+  border-radius: 20px;
   padding: 24px;
-  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.28);
+  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.24);
   margin: auto;
 }
 
@@ -169,7 +171,12 @@
 }
 
 @media (max-width: 768px) {
+  .overlay {
+    padding: 12px;
+  }
+
   .modal {
+    max-height: 92vh;
     padding: 18px;
   }
 

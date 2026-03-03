@@ -5,6 +5,8 @@ import { AnimatePresence, motion, useScroll, useTransform } from
 import RentFilters from '../components/RentFilters';
 import RentListingCard from '../components/RentListingCard';
 import AddPropertyModal from '../components/AddPropertyModal';
+import RentDetailsDrawer from '../components/RentDetailsDrawer';
+import RentChatDrawer from '../components/RentChatDrawer';
 import { rentListings } from '../mock/rentData';
 import styles from './RentPage.module.css';
 
@@ -14,6 +16,10 @@ export const RentPage = () => {
   const [filteredListings, setFilteredListings] =
     useState(rentListings);
   const [isAddPropertyOpen, setIsAddPropertyOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [activeDetails, setActiveDetails] = useState(null);
+  const [activeChat, setActiveChat] = useState(null);
+  const [chatMessages, setChatMessages] = useState({});
   const [filters, setFilters] = useState({
     radius: 1000,
     minPrice: 5000,
@@ -125,6 +131,26 @@ export const RentPage = () => {
     setIsAddPropertyOpen(false);
   };
 
+  const handleSendMessage = (listingId, text) => {
+    const trimmed = text.trim();
+
+    if (!trimmed) {
+      return;
+    }
+
+    const message = {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      sender: 'user',
+      text: trimmed,
+      timestamp: Date.now(),
+    };
+
+    setChatMessages((prev) => ({
+      ...prev,
+      [listingId]: [...(prev[listingId] || []), message],
+    }));
+  };
+
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -174,21 +200,30 @@ export const RentPage = () => {
           <p className={styles.subtitle}>Verified rentals within walking
             distance</p>
         </div>
+
+        <motion.button
+          type="button"
+          className={styles.openFiltersButton}
+          whileHover={{ y: -2, scale: 1.01 }}
+          whileTap={{ y: 1, scale: 0.99 }}
+          onClick={() => setIsFiltersOpen(true)}
+        >
+          Open Filters
+        </motion.button>
+
+        <motion.button
+          type="button"
+          className={styles.addPropertyButton}
+          whileHover={{ y: -3, scale: 1.02 }}
+          whileTap={{ y: 1, scale: 0.98 }}
+          onClick={() => setIsAddPropertyOpen(true)}
+        >
+          + Add Property
+        </motion.button>
       </motion.div>
 
       {/* Main Content Grid */}
       <div className={styles.contentGrid}>
-        {/* Left Sidebar - Filters */}
-        <motion.aside
-          className={styles.filterSidebar}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-        >
-          <RentFilters filters={filters}
-            onFilterChange={handleFilterChange} />
-        </motion.aside>
-
         {/* Center - Listings Grid */}
         <motion.section
           className={styles.listingsGrid}
@@ -199,7 +234,11 @@ export const RentPage = () => {
           {filteredListings.length > 0 ? (
             filteredListings.map((listing) => (
               <motion.div key={listing.id} variants={cardVariants}>
-                <RentListingCard listing={listing} />
+                <RentListingCard
+                  listing={listing}
+                  onViewDetails={setActiveDetails}
+                  onMessage={setActiveChat}
+                />
               </motion.div>
             ))
           ) : (
@@ -212,17 +251,38 @@ export const RentPage = () => {
         </motion.section>
       </div>
 
-      <motion.button
-        type="button"
-        className={styles.addPropertyButton}
-        whileHover={{ y: -3, scale: 1.02 }}
-        whileTap={{ y: 1, scale: 0.98 }}
-        onClick={() => setIsAddPropertyOpen(true)}
-      >
-        + Add Property
-      </motion.button>
-
       <AnimatePresence>
+        {isFiltersOpen && (
+          <motion.div
+            className={styles.filtersModalOverlay}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setIsFiltersOpen(false)}
+          >
+            <motion.div
+              className={styles.filtersModal}
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={styles.filtersModalHeader}>
+                <h2 className={styles.filtersModalTitle}>Filters</h2>
+                <button
+                  type="button"
+                  className={styles.filtersModalClose}
+                  onClick={() => setIsFiltersOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+              <RentFilters filters={filters} onFilterChange={handleFilterChange} />
+            </motion.div>
+          </motion.div>
+        )}
         {isAddPropertyOpen && (
           <AddPropertyModal
             onClose={() => setIsAddPropertyOpen(false)}
@@ -230,6 +290,22 @@ export const RentPage = () => {
           />
         )}
       </AnimatePresence>
+
+      <RentDetailsDrawer
+        listing={activeDetails}
+        onClose={() => setActiveDetails(null)}
+        onContact={(listing) => {
+          setActiveDetails(null);
+          setActiveChat(listing);
+        }}
+      />
+
+      <RentChatDrawer
+        listing={activeChat}
+        messages={activeChat ? chatMessages[activeChat.id] || [] : []}
+        onSend={handleSendMessage}
+        onClose={() => setActiveChat(null)}
+      />
     </div>
   );
 };

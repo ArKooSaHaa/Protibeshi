@@ -1,0 +1,42 @@
+.wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  border: none;
+  background: #ecfdf5;
+  color: #065f46;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.tag:focus-visible,
+.clearAllButton:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
+}
+
+.clearAllButton {
+  border: none;
+  background: transparent;
+  color: #0f766e;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}

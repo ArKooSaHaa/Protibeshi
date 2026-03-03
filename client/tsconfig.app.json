@@ -17,6 +17,8 @@
 
     /* Path aliases */
     "baseUrl": ".",
+    // baseUrl is deprecated in TS7; we keep it for path aliases and
+    // suppress the warning by bumping ignoreDeprecations.
     "ignoreDeprecations": "6.0",
     "paths": {
       "@/*": ["src/*"],
