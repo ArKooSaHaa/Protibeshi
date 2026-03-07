@@ -119,6 +119,13 @@ export const SignInForm = ({ signIn }: SignInFormProps) => {
       </div>
 
       <SocialLoginButtons disabled={signIn.isSubmitting} />
+
+      <p className={styles.signupPrompt}>
+        Don&apos;t have an account?{' '}
+        <Link className={styles.signupLink} to={ROUTES.SIGNUP}>
+          Create one
+        </Link>
+      </p>
     </section>
   );
 };

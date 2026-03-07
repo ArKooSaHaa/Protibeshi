@@ -9,7 +9,8 @@ import {
   AlertCircle, 
   Heart, 
   MessageSquare,
-  MapPin
+  MapPin,
+  UserRound
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import { ROUTES } from '@/config/routes.config';
@@ -22,6 +23,7 @@ const navigation = [
   { id: 'complaints', label: 'Complaints', icon: AlertCircle, path: ROUTES.COMPLAINTS },
   { id: 'relief', label: 'Relief', icon: Heart, path: ROUTES.RELIEF },
   { id: 'messages', label: 'Messages', icon: MessageSquare },
+  { id: 'account', label: 'Account', icon: UserRound, path: '/account' },
 ];
 
 const containerVariants = {
