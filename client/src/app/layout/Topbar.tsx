@@ -1,8 +1,16 @@
 import { motion } from 'framer-motion';
 import { MapPin, Bell, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '@/config/routes.config';
 import styles from './Topbar.module.css';
 
 export const Topbar = () => {
+  const navigate = useNavigate();
+
+  const goToAccount = () => {
+    navigate(ROUTES.ACCOUNT);
+  };
+
   return (
     <motion.header
       className={styles.topbar}
@@ -33,10 +41,16 @@ export const Topbar = () => {
           </motion.button>
         </div>
 
-        <motion.div className={styles.user} whileHover={{ scale: 1.02 }}>
+        <motion.button
+          type="button"
+          className={`${styles.user} ${styles.userButton}`}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={goToAccount}
+        >
           <span className={styles.userName}>Test User</span>
           <div className={styles.userAvatar}>T</div>
-        </motion.div>
+        </motion.button>
       </div>
     </motion.header>
   );

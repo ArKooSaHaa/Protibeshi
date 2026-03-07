@@ -9,6 +9,7 @@ import {
   Heart,
   MessageSquare,
   MapPin,
+  UserRound,
   type LucideIcon,
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
@@ -131,7 +132,23 @@ export const Sidebar = () => {
             </motion.div>
           );
         })}
+
       </nav>
+
+      <div className={styles.accountSection}>
+        <motion.div className={styles.navMotionWrapper} variants={navItemVariants} initial="initial" whileHover="hover" whileTap="tap">
+          <NavLink to="/account" className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navItemActive : ''}`}>
+            {({ isActive }) => (
+              <>
+                <div className={`${styles.navIcon} ${isActive ? styles.navIconActive : ''}`}>
+                  <UserRound size={20} />
+                </div>
+                <span className={styles.navLabel}>Account</span>
+              </>
+            )}
+          </NavLink>
+        </motion.div>
+      </div>
     </motion.aside>
   );
 };

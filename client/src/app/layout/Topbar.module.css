@@ -125,6 +125,17 @@
   transition: all 0.2s ease;
 }
 
+.userContent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.userButton {
+  border: none;
+  text-decoration: none;
+}
+
 .user:hover {
   background: var(--slate-200);
 }

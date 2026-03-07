@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @layer base {
   :root {
@@ -62,10 +60,13 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 }
@@ -103,8 +104,12 @@ html {
 html,
 body,
 #root {
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* Custom slider styles */

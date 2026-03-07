@@ -207,6 +207,29 @@
   padding: 0 0.45rem;
 }
 
+.signupPrompt {
+  margin: 0.95rem 0 0;
+  text-align: center;
+  color: #a7bad0;
+  font-size: 0.84rem;
+}
+
+.signupLink {
+  color: #6ee7b7;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.signupLink:hover {
+  color: #9af7cd;
+}
+
+.signupLink:focus-visible {
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 @keyframes glitch-once {
   0% {
     opacity: 0;
