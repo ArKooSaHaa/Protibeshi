@@ -1,9 +1,8 @@
 //  src/features/services/pages/ServicesPage.tsx 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { AnimatePresence, motion, useScroll, useTransform } from
   'framer-motion';
-import { Filter, TriangleAlert } from 'lucide-react';
-import { MobileFilterDrawer } from '../components/MobileFilterDrawer';
+import { TriangleAlert, X } from 'lucide-react';
 import { OfferServiceModal } from '../components/OfferServiceModal';
 import { ServiceCard } from '../components/ServiceCard';
 import { ServiceChatDrawer } from '../components/ServiceChatDrawer';
@@ -51,7 +50,6 @@ export const ServicesPage = () => {
     activeDetails,
     activeChat,
     chatMessages,
-    locationLabel,
     setFilters,
     setIsOfferModalOpen,
     setIsFilterDrawerOpen,
@@ -77,92 +75,103 @@ export const ServicesPage = () => {
 Our team will review this.`);
   };
 
+  useEffect(() => {
+    if (!isFilterDrawerOpen) {
+      return;
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsFilterDrawerOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isFilterDrawerOpen, setIsFilterDrawerOpen]);
+
   return (
     <div className={styles.page} ref={containerRef}>
       <ServicesHero
-        locationLabel={locationLabel}
         onOfferClick={() => setIsOfferModalOpen(true)}
+        onFilterClick={() => setIsFilterDrawerOpen(true)}
         y={heroY}
         opacity={heroOpacity}
       />
 
-      <div className={styles.mobileTopBar}>
-        <motion.button
-          type="button"
-          className={styles.mobileFilterButton}
-          whileHover={{ y: -1 }}
-          whileTap={{ y: 1 }}
-          onClick={() => setIsFilterDrawerOpen(true)}
+      <section className={styles.servicesColumn}>
+        <motion.div
+          className={styles.servicesGrid}
+          variants={cardContainerVariants}
+          initial="hidden"
+          animate="visible"
         >
-          <Filter size={14} /> Filters
-        </motion.button>
-        <span className={styles.resultCount}>{filteredServices.length}
-          services found</span>
-      </div>
+          {filteredServices.map((service) => (
+            <motion.div key={service.id} variants={cardItemVariants}>
+              <ServiceCard
+                service={service}
+                isBookmarked={bookmarkedIds.includes(service.id)}
+                priceLabel={getPriceLabel(service)}
+                onToggleBookmark={onToggleBookmark}
+                onMessage={setActiveChat}
+                onViewDetails={setActiveDetails}
+                onReport={handleReport}
+              />
+            </motion.div>
+          ))}
+        </motion.div>
 
-      <div className={styles.contentGrid}>
-        <aside className={styles.filterColumn}>
-          <div className={styles.stickyFilterWrap}>
-            <ServicesFilters filters={filters}
-              onFilterChange={setFilters} />
-          </div>
-        </aside>
+        <AnimatePresence>
+          {filteredServices.length === 0 && (
+            <motion.div
+              className={styles.emptyState}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+            >
+              <TriangleAlert size={20} />
+              <h3>No services match these filters</h3>
+              <p>Try increasing distance or removing one filter.</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </section>
 
-        <section className={styles.servicesColumn}>
+      <AnimatePresence>
+        {isFilterDrawerOpen && (
           <motion.div
-            className={styles.servicesGrid}
-            variants={cardContainerVariants}
-            initial="hidden"
-            animate="visible"
+            className={styles.filterOverlay}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsFilterDrawerOpen(false)}
           >
-            {filteredServices.map((service) => (
-              <motion.div key={service.id} variants={cardItemVariants}>
-                <ServiceCard
-                  service={service}
-                  isBookmarked={bookmarkedIds.includes(service.id)}
-                  priceLabel={getPriceLabel(service)}
-                  onToggleBookmark={onToggleBookmark}
-                  onMessage={setActiveChat}
-                  onViewDetails={setActiveDetails}
-                  onReport={handleReport}
-                />
-              </motion.div>
-            ))}
+            <motion.div
+              className={styles.filterModal}
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.98, y: 8 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={styles.filterModalHeader}>
+                <h4>Filters</h4>
+                <button
+                  type="button"
+                  className={styles.filterCloseButton}
+                  onClick={() => setIsFilterDrawerOpen(false)}
+                  aria-label="Close filters"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className={styles.filterModalBody}>
+                <ServicesFilters filters={filters} onFilterChange={setFilters} />
+              </div>
+            </motion.div>
           </motion.div>
-
-          <AnimatePresence>
-            {filteredServices.length === 0 && (
-              <motion.div
-                className={styles.emptyState}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }}
-              >
-                <TriangleAlert size={20} />
-                <h3>No services match these filters</h3>
-                <p>Try increasing distance or removing one filter.</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </section>
-      </div>
-
-      <motion.button
-        type="button"
-        className={styles.mobileOfferButton}
-        whileHover={{ y: -2 }}
-        whileTap={{ y: 1 }}
-        onClick={() => setIsOfferModalOpen(true)}
-      >
-        Offer Service
-      </motion.button>
-
-      <MobileFilterDrawer
-        isOpen={isFilterDrawerOpen}
-        filters={filters}
-        onFilterChange={setFilters}
-        onClose={() => setIsFilterDrawerOpen(false)}
-      />
+        )}
+      </AnimatePresence>
 
       <OfferServiceModal
         isOpen={isOfferModalOpen}
