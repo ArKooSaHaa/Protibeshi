@@ -4,13 +4,20 @@
   min-height: 250px;
   border-radius: 24px;
   padding: 36px 28px;
-  background-image:
-    linear-gradient(130deg, rgba(15, 23, 42, 0.9), rgba(5, 150, 105, 0.78)),
-    url("https://images.unsplash.com/photo-1521791055366-0d553872125f?auto=format&fit=crop&w=1400&q=80");
-  background-size: cover;
-  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(130deg, rgba(15, 23, 42, 0.94), rgba(5, 150, 105, 0.8));
   box-shadow: 0 16px 28px rgba(15, 23, 42, 0.14);
   overflow: hidden;
+}
+
+.heroVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .heroOverlay {
@@ -18,8 +25,8 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(15, 23, 42, 0.35),
-    rgba(15, 23, 42, 0.1)
+    rgba(15, 23, 42, 0.52),
+    rgba(15, 23, 42, 0.18)
   );
 }
 
@@ -28,15 +35,20 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  text-align: center;
   gap: 12px;
-  max-width: 760px;
+  max-width: 860px;
 }
 
 .kicker {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  width: fit-content;
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 12px;
@@ -60,24 +72,30 @@
   font-size: 16px;
 }
 
-.actions {
-  margin-top: 8px;
+.heroControls {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2;
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  justify-content: space-between;
   align-items: center;
 }
 
-.locationChip {
+.filterButton {
+  border: 1px solid rgba(16, 185, 129, 0.7);
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f0fdf4;
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 10px 18px rgba(5, 150, 105, 0.28);
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.95);
-  color: #475569;
-  border-radius: 999px;
-  padding: 8px 14px;
-  font-size: 13px;
-  border: 1px solid #e6ebf2;
+  cursor: pointer;
 }
 
 .offerButton {
@@ -96,5 +114,24 @@
   .hero {
     min-height: 220px;
     padding: 28px 18px;
+  }
+
+  .title {
+    font-size: clamp(1.55rem, 6vw, 2.1rem);
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+
+  .heroControls {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .kicker {
+    top: 12px;
+    left: 12px;
   }
 }
