@@ -1,3 +1,3 @@
 export const secrets = {
-  backendEndpoint: "http://localhost:5000",
+  backendEndpoint: import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000',
 };

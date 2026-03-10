@@ -70,7 +70,7 @@ export const useSignUp = () => {
   const startTyping = useAuthStore((state) => state.startTyping);
   const startSubmit = useAuthStore((state) => state.startSubmit);
   const submitFailure = useAuthStore((state) => state.submitFailure);
-  const submitSuccess = useAuthStore((state) => state.submitSuccess);
+  const submitSignupSuccess = useAuthStore((state) => state.submitSignupSuccess);
   const startRedirect = useAuthStore((state) => state.startRedirect);
   const resetStatus = useAuthStore((state) => state.resetStatus);
 
@@ -138,14 +138,26 @@ export const useSignUp = () => {
         formData.append('profile_picture', file);
       }
 
-      await axios.post(getSignupUrl(), formData);
+      const signupUrl = getSignupUrl();
 
-      submitSuccess(values.email.trim().toLowerCase());
+      console.info('[Auth] Sending signup request', { url: signupUrl, email: values.email.trim().toLowerCase() });
+
+      await axios.post(signupUrl, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      console.info('[Auth] Signup response received successfully');
+
+      submitSignupSuccess(values.email.trim().toLowerCase());
 
       redirectTimerRef.current = window.setTimeout(() => {
         startRedirect();
       }, 750);
     } catch (error: unknown) {
+      console.error('[Auth] Signup request failed', error);
+
       if (axios.isAxiosError(error)) {
         const responseData = error.response?.data as {
           message?: string;

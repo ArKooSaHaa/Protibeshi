@@ -11,7 +11,7 @@ export const SignUpPage = () => {
 
 	useEffect(() => {
 		if (signUp.status === 'redirect') {
-			navigate(ROUTES.FEED, { replace: true });
+			navigate(ROUTES.SIGNIN, { replace: true });
 		}
 	}, [navigate, signUp.status]);
 

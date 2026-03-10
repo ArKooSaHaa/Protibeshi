@@ -8,9 +8,11 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Database\QueryException;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
+
     public function signup(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -30,6 +32,7 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
+
             $errors = $validator->errors();
 
             if (in_array('Email already exists', $errors->get('email'), true)) {
@@ -56,6 +59,7 @@ class AuthController extends Controller
         $profilePicturePath = null;
 
         try {
+
             if ($request->hasFile('profile_picture')) {
                 $profilePicturePath = $request->file('profile_picture')->store('profile_images', 'public');
             }
@@ -94,6 +98,7 @@ class AuthController extends Controller
                 ],
             ], 201);
         } catch (QueryException $exception) {
+
             if ($profilePicturePath) {
                 Storage::disk('public')->delete($profilePicturePath);
             }
@@ -122,8 +127,10 @@ class AuthController extends Controller
         }
     }
 
+
     public function signin(Request $request)
     {
+
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required|string|min:8',
@@ -137,36 +144,41 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $user = User::where('email', $request->email)->first();
+        $credentials = $request->only('email', 'password');
 
-        if (!$user) {
+        try {
+
+            if (!$token = JWTAuth::attempt($credentials)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Invalid email or password',
+                ], 401);
+            }
+
+            $user = JWTAuth::user();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Login successful',
+                'token' => $token,
+                'user' => $user->only([
+                    'id',
+                    'first_name',
+                    'last_name',
+                    'username',
+                    'email',
+                    'city',
+                    'neighborhood',
+                    'profile_picture',
+                    'bio',
+                ]),
+            ], 200);
+        } catch (\Exception $e) {
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'User not found',
-            ], 404);
+                'message' => 'Login failed',
+            ], 500);
         }
-
-        if (!Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Incorrect password',
-            ], 401);
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Login successful',
-            'user' => $user->only([
-                'id',
-                'first_name',
-                'last_name',
-                'username',
-                'email',
-                'city',
-                'neighborhood',
-                'profile_picture',
-                'bio',
-            ]),
-        ], 200);
     }
 }
