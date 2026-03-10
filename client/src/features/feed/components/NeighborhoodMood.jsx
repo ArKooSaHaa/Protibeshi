@@ -15,6 +15,36 @@ import styles from './NeighborhoodMood.module.css';
 
 const DEFAULT_CENTER = [23.7316, 90.4171];
 const LOCATION_RADIUS_METERS = 500;
+
+const isFiniteNumber = (value) => Number.isFinite(Number(value));
+
+const isValidCenter = (value) => {
+  if (!Array.isArray(value) || value.length !== 2) {
+    return false;
+  }
+
+  const [lat, lng] = value;
+  const latitude = Number(lat);
+  const longitude = Number(lng);
+
+  return (
+    isFiniteNumber(latitude)
+    && isFiniteNumber(longitude)
+    && latitude >= -90
+    && latitude <= 90
+    && longitude >= -180
+    && longitude <= 180
+  );
+};
+
+const normalizeCenter = (value) => {
+  if (!isValidCenter(value)) {
+    return DEFAULT_CENTER;
+  }
+
+  return [Number(value[0]), Number(value[1])];
+};
+
 const MAP_PATH_OPTIONS = {
   color: '#10b981',
   fillColor: '#10b981',
@@ -33,6 +63,10 @@ function FlyToLocation({ center }) {
   const map = useMap();
 
   React.useEffect(() => {
+    if (!isValidCenter(center)) {
+      return;
+    }
+
     map.flyTo(center, 15, {
       duration: 1.5,
     });
@@ -76,6 +110,7 @@ export const NeighborhoodMood = () => {
   const [isLocating, setIsLocating] = React.useState(true);
   const [locationText, setLocationText] = React.useState('Detecting your location...');
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const safeCenter = React.useMemo(() => normalizeCenter(center), [center]);
 
   React.useEffect(() => {
     if (typeof window === 'undefined' || !navigator.geolocation) {
@@ -92,6 +127,13 @@ export const NeighborhoodMood = () => {
 
         const latitude = position.coords.latitude;
         const longitude = position.coords.longitude;
+
+        if (!isValidCenter([latitude, longitude])) {
+          setCenter(DEFAULT_CENTER);
+          setLocationText('Current location unavailable');
+          setIsLocating(false);
+          return;
+        }
 
         setCenter([latitude, longitude]);
         setLocationText('You are here');
@@ -163,12 +205,12 @@ export const NeighborhoodMood = () => {
           </button>
 
           <MapContainer
-            center={center}
+            center={safeCenter}
             zoom={15}
             scrollWheelZoom={false}
             className={styles.map}
           >
-            <NeighborhoodMapLayers center={center} locationText={locationText} />
+            <NeighborhoodMapLayers center={safeCenter} locationText={locationText} />
           </MapContainer>
         </div>
 
@@ -215,12 +257,12 @@ export const NeighborhoodMood = () => {
               </button>
 
               <MapContainer
-                center={center}
+                center={safeCenter}
                 zoom={16}
                 scrollWheelZoom
                 className={styles.fullMap}
               >
-                <NeighborhoodMapLayers center={center} locationText={locationText} />
+                <NeighborhoodMapLayers center={safeCenter} locationText={locationText} />
               </MapContainer>
             </motion.div>
           </motion.div>

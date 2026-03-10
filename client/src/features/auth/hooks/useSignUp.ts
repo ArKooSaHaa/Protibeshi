@@ -1,15 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import axios from 'axios';
 import { signUpSchema, type SignUpSchema } from '../schemas/signupSchema';
 import { useAuthStore } from '../store/authStore';
+import { ENV } from '@/config/env';
 
 type PasswordLevel = 'weak' | 'medium' | 'strong';
 
-const wait = (durationMs: number) =>
-  new Promise<void>((resolve) => {
-    window.setTimeout(resolve, durationMs);
-  });
+const getSignupUrl = () => {
+  // When client is served by Laravel at :8000, always use same-origin API.
+  if (window.location.port === '8000') {
+    return `${window.location.origin}/api/signup`;
+  }
+
+  return `${ENV.API_BASE_URL}/api/signup`;
+};
 
 const getPasswordScore = (password: string) => {
   return {
@@ -103,13 +109,63 @@ export const useSignUp = () => {
     startSubmit();
 
     try {
-      await wait(1000);
+      const formData = new FormData();
+
+      formData.append('first_name', values.firstName.trim());
+      formData.append('last_name', values.lastName.trim());
+      formData.append('username', values.username.trim());
+      formData.append('email', values.email.trim().toLowerCase());
+      formData.append('password', values.password);
+
+      if (values.phone.trim()) {
+        formData.append('phone', values.phone.trim());
+      }
+
+      if (values.city.trim()) {
+        formData.append('city', values.city.trim());
+      }
+
+      if (values.neighborhood.trim()) {
+        formData.append('neighborhood', values.neighborhood.trim());
+      }
+
+      if (values.bio?.trim()) {
+        formData.append('bio', values.bio.trim());
+      }
+
+      const file = values.profilePicture?.item(0);
+      if (file) {
+        formData.append('profile_picture', file);
+      }
+
+      await axios.post(getSignupUrl(), formData);
+
       submitSuccess(values.email.trim().toLowerCase());
 
       redirectTimerRef.current = window.setTimeout(() => {
         startRedirect();
       }, 750);
-    } catch {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const responseData = error.response?.data as {
+          message?: string;
+          errors?: Record<string, string[] | string>;
+        } | undefined;
+
+        const firstValidationError = responseData?.errors
+          ? Object.values(responseData.errors)[0]
+          : undefined;
+
+        const validationMessage = Array.isArray(firstValidationError)
+          ? firstValidationError[0]
+          : firstValidationError;
+
+        const errorMessage = responseData?.message || validationMessage || error.message;
+
+        submitFailure(errorMessage || 'Unable to create account at the moment. Please try again.');
+        return;
+      }
+
       submitFailure('Unable to create account at the moment. Please try again.');
     }
   });
