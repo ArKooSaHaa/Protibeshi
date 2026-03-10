@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SessionController;
 
 /*
@@ -24,3 +25,6 @@ Route::post('/session', [SessionController::class, 'createSession'])->middleware
 Route::put('/session', [SessionController::class, 'updateSession'])->middleware('check.admin');
 Route::post('/sessions', [SessionController::class, 'viewSessions'])->middleware('check.admin');
 Route::post('/attendance', [SessionController::class, 'submitAttendance']);
+
+Route::post('/signup', [AuthController::class, 'signup']);
+Route::post('/signin', [AuthController::class, 'signin']);

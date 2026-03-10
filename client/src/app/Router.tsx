@@ -1,3 +1,4 @@
+//client/src/app/Router.tsx
 import { Navigate, createBrowserRouter, RouteObject } from 'react-router-dom';
 import { RootLayout } from './layout/RootLayout';
 import { ROUTES } from '@/config/routes.config';

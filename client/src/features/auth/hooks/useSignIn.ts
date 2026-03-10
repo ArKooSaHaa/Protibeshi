@@ -1,6 +1,8 @@
 // src/features/auth/hooks/useSignIn.ts
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
+import axios from 'axios';
+import { ENV } from '@/config/env';
 import { useAuthStore } from '../store/authStore';
 
 type SignInFormValues = {
@@ -52,9 +54,13 @@ const validate = (values: SignInFormValues): SignInFieldErrors => {
   return nextErrors;
 };
 
-const wait = (durationMs: number) => new Promise<void>((resolve) => {
-  window.setTimeout(resolve, durationMs);
-});
+const getSigninUrl = () => {
+  if (window.location.port === '8000') {
+    return `${window.location.origin}/api/signin`;
+  }
+
+  return `${ENV.API_BASE_URL}/api/signin`;
+};
 
 export const useSignIn = (): UseSignInResult => {
   const [values, setValues] = useState<SignInFormValues>({
@@ -142,13 +148,35 @@ export const useSignIn = (): UseSignInResult => {
       startSubmit();
 
       try {
-        await wait(900);
+        await axios.post(getSigninUrl(), {
+          email: values.email,
+          password: values.password,
+        });
+
         submitSuccess(values.email);
 
         redirectTimerRef.current = window.setTimeout(() => {
           startRedirect();
         }, 650);
-      } catch {
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          const responseData = error.response?.data as {
+            message?: string;
+            errors?: Record<string, string[] | string>;
+          } | undefined;
+
+          const firstValidationError = responseData?.errors
+            ? Object.values(responseData.errors)[0]
+            : undefined;
+
+          const validationMessage = Array.isArray(firstValidationError)
+            ? firstValidationError[0]
+            : firstValidationError;
+
+          submitFailure(responseData?.message || validationMessage || 'Unable to sign in right now. Please try again.');
+          return;
+        }
+
         submitFailure('Unable to sign in right now. Please try again.');
       }
     },
