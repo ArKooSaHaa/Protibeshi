@@ -1,5 +1,6 @@
 # Laravel & PHP
 /vendor/
+vendor/
 /node_modules/
 /public/storage
 /storage/*.key
