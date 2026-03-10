@@ -16,7 +16,18 @@ import styles from './NeighborhoodMood.module.css';
 const DEFAULT_CENTER = [23.7316, 90.4171];
 const LOCATION_RADIUS_METERS = 500;
 
-const isFiniteNumber = (value) => Number.isFinite(Number(value));
+const parseCoordinate = (value) => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsedValue = Number(value);
+    return Number.isFinite(parsedValue) ? parsedValue : null;
+  }
+
+  return null;
+};
 
 const isValidCenter = (value) => {
   if (!Array.isArray(value) || value.length !== 2) {
@@ -24,12 +35,12 @@ const isValidCenter = (value) => {
   }
 
   const [lat, lng] = value;
-  const latitude = Number(lat);
-  const longitude = Number(lng);
+  const latitude = parseCoordinate(lat);
+  const longitude = parseCoordinate(lng);
 
   return (
-    isFiniteNumber(latitude)
-    && isFiniteNumber(longitude)
+    latitude !== null
+    && longitude !== null
     && latitude >= -90
     && latitude <= 90
     && longitude >= -180
@@ -42,7 +53,14 @@ const normalizeCenter = (value) => {
     return DEFAULT_CENTER;
   }
 
-  return [Number(value[0]), Number(value[1])];
+  const latitude = parseCoordinate(value[0]);
+  const longitude = parseCoordinate(value[1]);
+
+  if (latitude === null || longitude === null) {
+    return DEFAULT_CENTER;
+  }
+
+  return [latitude, longitude];
 };
 
 const MAP_PATH_OPTIONS = {
@@ -63,11 +81,13 @@ function FlyToLocation({ center }) {
   const map = useMap();
 
   React.useEffect(() => {
-    if (!isValidCenter(center)) {
+    const safeCenter = normalizeCenter(center);
+
+    if (!isValidCenter(safeCenter)) {
       return;
     }
 
-    map.flyTo(center, 15, {
+    map.flyTo(safeCenter, 15, {
       duration: 1.5,
     });
   }, [center, map]);

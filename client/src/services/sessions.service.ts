@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { secrets } from './secrets';
 import toast from 'react-hot-toast';
+import { getBearerTokenHeader } from '@/features/auth/utils/tokenStorage';
 
 class ApiClient {
   private client: AxiosInstance;
@@ -11,6 +12,16 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+    });
+
+    this.client.interceptors.request.use((config) => {
+      const bearerToken = getBearerTokenHeader();
+
+      if (bearerToken) {
+        config.headers.Authorization = bearerToken;
+      }
+
+      return config;
     });
   }
 
@@ -99,6 +110,11 @@ class ApiClient {
         (error.response?.data as { message?: string })?.message ||
         error.message ||
         'An unexpected error occurred';
+
+      if (error.response?.status === 401) {
+        toast.error('Unauthorized. Please sign in again.');
+        return;
+      }
 
       toast.error(message);
 
