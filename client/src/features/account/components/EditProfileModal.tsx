@@ -42,6 +42,11 @@ const isValidUrl = (value: string) => {
 
 const validateForm = (formState: FormState): ErrorState => {
   const errors: ErrorState = {};
+  const trimmedPhone = formState.phone.trim();
+  const trimmedCity = formState.city.trim();
+  const trimmedNeighborhood = formState.neighborhood.trim();
+  const trimmedAvatarUrl = formState.avatarUrl.trim();
+  const trimmedBio = formState.bio.trim();
 
   if (formState.fullName.trim().length < 2) errors.fullName = 'Name is required';
   if (formState.fullName.trim().length > 70) errors.fullName = 'Name must be 70 characters or fewer';
@@ -49,21 +54,19 @@ const validateForm = (formState: FormState): ErrorState => {
   if (formState.username.trim().length < 3) errors.username = 'Username must be at least 3 characters';
   if (formState.username.trim().length > 40) errors.username = 'Username must be 40 characters or fewer';
 
-  if (formState.phone.trim().length < 8) errors.phone = 'Enter a valid phone number';
-  if (formState.phone.trim().length > 20) errors.phone = 'Phone number is too long';
+  if (trimmedPhone && trimmedPhone.length < 8) errors.phone = 'Enter a valid phone number';
+  if (trimmedPhone.length > 20) errors.phone = 'Phone number is too long';
 
-  if (formState.city.trim().length < 2) errors.city = 'City is required';
-  if (formState.city.trim().length > 60) errors.city = 'City must be 60 characters or fewer';
+  if (trimmedCity.length > 60) errors.city = 'City must be 60 characters or fewer';
 
-  if (formState.neighborhood.trim().length < 2) errors.neighborhood = 'Neighborhood is required';
-  if (formState.neighborhood.trim().length > 60) {
+  if (trimmedNeighborhood.length > 60) {
     errors.neighborhood = 'Neighborhood must be 60 characters or fewer';
   }
 
-  if (!isValidUrl(formState.avatarUrl.trim())) errors.avatarUrl = 'Profile picture must be a valid URL';
+  if (trimmedAvatarUrl && !isValidUrl(trimmedAvatarUrl)) errors.avatarUrl = 'Profile picture must be a valid URL';
 
-  if (formState.bio.trim().length < 8) errors.bio = 'Bio should be at least 8 characters';
-  if (formState.bio.trim().length > 240) errors.bio = 'Bio must be 240 characters or fewer';
+  if (trimmedBio && trimmedBio.length < 8) errors.bio = 'Bio should be at least 8 characters';
+  if (trimmedBio.length > 240) errors.bio = 'Bio must be 240 characters or fewer';
 
   return errors;
 };

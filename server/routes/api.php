@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SessionController;
 
@@ -22,6 +23,9 @@ Route::post('/signin', [AuthController::class, 'signin']);
 */
 
 Route::middleware(['auth:api'])->group(function () {
+
+    Route::get('/account/profile', [AccountController::class, 'show']);
+    Route::put('/account/profile', [AccountController::class, 'update']);
 
     Route::get('/user', function (Request $request) {
         return $request->user();
