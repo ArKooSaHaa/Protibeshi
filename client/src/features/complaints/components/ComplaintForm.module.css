@@ -4,6 +4,7 @@
   border: 1px solid #e2e8f0;
   background: #ffffff;
   padding: 18px;
+  margin-top: clamp(24px, 5vh, 64px);
   display: flex;
   flex-direction: column;
   gap: 36px;

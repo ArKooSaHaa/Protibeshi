@@ -15,6 +15,54 @@ import styles from './NeighborhoodMood.module.css';
 
 const DEFAULT_CENTER = [23.7316, 90.4171];
 const LOCATION_RADIUS_METERS = 500;
+
+const parseCoordinate = (value) => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsedValue = Number(value);
+    return Number.isFinite(parsedValue) ? parsedValue : null;
+  }
+
+  return null;
+};
+
+const isValidCenter = (value) => {
+  if (!Array.isArray(value) || value.length !== 2) {
+    return false;
+  }
+
+  const [lat, lng] = value;
+  const latitude = parseCoordinate(lat);
+  const longitude = parseCoordinate(lng);
+
+  return (
+    latitude !== null
+    && longitude !== null
+    && latitude >= -90
+    && latitude <= 90
+    && longitude >= -180
+    && longitude <= 180
+  );
+};
+
+const normalizeCenter = (value) => {
+  if (!isValidCenter(value)) {
+    return DEFAULT_CENTER;
+  }
+
+  const latitude = parseCoordinate(value[0]);
+  const longitude = parseCoordinate(value[1]);
+
+  if (latitude === null || longitude === null) {
+    return DEFAULT_CENTER;
+  }
+
+  return [latitude, longitude];
+};
+
 const MAP_PATH_OPTIONS = {
   color: '#10b981',
   fillColor: '#10b981',
@@ -33,7 +81,13 @@ function FlyToLocation({ center }) {
   const map = useMap();
 
   React.useEffect(() => {
-    map.flyTo(center, 15, {
+    const safeCenter = normalizeCenter(center);
+
+    if (!isValidCenter(safeCenter)) {
+      return;
+    }
+
+    map.flyTo(safeCenter, 15, {
       duration: 1.5,
     });
   }, [center, map]);
@@ -76,6 +130,7 @@ export const NeighborhoodMood = () => {
   const [isLocating, setIsLocating] = React.useState(true);
   const [locationText, setLocationText] = React.useState('Detecting your location...');
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const safeCenter = React.useMemo(() => normalizeCenter(center), [center]);
 
   React.useEffect(() => {
     if (typeof window === 'undefined' || !navigator.geolocation) {
@@ -92,6 +147,13 @@ export const NeighborhoodMood = () => {
 
         const latitude = position.coords.latitude;
         const longitude = position.coords.longitude;
+
+        if (!isValidCenter([latitude, longitude])) {
+          setCenter(DEFAULT_CENTER);
+          setLocationText('Current location unavailable');
+          setIsLocating(false);
+          return;
+        }
 
         setCenter([latitude, longitude]);
         setLocationText('You are here');
@@ -163,12 +225,12 @@ export const NeighborhoodMood = () => {
           </button>
 
           <MapContainer
-            center={center}
+            center={safeCenter}
             zoom={15}
             scrollWheelZoom={false}
             className={styles.map}
           >
-            <NeighborhoodMapLayers center={center} locationText={locationText} />
+            <NeighborhoodMapLayers center={safeCenter} locationText={locationText} />
           </MapContainer>
         </div>
 
@@ -215,12 +277,12 @@ export const NeighborhoodMood = () => {
               </button>
 
               <MapContainer
-                center={center}
+                center={safeCenter}
                 zoom={16}
                 scrollWheelZoom
                 className={styles.fullMap}
               >
-                <NeighborhoodMapLayers center={center} locationText={locationText} />
+                <NeighborhoodMapLayers center={safeCenter} locationText={locationText} />
               </MapContainer>
             </motion.div>
           </motion.div>
