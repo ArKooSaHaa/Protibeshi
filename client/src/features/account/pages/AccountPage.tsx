@@ -25,7 +25,10 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
+import { ChangePasswordModal } from '../components/ChangePasswordModal';
+import { DeleteAccountModal } from '../components/DeleteAccountModal';
 import { EditProfileModal } from '../components/EditProfileModal';
 import { useUserPosts, type AccountPostTab, type PostStatus, type UserPost } from '../hooks/useUserPosts';
 
@@ -126,6 +129,10 @@ type PostEditorState = {
 
 export const AccountPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
+  const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false);
+  const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
   const [activeSetting, setActiveSetting] = useState<SettingActionKey>('privacy');
   const [previewPost, setPreviewPost] = useState<UserPost | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserPost | null>(null);
@@ -248,6 +255,53 @@ export const AccountPage = () => {
     await updatePost(editingPost.tab, editingPost.id, payload);
     setIsUpdatingPost(false);
     setEditingPost(null);
+  };
+
+  const handleSettingAction = (key: SettingActionKey) => {
+    setActiveSetting(key);
+
+    if (key === 'password') {
+      setIsChangePasswordOpen(true);
+    }
+
+    if (key === 'delete') {
+      setIsDeleteAccountOpen(true);
+    }
+  };
+
+  const handleChangePassword = async ({ oldPassword, newPassword }: { oldPassword: string; newPassword: string }) => {
+    setIsPasswordSubmitting(true);
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const isSamePassword = oldPassword === newPassword;
+
+      if (isSamePassword) {
+        toast.error('New password must be different from your old password.');
+        return;
+      }
+
+      toast.success('Password update request accepted.');
+    } finally {
+      setIsPasswordSubmitting(false);
+    }
+  };
+
+  const handleDeleteAccount = async ({ password, confirmationText }: { password: string; confirmationText: string }) => {
+    setIsDeleteSubmitting(true);
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      if (!password || confirmationText !== 'DELETE') {
+        toast.error('Please verify your password and confirmation text.');
+        return;
+      }
+
+      toast.success('Delete account request submitted for review.');
+    } finally {
+      setIsDeleteSubmitting(false);
+    }
   };
 
   if (isProfileLoading) {
@@ -481,7 +535,7 @@ export const AccountPage = () => {
                   <button
                     key={action.key}
                     type="button"
-                    onClick={() => setActiveSetting(action.key)}
+                    onClick={() => handleSettingAction(action.key)}
                     className={cn(
                       'flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition-all duration-300',
                       activeSetting === action.key
@@ -668,6 +722,20 @@ export const AccountPage = () => {
           isSaving={isSavingProfile}
           onOpenChange={setIsEditModalOpen}
           onSave={updateProfile}
+        />
+
+        <ChangePasswordModal
+          open={isChangePasswordOpen}
+          isSubmitting={isPasswordSubmitting}
+          onOpenChange={setIsChangePasswordOpen}
+          onSubmit={handleChangePassword}
+        />
+
+        <DeleteAccountModal
+          open={isDeleteAccountOpen}
+          isSubmitting={isDeleteSubmitting}
+          onOpenChange={setIsDeleteAccountOpen}
+          onSubmit={handleDeleteAccount}
         />
 
         <AnimatePresence>

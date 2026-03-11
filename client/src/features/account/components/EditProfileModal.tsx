@@ -130,91 +130,120 @@ export const EditProfileModal = ({ open, profile, isSaving, onOpenChange, onSave
         }
       }}
     >
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent
+        overlayClassName="bg-slate-950/40 backdrop-blur-sm"
+        className="max-h-[92vh] w-[min(96vw,56rem)] overflow-y-auto border border-slate-200/90 bg-white/95 p-4 shadow-[0_30px_90px_rgba(15,23,42,0.25)] backdrop-blur-xl sm:p-6"
+      >
         <DialogHeader>
-          <DialogTitle>Edit Profile</DialogTitle>
-          <DialogDescription>Update your account details visible on your public profile.</DialogDescription>
+          <DialogTitle className="text-slate-950">Edit Profile</DialogTitle>
+          <DialogDescription className="text-slate-600">Update your account details visible on your public profile.</DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-1">
-            <label className="text-xs text-slate-600" htmlFor="fullName">
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500" htmlFor="fullName">
               Name
             </label>
             <Input
               id="fullName"
               value={formState.fullName}
+              aria-invalid={Boolean(errors.fullName)}
               onChange={(e) => onFieldChange('fullName', e.target.value)}
+              className="h-11 border-slate-300 bg-white/90"
             />
             {errors.fullName ? <p className="text-xs text-red-600">{errors.fullName}</p> : null}
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs text-slate-600" htmlFor="username">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500" htmlFor="username">
               Username
             </label>
             <Input
               id="username"
               value={formState.username}
+              aria-invalid={Boolean(errors.username)}
               onChange={(e) => onFieldChange('username', e.target.value)}
+              className="h-11 border-slate-300 bg-white/90"
             />
             {errors.username ? <p className="text-xs text-red-600">{errors.username}</p> : null}
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs text-slate-600" htmlFor="phone">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500" htmlFor="phone">
               Phone
             </label>
-            <Input id="phone" value={formState.phone} onChange={(e) => onFieldChange('phone', e.target.value)} />
+            <Input
+              id="phone"
+              value={formState.phone}
+              aria-invalid={Boolean(errors.phone)}
+              onChange={(e) => onFieldChange('phone', e.target.value)}
+              className="h-11 border-slate-300 bg-white/90"
+            />
             {errors.phone ? <p className="text-xs text-red-600">{errors.phone}</p> : null}
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs text-slate-600" htmlFor="city">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500" htmlFor="city">
               City
             </label>
-            <Input id="city" value={formState.city} onChange={(e) => onFieldChange('city', e.target.value)} />
+            <Input
+              id="city"
+              value={formState.city}
+              aria-invalid={Boolean(errors.city)}
+              onChange={(e) => onFieldChange('city', e.target.value)}
+              className="h-11 border-slate-300 bg-white/90"
+            />
             {errors.city ? <p className="text-xs text-red-600">{errors.city}</p> : null}
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs text-slate-600" htmlFor="neighborhood">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500" htmlFor="neighborhood">
               Neighborhood
             </label>
             <Input
               id="neighborhood"
               value={formState.neighborhood}
+              aria-invalid={Boolean(errors.neighborhood)}
               onChange={(e) => onFieldChange('neighborhood', e.target.value)}
+              className="h-11 border-slate-300 bg-white/90"
             />
             {errors.neighborhood ? <p className="text-xs text-red-600">{errors.neighborhood}</p> : null}
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs text-slate-600" htmlFor="avatarUrl">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500" htmlFor="avatarUrl">
               Profile Picture URL
             </label>
             <Input
               id="avatarUrl"
               value={formState.avatarUrl}
+              aria-invalid={Boolean(errors.avatarUrl)}
               onChange={(e) => onFieldChange('avatarUrl', e.target.value)}
+              className="h-11 border-slate-300 bg-white/90"
             />
             {errors.avatarUrl ? <p className="text-xs text-red-600">{errors.avatarUrl}</p> : null}
           </div>
 
-          <div className="space-y-1 md:col-span-2">
-            <label className="text-xs text-slate-600" htmlFor="bio">
+          <div className="space-y-1.5 sm:col-span-2">
+            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500" htmlFor="bio">
               Bio
             </label>
-            <Textarea id="bio" value={formState.bio} onChange={(e) => onFieldChange('bio', e.target.value)} />
+            <Textarea
+              id="bio"
+              value={formState.bio}
+              aria-invalid={Boolean(errors.bio)}
+              onChange={(e) => onFieldChange('bio', e.target.value)}
+              className="min-h-[110px] border-slate-300 bg-white/90"
+            />
             {errors.bio ? <p className="text-xs text-red-600">{errors.bio}</p> : null}
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
+        <DialogFooter className="mt-2 gap-2 sm:gap-3">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} className="w-full sm:w-auto">
             Cancel
           </Button>
-          <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={onSubmit} disabled={isSaving || hasErrors}>
+          <Button className="w-full bg-emerald-600 transition-all hover:bg-emerald-700 sm:w-auto" onClick={onSubmit} disabled={isSaving || hasErrors}>
             {isSaving ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogFooter>
