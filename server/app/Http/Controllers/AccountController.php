@@ -28,11 +28,12 @@ class AccountController extends Controller
         $validated = $request->validate([
             'full_name' => ['sometimes', 'required', 'string', 'max:150'],
             'username' => ['sometimes', 'required', 'string', 'max:100', Rule::unique('users', 'username')->ignore($user->id)],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'city' => ['nullable', 'string', 'max:100'],
-            'neighborhood' => ['nullable', 'string', 'max:150'],
-            'bio' => ['nullable', 'string', 'max:500'],
-            'profile_picture' => ['nullable', 'string', 'max:2048'],
+            // `sometimes` ensures we only update explicitly submitted fields and keep existing values intact.
+            'phone' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'city' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'neighborhood' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'bio' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'profile_picture' => ['sometimes', 'nullable', 'string', 'max:2048'],
         ]);
 
         if (array_key_exists('full_name', $validated)) {

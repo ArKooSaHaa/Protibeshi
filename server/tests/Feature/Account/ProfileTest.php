@@ -104,4 +104,44 @@ class ProfileTest extends TestCase
         $this->assertSame('Motijheel', $user->neighborhood);
         $this->assertSame('https://example.com/avatar.png', $user->profile_picture);
     }
+
+    public function test_partial_profile_update_preserves_existing_values(): void
+    {
+        $user = $this->createUser([
+            'first_name' => 'Arko',
+            'last_name' => 'Saha',
+            'username' => 'arko_profile',
+            'email' => 'arko.profile@example.com',
+            'phone' => '+8801700000000',
+            'city' => 'Dhaka',
+            'neighborhood' => 'Mirpur',
+            'bio' => 'Initial bio',
+            'profile_picture' => 'profile_images/original.png',
+        ]);
+
+        $token = JWTAuth::fromUser($user);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)->putJson('/api/account/profile', [
+            'city' => 'Chattogram',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.user.city', 'Chattogram')
+            ->assertJsonPath('data.user.username', 'arko_profile');
+
+        $user->refresh();
+
+        $this->assertSame('Arko', $user->first_name);
+        $this->assertSame('Saha', $user->last_name);
+        $this->assertSame('arko_profile', $user->username);
+        $this->assertSame('arko.profile@example.com', $user->email);
+        $this->assertSame('+8801700000000', $user->phone);
+        $this->assertSame('Mirpur', $user->neighborhood);
+        $this->assertSame('Initial bio', $user->bio);
+        $this->assertSame('profile_images/original.png', $user->profile_picture);
+        $this->assertSame('Chattogram', $user->city);
+    }
+
 }
