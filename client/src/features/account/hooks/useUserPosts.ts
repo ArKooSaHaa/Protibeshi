@@ -1,4 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
+import {
+  fetchAccountProfile,
+  getAccountErrorMessage,
+  updateAccountProfile,
+  type AccountProfileApi,
+} from '../services/accountService';
 
 export type AccountPostTab =
   | 'feed'
@@ -22,6 +29,7 @@ export interface UserProfile {
   avatarUrl: string;
   bio: string;
   createdAt: string;
+  emailVerified: boolean;
   verificationStatus: 'verified' | 'unverified';
 }
 
@@ -60,12 +68,15 @@ interface UserPostsResult {
   totalCount: number;
   hasMore: boolean;
   isLoading: boolean;
+  isProfileLoading: boolean;
   isSavingProfile: boolean;
+  profileError: string | null;
   stats: FeedSummary;
   pageSize: number;
   tabs: Array<{ key: AccountPostTab; label: string }>;
   setActiveTab: (tab: AccountPostTab) => void;
   loadMore: () => void;
+  refreshProfile: () => Promise<void>;
   updateProfile: (payload: Partial<UserProfile>) => Promise<void>;
   updatePost: (
     tab: AccountPostTab,
@@ -77,27 +88,27 @@ interface UserPostsResult {
 
 const PAGE_SIZE = 6;
 
-const currentUserId = 'user-1';
+const mockAuthorId = 'user-1';
 
 const initialProfile: UserProfile = {
-  id: currentUserId,
-  fullName: 'Arko Saha',
-  username: 'arkosaha',
-  email: 'arko@protibeshi.app',
-  phone: '+8801711223344',
-  city: 'Dhaka',
-  neighborhood: 'Motijheel',
-  avatarUrl:
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=280&q=80',
-  bio: 'Building safer neighborhoods through local collaboration and transparent community action.',
-  createdAt: '2024-01-15T08:30:00.000Z',
-  verificationStatus: 'verified',
+  id: '',
+  fullName: '',
+  username: '',
+  email: '',
+  phone: '',
+  city: '',
+  neighborhood: '',
+  avatarUrl: '',
+  bio: '',
+  createdAt: '',
+  emailVerified: false,
+  verificationStatus: 'unverified',
 };
 
 const seedPosts: UserPost[] = [
   {
     id: 'f-1',
-    authorId: currentUserId,
+    authorId: mockAuthorId,
     tab: 'feed',
     title: 'Gas leak detected - evacuate immediately',
     description: 'Strong smell near lane 3. Fire service has been informed.',
@@ -107,7 +118,7 @@ const seedPosts: UserPost[] = [
   },
   {
     id: 'f-2',
-    authorId: currentUserId,
+    authorId: mockAuthorId,
     tab: 'feed',
     title: 'Community clean-up this Friday',
     description: 'Volunteers needed at 8am near the playground.',
@@ -117,7 +128,7 @@ const seedPosts: UserPost[] = [
   },
   {
     id: 'm-1',
-    authorId: currentUserId,
+    authorId: mockAuthorId,
     tab: 'marketplace',
     title: 'iPhone 12 - 128GB Blue',
     description: 'Excellent condition with charger and original box.',
@@ -132,7 +143,7 @@ const seedPosts: UserPost[] = [
   },
   {
     id: 'm-2',
-    authorId: currentUserId,
+    authorId: mockAuthorId,
     tab: 'marketplace',
     title: 'Wooden study desk',
     description: 'Sturdy desk, minor scratches.',
@@ -147,7 +158,7 @@ const seedPosts: UserPost[] = [
   },
   {
     id: 'r-1',
-    authorId: currentUserId,
+    authorId: mockAuthorId,
     tab: 'rent',
     title: '2 bed apartment near Motijheel',
     description: 'Family-friendly unit, lift and generator available.',
@@ -161,7 +172,7 @@ const seedPosts: UserPost[] = [
   },
   {
     id: 'r-2',
-    authorId: currentUserId,
+    authorId: mockAuthorId,
     tab: 'rent',
     title: 'Single room sublet',
     description: 'Ideal for students, utility bills shared.',
@@ -175,7 +186,7 @@ const seedPosts: UserPost[] = [
   },
   {
     id: 's-1',
-    authorId: currentUserId,
+    authorId: mockAuthorId,
     tab: 'services',
     title: 'Home plumbing support',
     description: 'Pipe leak repairs and quick emergency checks.',
@@ -187,7 +198,7 @@ const seedPosts: UserPost[] = [
   },
   {
     id: 's-2',
-    authorId: currentUserId,
+    authorId: mockAuthorId,
     tab: 'services',
     title: 'Math tutor (Class 8-12)',
     description: 'Evening sessions available on weekdays.',
@@ -199,7 +210,7 @@ const seedPosts: UserPost[] = [
   },
   {
     id: 'c-1',
-    authorId: currentUserId,
+    authorId: mockAuthorId,
     tab: 'complaints',
     title: 'Broken street light near block C',
     description: 'Street has remained dark for three nights.',
@@ -210,7 +221,7 @@ const seedPosts: UserPost[] = [
   },
   {
     id: 'c-2',
-    authorId: currentUserId,
+    authorId: mockAuthorId,
     tab: 'complaints',
     title: 'Drain overflow after rain',
     description: 'Waterlogging making road unusable in evening.',
@@ -221,7 +232,7 @@ const seedPosts: UserPost[] = [
   },
   {
     id: 'rp-1',
-    authorId: currentUserId,
+    authorId: mockAuthorId,
     tab: 'relief',
     title: 'Need food supplies for elderly neighbors',
     description: 'Requesting dry food packs for 3 families.',
@@ -232,7 +243,7 @@ const seedPosts: UserPost[] = [
   },
   {
     id: 'rp-2',
-    authorId: currentUserId,
+    authorId: mockAuthorId,
     tab: 'relief',
     title: 'Offering blankets and warm clothes',
     description: 'Can provide pickup from community center.',
@@ -243,7 +254,7 @@ const seedPosts: UserPost[] = [
   },
   {
     id: 'f-3',
-    authorId: currentUserId,
+    authorId: mockAuthorId,
     tab: 'feed',
     title: 'Water line maintenance notice',
     description: 'Supply may be interrupted from 11pm to 4am.',
@@ -253,7 +264,7 @@ const seedPosts: UserPost[] = [
   },
   {
     id: 'm-3',
-    authorId: currentUserId,
+    authorId: mockAuthorId,
     tab: 'marketplace',
     title: 'Bicycle for daily commute',
     description: 'Smooth ride, recently serviced.',
@@ -277,6 +288,21 @@ const allTabs: Array<{ key: AccountPostTab; label: string }> = [
   { key: 'relief', label: 'Relief Posts' },
 ];
 
+const mapAccountProfile = (profile: AccountProfileApi): UserProfile => ({
+  id: String(profile.id),
+  fullName: profile.full_name || [profile.first_name, profile.last_name].filter(Boolean).join(' '),
+  username: profile.username || '',
+  email: profile.email || '',
+  phone: profile.phone || '',
+  city: profile.city || '',
+  neighborhood: profile.neighborhood || '',
+  avatarUrl: profile.profile_picture_url || '',
+  bio: profile.bio || '',
+  createdAt: profile.created_at || '',
+  emailVerified: Boolean(profile.email_verified),
+  verificationStatus: profile.verification_status === 'verified' ? 'verified' : 'unverified',
+});
+
 export const useUserPosts = (): UserPostsResult => {
   const [profile, setProfile] = useState<UserProfile>(initialProfile);
   const [activeTab, setActiveTab] = useState<AccountPostTab>('feed');
@@ -290,7 +316,9 @@ export const useUserPosts = (): UserPostsResult => {
     relief: false,
   });
   const [loadingTab, setLoadingTab] = useState<AccountPostTab | null>(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [visibleCounts, setVisibleCounts] = useState<Record<AccountPostTab, number>>({
     feed: PAGE_SIZE,
     marketplace: PAGE_SIZE,
@@ -301,8 +329,8 @@ export const useUserPosts = (): UserPostsResult => {
   });
 
   const ownedPosts = useMemo(
-    () => postsState.filter((post) => post.authorId === currentUserId),
-    [postsState],
+    () => postsState.filter((post) => post.authorId === profile.id),
+    [postsState, profile.id],
   );
 
   const postsByTab = useMemo(() => {
@@ -332,6 +360,25 @@ export const useUserPosts = (): UserPostsResult => {
     loadTab(activeTab);
   }, [activeTab, loadTab]);
 
+  const loadProfile = useCallback(async () => {
+    setIsProfileLoading(true);
+    setProfileError(null);
+
+    try {
+      const nextProfile = await fetchAccountProfile();
+      setProfile(mapAccountProfile(nextProfile));
+    } catch (error: unknown) {
+      const message = getAccountErrorMessage(error, 'Unable to load your account details right now.');
+      setProfileError(message);
+    } finally {
+      setIsProfileLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadProfile();
+  }, [loadProfile]);
+
   const totalCount = postsByTab[activeTab].length;
   const currentVisibleCount = visibleCounts[activeTab];
   const hasMore = totalCount > currentVisibleCount;
@@ -358,12 +405,27 @@ export const useUserPosts = (): UserPostsResult => {
   const updateProfile = useCallback(async (payload: Partial<UserProfile>) => {
     setIsSavingProfile(true);
 
-    await new Promise<void>((resolve) => {
-      window.setTimeout(() => resolve(), 550);
-    });
+    try {
+      const updatedProfile = await updateAccountProfile({
+        ...(payload.fullName !== undefined ? { full_name: payload.fullName.trim() } : {}),
+        ...(payload.username !== undefined ? { username: payload.username.trim() } : {}),
+        ...(payload.phone !== undefined ? { phone: payload.phone.trim() } : {}),
+        ...(payload.city !== undefined ? { city: payload.city.trim() } : {}),
+        ...(payload.neighborhood !== undefined ? { neighborhood: payload.neighborhood.trim() } : {}),
+        ...(payload.bio !== undefined ? { bio: payload.bio.trim() } : {}),
+        ...(payload.avatarUrl !== undefined ? { profile_picture: payload.avatarUrl.trim() } : {}),
+      });
 
-    setProfile((prev) => ({ ...prev, ...payload }));
-    setIsSavingProfile(false);
+      setProfile(mapAccountProfile(updatedProfile));
+      setProfileError(null);
+      toast.success('Profile updated successfully.');
+    } catch (error: unknown) {
+      const message = getAccountErrorMessage(error, 'Unable to save your profile right now.');
+      toast.error(message);
+      throw error;
+    } finally {
+      setIsSavingProfile(false);
+    }
   }, []);
 
   const updatePost = useCallback(async (
@@ -373,7 +435,7 @@ export const useUserPosts = (): UserPostsResult => {
   ) => {
     const target = postsState.find((post) => post.id === postId);
 
-    if (!target || target.authorId !== currentUserId || target.tab !== tab) {
+    if (!target || target.authorId !== profile.id || target.tab !== tab) {
       return;
     }
 
@@ -393,12 +455,12 @@ export const useUserPosts = (): UserPostsResult => {
         };
       }),
     );
-  }, [postsState]);
+  }, [postsState, profile.id]);
 
   const deletePost = useCallback(async (tab: AccountPostTab, postId: string) => {
     const target = postsState.find((post) => post.id === postId);
 
-    if (!target || target.authorId !== currentUserId || target.tab !== tab) {
+    if (!target || target.authorId !== profile.id || target.tab !== tab) {
       return;
     }
 
@@ -407,7 +469,7 @@ export const useUserPosts = (): UserPostsResult => {
     });
 
     setPostsState((prev) => prev.filter((post) => post.id !== postId));
-  }, [postsState]);
+  }, [postsState, profile.id]);
 
   return {
     profile,
@@ -416,12 +478,15 @@ export const useUserPosts = (): UserPostsResult => {
     totalCount,
     hasMore,
     isLoading: loadingTab === activeTab,
+    isProfileLoading,
     isSavingProfile,
+    profileError,
     stats,
     pageSize: PAGE_SIZE,
     tabs: allTabs,
     setActiveTab,
     loadMore,
+    refreshProfile: loadProfile,
     updateProfile,
     updatePost,
     deletePost,
