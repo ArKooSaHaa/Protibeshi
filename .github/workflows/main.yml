@@ -1,0 +1,154 @@
+name: Protibeshi CI/CD
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+
+# ─────────────────────────────────────────────
+# Backend Tests (Laravel)
+# ─────────────────────────────────────────────
+  backend-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_DATABASE: protibeshi_test
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.3
+          extensions: mbstring, bcmath, pdo, mysql
+
+      - name: Install Composer dependencies
+        working-directory: ./server
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare testing environment
+        working-directory: ./server
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Run migrations
+        working-directory: ./server
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: protibeshi_db
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: php artisan migrate
+
+      - name: Run Laravel tests
+        working-directory: ./server
+        run: php artisan test
+
+
+# ─────────────────────────────────────────────
+# Frontend Tests (React + Vite)
+# ─────────────────────────────────────────────
+  frontend-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./client
+        run: npm ci
+
+      - name: Lint code
+        working-directory: ./client
+        run: npm run lint
+
+      - name: Type check
+        working-directory: ./client
+        run: npm run type-check
+
+      - name: Build production bundle
+        working-directory: ./client
+        run: npm run build
+
+
+# ─────────────────────────────────────────────
+# Security Checks
+# ─────────────────────────────────────────────
+  security-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.3
+
+      - name: npm security audit
+        working-directory: ./client
+        run: npm audit --audit-level=moderate || true
+
+      - name: Composer security audit
+        working-directory: ./server
+        run: |
+          composer install
+          composer audit || true
+
+
+# ─────────────────────────────────────────────
+# Docker Build (Production only)
+# ─────────────────────────────────────────────
+  docker-build:
+    needs: [backend-tests, frontend-tests, security-checks]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          tags: protibeshi:latest
