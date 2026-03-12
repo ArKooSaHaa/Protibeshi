@@ -37,6 +37,12 @@ type UpdateAccountProfilePayload = {
   profile_picture?: string;
 };
 
+type ChangePasswordPayload = {
+  current_password: string;
+  new_password: string;
+  new_password_confirmation: string;
+};
+
 const getApiBaseUrl = () => {
   if (typeof window !== 'undefined' && window.location.port === '8000') {
     return window.location.origin;
@@ -75,6 +81,22 @@ export const fetchAccountProfile = async (): Promise<AccountProfileApi> => {
 export const updateAccountProfile = async (payload: UpdateAccountProfilePayload): Promise<AccountProfileApi> => {
   const response = await axios.put<AccountProfileResponse>('/api/account/profile', payload, getRequestConfig());
   return getUserFromResponse(response.data);
+};
+
+export const changePassword = async (payload: ChangePasswordPayload): Promise<void> => {
+  await axios.post('/api/account/change-password', payload, getRequestConfig());
+};
+
+type DeleteAccountPayload = {
+  password: string;
+  confirmation: string;
+};
+
+export const deleteAccount = async (payload: DeleteAccountPayload): Promise<void> => {
+  await axios.delete('/api/account', {
+    ...getRequestConfig(),
+    data: payload,
+  });
 };
 
 export const getAccountErrorMessage = (error: unknown, fallback: string): string => {
