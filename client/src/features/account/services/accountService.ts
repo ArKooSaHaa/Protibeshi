@@ -87,6 +87,18 @@ export const changePassword = async (payload: ChangePasswordPayload): Promise<vo
   await axios.post('/api/account/change-password', payload, getRequestConfig());
 };
 
+type DeleteAccountPayload = {
+  password: string;
+  confirmation: string;
+};
+
+export const deleteAccount = async (payload: DeleteAccountPayload): Promise<void> => {
+  await axios.delete('/api/account', {
+    ...getRequestConfig(),
+    data: payload,
+  });
+};
+
 export const getAccountErrorMessage = (error: unknown, fallback: string): string => {
   if (!axios.isAxiosError(error)) {
     return fallback;

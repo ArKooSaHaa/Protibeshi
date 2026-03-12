@@ -31,7 +31,8 @@ import { ChangePasswordModal } from '../components/ChangePasswordModal';
 import { DeleteAccountModal } from '../components/DeleteAccountModal';
 import { EditProfileModal } from '../components/EditProfileModal';
 import { useUserPosts, type AccountPostTab, type PostStatus, type UserPost } from '../hooks/useUserPosts';
-import { changePassword, getAccountErrorMessage } from '../services/accountService';
+import { changePassword, deleteAccount, getAccountErrorMessage } from '../services/accountService';
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 const sectionTransition = {
   duration: 0.55,
@@ -129,6 +130,7 @@ type PostEditorState = {
 };
 
 export const AccountPage = () => {
+  const logout = useAuthStore((state) => state.logout);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
@@ -303,14 +305,13 @@ export const AccountPage = () => {
     setIsDeleteSubmitting(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      if (!password || confirmationText !== 'DELETE') {
-        toast.error('Please verify your password and confirmation text.');
-        return;
-      }
-
-      toast.success('Delete account request submitted for review.');
+      await deleteAccount({ password, confirmation: confirmationText });
+      toast.success('Your account has been deleted successfully.');
+      logout();
+    } catch (error) {
+      const message = getAccountErrorMessage(error, 'Failed to delete account. Please try again.');
+      toast.error(message);
+      throw error;
     } finally {
       setIsDeleteSubmitting(false);
     }

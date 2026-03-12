@@ -141,6 +141,44 @@ class AccountController extends Controller
         ]);
     }
 
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'password' => 'required|string',
+            'confirmation' => 'required|string',
+        ]);
+
+        if ($validated['confirmation'] !== 'DELETE') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => [
+                    'confirmation' => ['You must type DELETE to confirm account deletion.'],
+                ],
+            ], 422);
+        }
+
+        if (!Hash::check($validated['password'], $user->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => [
+                    'password' => ['The password is incorrect.'],
+                ],
+            ], 422);
+        }
+
+        $user->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Account deleted successfully',
+        ]);
+    }
+
     private function serializeUser(User $user): array
     {
         $fullName = trim(implode(' ', array_filter([$user->first_name, $user->last_name])));

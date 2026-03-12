@@ -59,12 +59,16 @@ export const DeleteAccountModal = ({
       return;
     }
 
-    await onSubmit({
-      password: password.trim(),
-      confirmationText: confirmationText.trim(),
-    });
+    try {
+      await onSubmit({
+        password: password.trim(),
+        confirmationText: confirmationText.trim(),
+      });
 
-    onOpenChange(false);
+      onOpenChange(false);
+    } catch {
+      // keep modal open so the error toast is visible
+    }
   };
 
   return (

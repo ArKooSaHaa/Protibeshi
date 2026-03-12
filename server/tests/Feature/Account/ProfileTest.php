@@ -298,4 +298,76 @@ class ProfileTest extends TestCase
         $this->assertTrue(Hash::check('SamePassword123!', $user->password));
     }
 
+    public function test_authenticated_user_can_delete_account(): void
+    {
+        $user = $this->createUser([
+            'password' => Hash::make('ValidPassword1!'),
+        ]);
+
+        $token = JWTAuth::fromUser($user);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)->deleteJson('/api/account', [
+            'password' => 'ValidPassword1!',
+            'confirmation' => 'DELETE',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('status', 'success');
+
+        $this->assertSoftDeleted('users', ['id' => $user->id]);
+    }
+
+    public function test_delete_account_fails_with_wrong_password(): void
+    {
+        $user = $this->createUser([
+            'password' => Hash::make('ValidPassword1!'),
+        ]);
+
+        $token = JWTAuth::fromUser($user);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)->deleteJson('/api/account', [
+            'password' => 'WrongPassword99!',
+            'confirmation' => 'DELETE',
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonStructure(['status', 'message', 'errors']);
+
+        $this->assertDatabaseHas('users', ['id' => $user->id, 'deleted_at' => null]);
+    }
+
+    public function test_delete_account_fails_with_wrong_confirmation_text(): void
+    {
+        $user = $this->createUser([
+            'password' => Hash::make('ValidPassword1!'),
+        ]);
+
+        $token = JWTAuth::fromUser($user);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)->deleteJson('/api/account', [
+            'password' => 'ValidPassword1!',
+            'confirmation' => 'delete',
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonStructure(['status', 'message', 'errors']);
+
+        $this->assertDatabaseHas('users', ['id' => $user->id, 'deleted_at' => null]);
+    }
+
+    public function test_delete_account_requires_authentication(): void
+    {
+        $response = $this->deleteJson('/api/account', [
+            'password' => 'ValidPassword1!',
+            'confirmation' => 'DELETE',
+        ]);
+
+        // The custom exception handler converts all exceptions to 200 with an error body.
+        // Unauthenticated requests produce a "success: false" response.
+        $response->assertJsonPath('success', false);
+    }
+
 }
