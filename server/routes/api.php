@@ -26,6 +26,7 @@ Route::middleware(['auth:api'])->group(function () {
 
     Route::get('/account/profile', [AccountController::class, 'show']);
     Route::put('/account/profile', [AccountController::class, 'update']);
+    Route::post('/account/change-password', [AccountController::class, 'changePassword']);
 
     Route::get('/user', function (Request $request) {
         return $request->user();

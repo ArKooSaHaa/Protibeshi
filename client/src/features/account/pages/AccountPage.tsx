@@ -31,6 +31,7 @@ import { ChangePasswordModal } from '../components/ChangePasswordModal';
 import { DeleteAccountModal } from '../components/DeleteAccountModal';
 import { EditProfileModal } from '../components/EditProfileModal';
 import { useUserPosts, type AccountPostTab, type PostStatus, type UserPost } from '../hooks/useUserPosts';
+import { changePassword, getAccountErrorMessage } from '../services/accountService';
 
 const sectionTransition = {
   duration: 0.55,
@@ -269,19 +270,30 @@ export const AccountPage = () => {
     }
   };
 
-  const handleChangePassword = async ({ oldPassword, newPassword }: { oldPassword: string; newPassword: string }) => {
+  const handleChangePassword = async ({ 
+    current_password, 
+    new_password, 
+    new_password_confirmation 
+  }: { 
+    current_password: string; 
+    new_password: string; 
+    new_password_confirmation: string;
+  }) => {
     setIsPasswordSubmitting(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const isSamePassword = oldPassword === newPassword;
+      await changePassword({
+        current_password,
+        new_password,
+        new_password_confirmation,
+      });
 
-      if (isSamePassword) {
-        toast.error('New password must be different from your old password.');
-        return;
-      }
-
-      toast.success('Password update request accepted.');
+      toast.success('Password changed successfully!');
+      setIsChangePasswordOpen(false);
+    } catch (error) {
+      const message = getAccountErrorMessage(error, 'Failed to change password. Please try again.');
+      toast.error(message);
+      throw error;
     } finally {
       setIsPasswordSubmitting(false);
     }

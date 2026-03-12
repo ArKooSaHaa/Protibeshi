@@ -15,7 +15,11 @@ interface ChangePasswordModalProps {
   open: boolean;
   isSubmitting: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (payload: { oldPassword: string; newPassword: string }) => Promise<void>;
+  onSubmit: (payload: { 
+    current_password: string; 
+    new_password: string; 
+    new_password_confirmation: string;
+  }) => Promise<void>;
 }
 
 type FormState = {
@@ -136,12 +140,17 @@ export const ChangePasswordModal = ({ open, isSubmitting, onOpenChange, onSubmit
       return;
     }
 
-    await onSubmit({
-      oldPassword: form.oldPassword.trim(),
-      newPassword: form.newPassword.trim(),
-    });
+    try {
+      await onSubmit({
+        current_password: form.oldPassword.trim(),
+        new_password: form.newPassword.trim(),
+        new_password_confirmation: form.confirmPassword.trim(),
+      });
 
-    onOpenChange(false);
+      onOpenChange(false);
+    } catch {
+      // Keep dialog open when API fails so user can correct inputs.
+    }
   };
 
   const resetForm = () => {

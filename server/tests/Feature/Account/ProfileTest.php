@@ -144,4 +144,158 @@ class ProfileTest extends TestCase
         $this->assertSame('Chattogram', $user->city);
     }
 
+    public function test_authenticated_user_can_change_password(): void
+    {
+        $user = $this->createUser([
+            'password' => Hash::make('OldPassword123!'),
+        ]);
+
+        $token = JWTAuth::fromUser($user);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)->postJson('/api/account/change-password', [
+            'current_password' => 'OldPassword123!',
+            'new_password' => 'NewPassword456@',
+            'new_password_confirmation' => 'NewPassword456@',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('message', 'Password changed successfully');
+
+        $user->refresh();
+
+        $this->assertTrue(Hash::check('NewPassword456@', $user->password));
+        $this->assertFalse(Hash::check('OldPassword123!', $user->password));
+    }
+
+    public function test_authenticated_user_can_change_password_with_reported_values(): void
+    {
+        $user = $this->createUser([
+            'password' => Hash::make('Arkosahabd@123'),
+        ]);
+
+        $token = JWTAuth::fromUser($user);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)->postJson('/api/account/change-password', [
+            'current_password' => 'Arkosahabd@123',
+            'new_password' => 'Arkosahabd@1234',
+            'new_password_confirmation' => 'Arkosahabd@1234',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('message', 'Password changed successfully');
+
+        $user->refresh();
+
+        $this->assertTrue(Hash::check('Arkosahabd@1234', $user->password));
+        $this->assertFalse(Hash::check('Arkosahabd@123', $user->password));
+    }
+
+    public function test_change_password_fails_with_incorrect_current_password(): void
+    {
+        $user = $this->createUser([
+            'password' => Hash::make('OldPassword123!'),
+        ]);
+
+        $token = JWTAuth::fromUser($user);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)->postJson('/api/account/change-password', [
+            'current_password' => 'WrongPassword123!',
+            'new_password' => 'NewPassword456@',
+            'new_password_confirmation' => 'NewPassword456@',
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.current_password.0', 'The current password is incorrect.');
+
+        $user->refresh();
+
+        $this->assertTrue(Hash::check('OldPassword123!', $user->password));
+    }
+
+    public function test_change_password_fails_with_invalid_new_password_format(): void
+    {
+        $user = $this->createUser([
+            'password' => Hash::make('OldPassword123!'),
+        ]);
+
+        $token = JWTAuth::fromUser($user);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)->postJson('/api/account/change-password', [
+            'current_password' => 'OldPassword123!',
+            'new_password' => 'weakpassword', // Missing uppercase, number, special char
+            'new_password_confirmation' => 'weakpassword',
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonStructure([
+                'status',
+                'message',
+                'errors' => ['new_password'],
+            ]);
+
+        $user->refresh();
+
+        $this->assertTrue(Hash::check('OldPassword123!', $user->password));
+    }
+
+    public function test_change_password_fails_with_mismatched_confirmation(): void
+    {
+        $user = $this->createUser([
+            'password' => Hash::make('OldPassword123!'),
+        ]);
+
+        $token = JWTAuth::fromUser($user);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)->postJson('/api/account/change-password', [
+            'current_password' => 'OldPassword123!',
+            'new_password' => 'NewPassword456@',
+            'new_password_confirmation' => 'DifferentPassword789@',
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonStructure([
+                'status',
+                'message',
+                'errors',
+            ]);
+
+        $user->refresh();
+
+        $this->assertTrue(Hash::check('OldPassword123!', $user->password));
+    }
+
+    public function test_change_password_fails_when_new_password_same_as_current(): void
+    {
+        $user = $this->createUser([
+            'password' => Hash::make('SamePassword123!'),
+        ]);
+
+        $token = JWTAuth::fromUser($user);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)->postJson('/api/account/change-password', [
+            'current_password' => 'SamePassword123!',
+            'new_password' => 'SamePassword123!',
+            'new_password_confirmation' => 'SamePassword123!',
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonStructure([
+                'status',
+                'message',
+                'errors',
+            ]);
+
+        $user->refresh();
+
+        $this->assertTrue(Hash::check('SamePassword123!', $user->password));
+    }
+
 }
