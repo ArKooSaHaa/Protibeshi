@@ -25,9 +25,14 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
+import { ChangePasswordModal } from '../components/ChangePasswordModal';
+import { DeleteAccountModal } from '../components/DeleteAccountModal';
 import { EditProfileModal } from '../components/EditProfileModal';
 import { useUserPosts, type AccountPostTab, type PostStatus, type UserPost } from '../hooks/useUserPosts';
+import { changePassword, deleteAccount, getAccountErrorMessage } from '../services/accountService';
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 const sectionTransition = {
   duration: 0.55,
@@ -125,7 +130,12 @@ type PostEditorState = {
 };
 
 export const AccountPage = () => {
+  const logout = useAuthStore((state) => state.logout);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
+  const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false);
+  const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
   const [activeSetting, setActiveSetting] = useState<SettingActionKey>('privacy');
   const [previewPost, setPreviewPost] = useState<UserPost | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserPost | null>(null);
@@ -139,14 +149,31 @@ export const AccountPage = () => {
     totalCount,
     hasMore,
     isLoading,
+    isProfileLoading,
     isSavingProfile,
+    profileError,
     stats,
     setActiveTab,
     loadMore,
+    refreshProfile,
     updateProfile,
     updatePost,
     deletePost,
   } = useUserPosts();
+
+  const verificationLabel = profile.verificationStatus === 'verified' ? 'Verified' : 'Unverified';
+  const joinedLabel = profile.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    : 'Recently joined';
+
+  const heroMetrics = useMemo(
+    () => [
+      { label: 'Member since', value: joinedLabel, sublabel: 'Account tenure on Protibeshi' },
+      { label: 'Verification', value: verificationLabel, sublabel: profile.emailVerified ? 'Email confirmed' : 'Pending confirmation' },
+      { label: 'Published posts', value: String(stats.totalPosts), sublabel: 'Content linked to this account' },
+    ],
+    [joinedLabel, profile.emailVerified, stats.totalPosts, verificationLabel],
+  );
 
   const statsCards = useMemo(
     () => [
@@ -201,9 +228,9 @@ export const AccountPage = () => {
       { label: 'Full Name', value: profile.fullName, icon: UserRound },
       { label: 'Username', value: `@${profile.username}`, icon: BadgeCheck },
       { label: 'Email', value: profile.email, icon: Mail },
-      { label: 'Phone Number', value: profile.phone, icon: Phone },
-      { label: 'City', value: profile.city, icon: Building2 },
-      { label: 'Neighborhood', value: profile.neighborhood, icon: MapPin },
+      { label: 'Phone Number', value: profile.phone || 'Not provided', icon: Phone },
+      { label: 'City', value: profile.city || 'Not provided', icon: Building2 },
+      { label: 'Neighborhood', value: profile.neighborhood || 'Not provided', icon: MapPin },
     ],
     [profile],
   );
@@ -232,6 +259,107 @@ export const AccountPage = () => {
     setIsUpdatingPost(false);
     setEditingPost(null);
   };
+
+  const handleSettingAction = (key: SettingActionKey) => {
+    setActiveSetting(key);
+
+    if (key === 'password') {
+      setIsChangePasswordOpen(true);
+    }
+
+    if (key === 'delete') {
+      setIsDeleteAccountOpen(true);
+    }
+  };
+
+  const handleChangePassword = async ({ 
+    current_password, 
+    new_password, 
+    new_password_confirmation 
+  }: { 
+    current_password: string; 
+    new_password: string; 
+    new_password_confirmation: string;
+  }) => {
+    setIsPasswordSubmitting(true);
+
+    try {
+      await changePassword({
+        current_password,
+        new_password,
+        new_password_confirmation,
+      });
+
+      toast.success('Password changed successfully!');
+      setIsChangePasswordOpen(false);
+    } catch (error) {
+      const message = getAccountErrorMessage(error, 'Failed to change password. Please try again.');
+      toast.error(message);
+      throw error;
+    } finally {
+      setIsPasswordSubmitting(false);
+    }
+  };
+
+  const handleDeleteAccount = async ({ password, confirmationText }: { password: string; confirmationText: string }) => {
+    setIsDeleteSubmitting(true);
+
+    try {
+      await deleteAccount({ password, confirmation: confirmationText });
+      toast.success('Your account has been deleted successfully.');
+      logout();
+    } catch (error) {
+      const message = getAccountErrorMessage(error, 'Failed to delete account. Please try again.');
+      toast.error(message);
+      throw error;
+    } finally {
+      setIsDeleteSubmitting(false);
+    }
+  };
+
+  if (isProfileLoading) {
+    return (
+      <div className="px-3 pb-10 pt-6 md:px-6">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <div className="flex min-h-[220px] items-center justify-center rounded-[32px] border border-slate-200/80 bg-white/80 shadow-[0_18px_55px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+            <div className="flex items-center gap-3 text-slate-700">
+              <LoaderCircle className="h-5 w-5 animate-spin text-emerald-600" />
+              <span className="text-sm font-medium">Loading your account details...</span>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} className="h-36 animate-pulse rounded-[28px] border border-slate-200 bg-slate-100/80" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (profileError) {
+    return (
+      <div className="px-3 pb-10 pt-6 md:px-6">
+        <div className="mx-auto max-w-4xl rounded-[32px] border border-rose-200 bg-white/85 p-8 shadow-[0_18px_55px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-rose-600">Account unavailable</p>
+              <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">We couldn&apos;t load your account page.</h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">{profileError}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void refreshProfile()}
+              className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+            >
+              <CircleAlert className="h-4 w-4" />
+              Try again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative isolate overflow-hidden px-3 pb-10 pt-2 md:px-6">
@@ -262,19 +390,30 @@ export const AccountPage = () => {
             <div className="flex flex-col gap-5 md:flex-row md:items-start">
               <motion.div whileHover={{ scale: 1.04, y: -2 }} className="relative shrink-0">
                 <div className="absolute inset-0 rounded-full bg-emerald-400/30 blur-2xl" />
-                <img
-                  src={profile.avatarUrl}
-                  alt={profile.fullName}
-                  className="relative h-28 w-28 rounded-full border-4 border-white/80 object-cover shadow-[0_18px_45px_rgba(16,185,129,0.28)] md:h-32 md:w-32"
-                />
+                {profile.avatarUrl ? (
+                  <img
+                    src={profile.avatarUrl}
+                    alt={profile.fullName}
+                    className="relative h-28 w-28 rounded-full border-4 border-white/80 object-cover shadow-[0_18px_45px_rgba(16,185,129,0.28)] md:h-32 md:w-32"
+                  />
+                ) : (
+                  <div className="relative flex h-28 w-28 items-center justify-center rounded-full border-4 border-white/80 bg-emerald-600 text-3xl font-semibold text-white shadow-[0_18px_45px_rgba(16,185,129,0.28)] md:h-32 md:w-32">
+                    {profile.fullName.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
               </motion.div>
 
               <div className="max-w-3xl space-y-4">
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">{profile.fullName}</h1>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
+                  <span className={cn(
+                    'inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em]',
+                    profile.verificationStatus === 'verified'
+                      ? 'border-emerald-500/20 bg-white/70 text-emerald-700'
+                      : 'border-amber-500/20 bg-white/70 text-amber-700',
+                  )}>
                     <BadgeCheck className="h-3.5 w-3.5" />
-                    Verified
+                    {verificationLabel}
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full border border-slate-200/80 bg-slate-950/5 px-3 py-1 text-xs font-medium text-slate-700">
                     <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
@@ -287,16 +426,16 @@ export const AccountPage = () => {
                   <span className="h-1 w-1 rounded-full bg-slate-300" />
                   <span className="inline-flex items-center gap-1.5">
                     <MapPin className="h-4 w-4 text-emerald-600" />
-                    {profile.neighborhood}, {profile.city}
+                    {[profile.neighborhood, profile.city].filter(Boolean).join(', ') || 'Location not provided'}
                   </span>
                 </div>
 
-                <p className="max-w-2xl text-sm leading-7 text-slate-700 md:text-base">{profile.bio}</p>
+                <p className="max-w-2xl text-sm leading-7 text-slate-700 md:text-base">{profile.bio || 'No bio added yet.'}</p>
 
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <HeroMetric label="Reputation" value="94%" sublabel="Trusted by neighbors" />
-                  <HeroMetric label="Response time" value="12m" sublabel="Fast on urgent posts" />
-                  <HeroMetric label="Activity streak" value="18d" sublabel="Consistent local updates" />
+                  {heroMetrics.map((metric) => (
+                    <HeroMetric key={metric.label} label={metric.label} value={metric.value} sublabel={metric.sublabel} />
+                  ))}
                 </div>
               </div>
             </div>
@@ -377,7 +516,7 @@ export const AccountPage = () => {
               ))}
               <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 md:col-span-2">
                 <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Short Bio</div>
-                <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700">{profile.bio}</p>
+                <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700">{profile.bio || 'No bio added yet.'}</p>
               </div>
             </div>
           </motion.div>
@@ -394,10 +533,10 @@ export const AccountPage = () => {
               <SectionEyebrow title="Account Details" subtitle="Security and verification signals that increase trust around your local activity." />
 
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                <InfoTile label="Account Created" value={new Date(profile.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })} icon={CalendarDays} />
-                <InfoTile label="Verification Status" value={profile.verificationStatus === 'verified' ? 'Verified' : 'Unverified'} icon={BadgeCheck} />
-                <InfoTile label="Email Verified" value="Confirmed" icon={Mail} />
-                <InfoTile label="Phone Verified" value="Confirmed" icon={Phone} />
+                <InfoTile label="Account Created" value={profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Unavailable'} icon={CalendarDays} />
+                <InfoTile label="Verification Status" value={verificationLabel} icon={BadgeCheck} />
+                <InfoTile label="Email Verified" value={profile.emailVerified ? 'Confirmed' : 'Pending'} icon={Mail} />
+                <InfoTile label="Phone On File" value={profile.phone ? 'Available' : 'Not provided'} icon={Phone} />
               </div>
             </div>
 
@@ -409,7 +548,7 @@ export const AccountPage = () => {
                   <button
                     key={action.key}
                     type="button"
-                    onClick={() => setActiveSetting(action.key)}
+                    onClick={() => handleSettingAction(action.key)}
                     className={cn(
                       'flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition-all duration-300',
                       activeSetting === action.key
@@ -596,6 +735,20 @@ export const AccountPage = () => {
           isSaving={isSavingProfile}
           onOpenChange={setIsEditModalOpen}
           onSave={updateProfile}
+        />
+
+        <ChangePasswordModal
+          open={isChangePasswordOpen}
+          isSubmitting={isPasswordSubmitting}
+          onOpenChange={setIsChangePasswordOpen}
+          onSubmit={handleChangePassword}
+        />
+
+        <DeleteAccountModal
+          open={isDeleteAccountOpen}
+          isSubmitting={isDeleteSubmitting}
+          onOpenChange={setIsDeleteAccountOpen}
+          onSubmit={handleDeleteAccount}
         />
 
         <AnimatePresence>
