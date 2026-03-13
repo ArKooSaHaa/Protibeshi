@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ListingController;
 use App\Http\Controllers\SessionController;
 
 /*
@@ -15,6 +16,8 @@ use App\Http\Controllers\SessionController;
 Route::post('/signup', [AuthController::class, 'signup']);
 Route::post('/signin', [AuthController::class, 'signin']);
 
+Route::get('/listings', [ListingController::class, 'index']);
+
 
 /*
 |--------------------------------------------------------------------------
@@ -23,6 +26,8 @@ Route::post('/signin', [AuthController::class, 'signin']);
 */
 
 Route::middleware(['auth:api'])->group(function () {
+
+    Route::post('/listings', [ListingController::class, 'store']);
 
     Route::get('/account/profile', [AccountController::class, 'show']);
     Route::put('/account/profile', [AccountController::class, 'update']);

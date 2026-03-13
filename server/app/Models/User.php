@@ -33,6 +33,11 @@ class User extends Authenticatable implements JWTSubject
         'password',
     ];
 
+    public function listings()
+    {
+        return $this->hasMany(Listing::class);
+    }
+
     /**
      * Return JWT identifier
      */
