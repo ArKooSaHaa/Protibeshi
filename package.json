@@ -7,12 +7,16 @@
     "start:server": "cd server && php artisan serve",
     "build:client": "cd client && npm run build",
     "copy:client": "cp -r client/dist/* server/public/",
-    "build:prod": "npm run build:client && npm run copy:client"
+    "build:prod": "npm run build:client && npm run copy:client",
+    "dev:watch": "chokidar 'client/src/**/*' -c 'npm run build && rsync -av client/dist/ server/public/'"  
   },
   "keywords": [],
   "author": "Ali Ahnaf",
   "license": "ISC",
   "dependencies": {
     "framer-motion": "^12.34.3"
+  },
+  "devDependencies": {
+    "chokidar-cli": "^3.0.0"
   }
 }
