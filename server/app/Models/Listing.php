@@ -20,8 +20,22 @@ class Listing extends Model
         'is_active',
     ];
 
+    protected $casts = [
+        'price' => 'decimal:2',
+        'is_active' => 'boolean',
+    ];
+
+    protected $appends = [
+        'photo_url',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function getPhotoUrlAttribute()
+    {
+        return $this->photo ? asset('storage/' . $this->photo) : null;
     }
 }

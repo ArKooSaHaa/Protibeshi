@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Upload, DollarSign, Tag, FileText, Settings, MapPin } from 'lucide-react';
+import { createListing } from '@/services/listingService';
 import styles from './CreateListingModal.module.css';
 
 const CATEGORIES = [
@@ -13,18 +14,20 @@ const CATEGORIES = [
     'Other',
 ];
 
-const CreateListingModal = ({ isOpen, onClose }) => {
+const CreateListingModal = ({ isOpen, onClose, onCreated }) => {
     const [formData, setFormData] = useState({
         title: '',
         price: '',
         category: '',
         location: '',
-        photoUrl: '',
         details: '',
         options: '',
     });
 
     const [photoPreview, setPhotoPreview] = useState(null);
+    const [selectedPhoto, setSelectedPhoto] = useState(null);
+    const [submitError, setSubmitError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     /* =========================
        Disable background scroll
@@ -73,50 +76,81 @@ const CreateListingModal = ({ isOpen, onClose }) => {
         const file = e.target.files?.[0];
 
         if (file) {
+            setSelectedPhoto(file);
             const reader = new FileReader();
 
             reader.onloadend = () => {
                 setPhotoPreview(reader.result);
-                setFormData((prev) => ({
-                    ...prev,
-                    photoUrl: reader.result,
-                }));
             };
 
             reader.readAsDataURL(file);
+        } else {
+            setSelectedPhoto(null);
+            setPhotoPreview(null);
         }
     };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        console.log('New listing:', formData);
-
+    const resetForm = () => {
         setFormData({
             title: '',
             price: '',
             category: '',
             location: '',
-            photoUrl: '',
             details: '',
             options: '',
         });
 
         setPhotoPreview(null);
-        onClose();
+        setSelectedPhoto(null);
+        setSubmitError('');
+        setIsSubmitting(false);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSubmitError('');
+
+        const normalizedPrice = String(formData.price).replace(/[^0-9.]/g, '');
+        if (!normalizedPrice || Number.isNaN(Number(normalizedPrice))) {
+            setSubmitError('Please enter a valid numeric price (example: 2500).');
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+            setSubmitError('Please sign in to create a listing.');
+            return;
+        }
+
+        const payload = new FormData();
+        if (selectedPhoto) {
+            payload.append('photo', selectedPhoto);
+        }
+        payload.append('title', formData.title);
+            payload.append('price', normalizedPrice);
+        payload.append('category', formData.category);
+        payload.append('location', formData.location);
+        payload.append('details', formData.details);
+
+        try {
+            setIsSubmitting(true);
+            const result = await createListing(payload, token);
+
+            if (typeof onCreated === 'function') {
+                await onCreated(result?.listing || null);
+            }
+
+            resetForm();
+            onClose();
+        } catch (error) {
+            setSubmitError(error.message || 'Failed to create listing.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleReset = () => {
-        setFormData({
-            title: '',
-            price: '',
-            category: '',
-            location: '',
-            photoUrl: '',
-            details: '',
-            options: '',
-        });
-
-        setPhotoPreview(null);
+        resetForm();
         onClose();
     };
 
@@ -236,11 +270,13 @@ const CreateListingModal = ({ isOpen, onClose }) => {
                                         <DollarSign size={16} />
                                         <input
                                             id="price"
-                                            type="text"
+                                            type="number"
                                             name="price"
                                             value={formData.price}
                                             onChange={handleInputChange}
-                                            placeholder="BDT 2,500"
+                                            min="0"
+                                            step="0.01"
+                                            placeholder="2500"
                                             required
                                         />
                                     </div>
@@ -327,11 +363,18 @@ const CreateListingModal = ({ isOpen, onClose }) => {
                             </div>
 
                             {/* Actions */}
+                            {submitError && (
+                                <p className={styles.submitError} role="alert">
+                                    {submitError}
+                                </p>
+                            )}
+
                             <div className={styles.modalActions}>
                                 <motion.button
                                     type="button"
                                     onClick={handleReset}
                                     className={styles.cancelButton}
+                                    disabled={isSubmitting}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                 >
@@ -341,10 +384,11 @@ const CreateListingModal = ({ isOpen, onClose }) => {
                                 <motion.button
                                     type="submit"
                                     className={styles.submitButton}
+                                    disabled={isSubmitting}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                 >
-                                    Create Listing
+                                    {isSubmitting ? 'Creating...' : 'Create Listing'}
                                 </motion.button>
                             </div>
                         </form>

@@ -285,6 +285,35 @@
   gap: 20px;
 }
 
+.feedError {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.feedLoading,
+.emptyState {
+  width: 100%;
+  border: 1px solid #e6ebf2;
+  background: #ffffff;
+  color: #475569;
+  border-radius: 14px;
+  padding: 24px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.emptyState {
+  grid-column: 1 / -1;
+}
+
 /* ================= FILTERS PANEL ================= */
 
 .filtersPanel {

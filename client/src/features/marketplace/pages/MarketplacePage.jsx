@@ -1,541 +1,439 @@
 // src/features/marketplace/pages/MarketplacePage.jsx
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useScroll, useTransform } from 'framer-motion';
 import { ChevronDown, MapPin, Search, SlidersHorizontal, Sparkles, Loader, X } from 'lucide-react';
 import CreateListingModal from '../components/CreateListingModal';
 import ProductDetailsModal from '../components/ProductDetailsModal';
+import { getListings } from '@/services/listingService';
 import styles from './MarketplacePage.module.css';
 
-const listings = [
-    {
-        id: 1,
-        title: 'M19 TWS Gaming Bluetooth Earbuds',
-        price: 'BDT388',
-        location: 'Dhaka, Bangladesh',
-        badge: 'Top pick',
-        category: 'Electronics',
-        image:
-            'https://images.unsplash.com/photo-1518441902110-5e56d6b76d19?auto=format&fit=crop&w=640&q=80',
-    },
-    {
-        id: 2,
-        title: 'iPad (9th Gen) 64GB WiFi',
-        price: 'BDT2,835',
-        location: 'Bara Kalampur, Dhaka',
-        badge: 'Verified',
-        category: 'Electronics',
-        image:
-            'https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?auto=format&fit=crop&w=640&q=80',
-    },
-    {
-        id: 3,
-        title: 'High Quality Sneakers',
-        price: 'BDT450',
-        location: 'Dhaka, Bangladesh',
-        badge: 'New',
-        category: 'Fashion',
-        image:
-            'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=640&q=80',
-    },
-    {
-        id: 4,
-        title: 'Gixxer Monotone 150cc',
-        price: 'BDT151,000',
-        location: 'Dhaka, Bangladesh',
-        badge: 'Hot',
-        category: 'Vehicles',
-        image:
-            'https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=640&q=80',
-    },
-    {
-        id: 5,
-        title: 'Racing Helmet',
-        price: 'BDT1,200',
-        location: 'Uttara, Dhaka',
-        badge: 'Just listed',
-        category: 'Vehicles',
-        image:
-            'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=640&q=80',
-    },
-    {
-        id: 6,
-        title: 'Studio PC Build',
-        price: 'BDT38,000',
-        location: 'Dhanmondi, Dhaka',
-        badge: 'Ready',
-        category: 'Electronics',
-        image:
-            'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=640&q=80',
-    },
-    {
-        id: 7,
-        title: 'Vintage Leather Sofa',
-        price: 'BDT8,500',
-        location: 'Gulshan, Dhaka',
-        badge: 'Trending',
-        category: 'Furniture',
-        image:
-            'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=640&q=80',
-    },
-    {
-        id: 8,
-        title: 'MacBook Air M1 2020',
-        price: 'BDT85,000',
-        location: 'Banani, Dhaka',
-        badge: 'Hot',
-        category: 'Electronics',
-        image:
-            'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=640&q=80',
-    },
-    {
-        id: 9,
-        title: 'Professional Camera DSLR',
-        price: 'BDT42,000',
-        location: 'Mohakhali, Dhaka',
-        badge: 'Verified',
-        category: 'Electronics',
-        image:
-            'https://images.unsplash.com/photo-1489749798305-4fea3ba63d60?auto=format&fit=crop&w=640&q=80',
-    },
-    {
-        id: 10,
-        title: 'Gaming Laptop RTX 4060',
-        price: 'BDT95,000',
-        location: 'Mirpur, Dhaka',
-        badge: 'New',
-        category: 'Electronics',
-        image:
-            'https://images.unsplash.com/photo-1588872657840-18ed94f19141?auto=format&fit=crop&w=640&q=80',
-    },
-    {
-        id: 11,
-        title: 'Mountain Bike Trek 3900',
-        price: 'BDT18,500',
-        location: 'Uttara, Dhaka',
-        badge: 'Top pick',
-        category: 'Vehicles',
-        image:
-            'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=640&q=80',
-    },
-    {
-        id: 12,
-        title: 'Wireless Smart Speaker',
-        price: 'BDT3,200',
-        location: 'Dhanmondi, Dhaka',
-        badge: 'Just listed',
-        category: 'Electronics',
-        image:
-            'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&w=640&q=80',
-    },
-    {
-        id: 13,
-        title: 'Vintage Ottoman Chair',
-        price: 'BDT2,800',
-        location: 'Gulshan, Dhaka',
-        badge: 'Ready',
-        category: 'Furniture',
-        image:
-            'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=640&q=80',
-    },
-    {
-        id: 14,
-        title: 'Professional Microphone Set',
-        price: 'BDT5,600',
-        location: 'Banani, Dhaka',
-        badge: 'Trending',
-        category: 'Electronics',
-        image:
-            'https://images.unsplash.com/photo-1516321318423-f06f70504504?auto=format&fit=crop&w=640&q=80',
-    },
-    {
-        id: 15,
-        title: 'Smart Watch Apple Watch 7',
-        price: 'BDT28,000',
-        location: 'Mohakhali, Dhaka',
-        badge: 'Hot',
-        category: 'Electronics',
-        image:
-            'https://images.unsplash.com/photo-1505941957517-cf71ee64871d?auto=format&fit=crop&w=640&q=80',
-    },
-    {
-        id: 16,
-        title: 'Designer Handbag Lv Style',
-        price: 'BDT4,200',
-        location: 'Mirpur, Dhaka',
-        badge: 'Verified',
-        category: 'Fashion',
-        image:
-            'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=640&q=80',
-    },
-];
+const BACKEND_ORIGIN = 'http://127.0.0.1:8000';
+const FALLBACK_IMAGE =
+  'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=640&q=80';
 
 const categories = [
-    'Electronics',
-    'Vehicles',
-    'Fashion',
-    'Furniture',
-    'Real Estate',
-    'Services',
+  'Electronics',
+  'Vehicles',
+  'Fashion',
+  'Furniture',
+  'Real Estate',
+  'Services',
 ];
 
+const buildPhotoUrl = (listing) => {
+  if (listing?.photo_url) {
+    return listing.photo_url;
+  }
+
+  if (listing?.photo) {
+    return `${BACKEND_ORIGIN}/storage/${listing.photo}`;
+  }
+
+  return FALLBACK_IMAGE;
+};
+
+const mapListingToCard = (listing) => {
+  const numericPrice = Number(listing?.price ?? 0);
+  const safePrice = Number.isFinite(numericPrice) ? numericPrice : 0;
+
+  return {
+    id: listing.id,
+    title: listing.title || 'Untitled listing',
+    price: `BDT ${safePrice.toLocaleString()}`,
+    priceValue: safePrice,
+    location: listing.location || 'Location not provided',
+    badge: listing.is_active ? 'Active' : 'Inactive',
+    category: listing.category || 'Other',
+    details: listing.details || '',
+    image: buildPhotoUrl(listing),
+  };
+};
+
 export const MarketplacePage = () => {
-    const containerRef = useRef(null);
-    const heroRef = useRef(null);
+  const containerRef = useRef(null);
 
-    const [displayCount, setDisplayCount] = useState(12);
-    const [isLoading, setIsLoading] = useState(false);
-    const [selectedCategory, setSelectedCategory] = useState(null);
-    const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
-    const [selectedFilter, setSelectedFilter] = useState('for-you');
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [selectedProduct, setSelectedProduct] = useState(null);
+  const [displayCount, setDisplayCount] = useState(12);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isFeedLoading, setIsFeedLoading] = useState(true);
+  const [feedError, setFeedError] = useState('');
+  const [listings, setListings] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState('for-you');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
-    const { scrollYProgress } = useScroll({
-        target: containerRef,
-        offset: ['start start', 'end start'],
-    });
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ['start start', 'end start'],
+  });
 
-    // Parallax effect for hero background
-    const heroY = useTransform(scrollYProgress, [0, 1], [0, 100]);
-    const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0.6]);
+  const heroY = useTransform(scrollYProgress, [0, 1], [0, 100]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0.6]);
+  const toolbarOpacity = useTransform(scrollYProgress, [0, 0.1], [1, 0.8]);
+  const toolbarY = useTransform(scrollYProgress, [0, 0.1], [0, -10]);
 
-    // Toolbar fade effect
-    const toolbarOpacity = useTransform(scrollYProgress, [0, 0.1], [1, 0.8]);
-    const toolbarY = useTransform(scrollYProgress, [0, 0.1], [0, -10]);
+  const cardContainerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.2,
+      },
+    },
+  };
 
-    const cardContainerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.08,
-                delayChildren: 0.2,
-            },
-        },
-    };
+  const cardItemVariants = {
+    hidden: { opacity: 0, y: 40, scale: 0.95 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        duration: 0.4,
+        ease: [0.25, 0.46, 0.45, 0.94],
+      },
+    },
+  };
 
-    const cardItemVariants = {
-        hidden: { opacity: 0, y: 40, scale: 0.95 },
-        visible: {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            transition: {
-                duration: 0.4,
-                ease: [0.25, 0.46, 0.45, 0.94],
-            },
-        },
-    };
+  const loadMarketplaceListings = async () => {
+    setFeedError('');
+    setIsFeedLoading(true);
 
-    const handleLoadMore = () => {
-        setIsLoading(true);
-        setTimeout(() => {
-            setDisplayCount((prev) => Math.min(prev + 8, listings.length));
-            setIsLoading(false);
-        }, 600);
-    };
+    try {
+      const apiListings = await getListings();
+      const mapped = apiListings.map(mapListingToCard);
+      setListings(mapped);
+      setDisplayCount(12);
+    } catch (error) {
+      setFeedError(error.message || 'Failed to load marketplace listings.');
+    } finally {
+      setIsFeedLoading(false);
+    }
+  };
 
-    const getFilteredListings = () => {
-        let filtered = listings;
+  useEffect(() => {
+    loadMarketplaceListings();
+  }, []);
 
-        if (selectedCategory) {
-            filtered = filtered.filter(
-                (item) => item.category === selectedCategory
-            );
+  const handleListingCreated = async (createdListing) => {
+    if (createdListing?.id) {
+      const optimisticCard = mapListingToCard(createdListing);
+
+      setListings((previous) => {
+        const exists = previous.some((item) => item.id === optimisticCard.id);
+        if (exists) {
+          return previous;
         }
 
-        if (selectedFilter === 'verified') {
-            filtered = filtered.filter((item) => item.badge === 'Verified');
-        } else if (selectedFilter === 'top-deals') {
-            filtered = filtered.filter(
-                (item) =>
-                    item.badge === 'Hot' || item.price.includes('BDT')
-            );
-        }
+        return [optimisticCard, ...previous];
+      });
+    }
 
-        return filtered;
-    };
+    await loadMarketplaceListings();
+  };
 
-    return (
-        <div className={styles.marketplacePage} ref={containerRef}>
-            <motion.div
-                className={styles.hero}
-                ref={heroRef}
-                style={{ y: heroY, opacity: heroOpacity }}
-            >
-                <div className={styles.heroMedia} aria-hidden="true">
-                    <video
-                        className={styles.heroVideo}
-                        src="/marketplace.mp4"
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                    />
-                    <div className={styles.heroOverlay} />
-                </div>
+  const filteredListings = useMemo(() => {
+    let filtered = listings;
 
-                <div className={styles.heroContent}>
-                    <span className={styles.kicker}>Marketplace</span>
-                    <h1 className={styles.title}>Today&apos;s picks</h1>
-                    <p className={styles.subtitle}>
-                        Shop locally with trusted sellers, verified listings, and smart discovery.
-                    </p>
-                    <div className={styles.locationPill}>
-                        <MapPin size={14} />
-                        Dhaka • 65 km
-                    </div>
-                </div>
+    if (selectedCategory) {
+      filtered = filtered.filter((item) => item.category === selectedCategory);
+    }
 
-                <div className={styles.heroCategoryWrap}>
-                    <motion.button
-                        type="button"
-                        className={`${styles.createPill} ${styles.heroCategoryButton}`}
-                        onClick={() => setIsCategoriesOpen(true)}
-                        aria-expanded={isCategoriesOpen}
-                        aria-controls="marketplace-category-modal"
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                    >
-                        <SlidersHorizontal size={14} />
-                        Categories
-                        <ChevronDown
-                            size={14}
-                            className={`${styles.panelToggleIcon} ${isCategoriesOpen ? styles.panelToggleIconOpen : ''}`}
-                            aria-hidden="true"
-                        />
-                    </motion.button>
-                </div>
+    if (selectedFilter === 'verified') {
+      filtered = filtered.filter((item) => item.badge === 'Verified');
+    } else if (selectedFilter === 'top-deals') {
+      filtered = filtered.filter((item) => item.priceValue > 0);
+    }
 
-                <div className={styles.heroCreateWrap}>
-                    <motion.button
-                        type="button"
-                        className={`${styles.createPill} ${styles.heroCreateButton}`}
-                        onClick={() => setIsCreateModalOpen(true)}
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                    >
-                        <Sparkles size={14} />
-                        Create new listing
-                    </motion.button>
-                </div>
-            </motion.div>
+    return filtered;
+  }, [listings, selectedCategory, selectedFilter]);
 
-            {/* Toolbar */}
-            <motion.div
-                className={styles.toolbar}
-                style={{ opacity: toolbarOpacity, y: toolbarY }}
-            >
-                <div className={styles.searchBox}>
-                    <Search size={16} />
-                    <input placeholder="Search Marketplace" />
-                </div>
+  const hasMoreListings = displayCount < filteredListings.length;
 
-                <div className={styles.filterPills}>
-                    <motion.button
-                        type="button"
-                        className={`${styles.filterPill} ${selectedFilter === 'for-you'
-                                ? styles.filterPillActive
-                                : ''
-                            }`}
-                        onClick={() => setSelectedFilter('for-you')}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        For you
-                    </motion.button>
+  const handleLoadMore = () => {
+    setIsLoadingMore(true);
 
-                    <motion.button
-                        type="button"
-                        className={`${styles.filterPill} ${selectedFilter === 'nearby'
-                                ? styles.filterPillActive
-                                : ''
-                            }`}
-                        onClick={() => setSelectedFilter('nearby')}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        Nearby
-                    </motion.button>
+    setTimeout(() => {
+      setDisplayCount((prev) => Math.min(prev + 8, filteredListings.length));
+      setIsLoadingMore(false);
+    }, 600);
+  };
 
-                    <motion.button
-                        type="button"
-                        className={`${styles.filterPill} ${selectedFilter === 'top-deals'
-                                ? styles.filterPillActive
-                                : ''
-                            }`}
-                        onClick={() => setSelectedFilter('top-deals')}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        Top deals
-                    </motion.button>
-
-                    <motion.button
-                        type="button"
-                        className={`${styles.filterPill} ${selectedFilter === 'verified'
-                                ? styles.filterPillActive
-                                : ''
-                            }`}
-                        onClick={() => setSelectedFilter('verified')}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        Verified
-                    </motion.button>
-
-                </div>
-            </motion.div>
-
-            {/* Content Grid */}
-            <div className={styles.contentGrid}>
-                <motion.section
-                    className={styles.cardsGrid}
-                    variants={cardContainerVariants}
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: false, margin: '0px 0px -100px 0px' }}
-                >
-                    {getFilteredListings()
-                        .slice(0, displayCount)
-                        .map((item) => (
-                            <motion.article
-                                key={item.id}
-                                className={styles.card}
-                                variants={cardItemVariants}
-                                whileHover={{ y: -6, rotateX: 2, rotateY: -2 }}
-                                transition={{ duration: 0.2 }}
-                                onClick={() => setSelectedProduct(item)}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                <div className={styles.cardImage}>
-                                    <img src={item.image} alt={item.title} />
-                                    <span className={styles.badge}>{item.badge}</span>
-                                </div>
-
-                                <div className={styles.cardBody}>
-                                    <span className={styles.price}>{item.price}</span>
-                                    <h3 className={styles.cardTitle}>{item.title}</h3>
-                                    <span className={styles.cardLocation}>
-                                        {item.location}
-                                    </span>
-                                </div>
-                            </motion.article>
-                        ))}
-                </motion.section>
-
-                {displayCount < listings.length && (
-                    <motion.div
-                        className={styles.loadMoreContainer}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
-                    >
-                        <motion.button
-                            type="button"
-                            className={styles.loadMoreButton}
-                            onClick={handleLoadMore}
-                            disabled={isLoading}
-                            whileHover={{ scale: isLoading ? 1 : 1.04 }}
-                            whileTap={{ scale: isLoading ? 1 : 0.98 }}
-                        >
-                            {isLoading ? (
-                                <>
-                                    <Loader size={16} className={styles.spinIcon} />
-                                    Loading...
-                                </>
-                            ) : (
-                                <>
-                                    Load More Listings
-                                    <span className={styles.count}>
-                                        ({listings.length - displayCount} more)
-                                    </span>
-                                </>
-                            )}
-                        </motion.button>
-                    </motion.div>
-                )}
-            </div>
-
-            <CreateListingModal
-                isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-            />
-
-            <AnimatePresence>
-                {isCategoriesOpen && (
-                    <motion.div
-                        id="marketplace-category-modal"
-                        className={styles.categoryOverlay}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        onClick={() => setIsCategoriesOpen(false)}
-                    >
-                        <motion.div
-                            className={styles.categoryModal}
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            transition={{ duration: 0.3, ease: 'easeOut' }}
-                            onClick={(event) => event.stopPropagation()}
-                        >
-                            <div className={styles.categoryModalHeader}>
-                                <h3>Choose Category</h3>
-                                <button
-                                    type="button"
-                                    className={styles.categoryModalClose}
-                                    onClick={() => setIsCategoriesOpen(false)}
-                                    aria-label="Close category options"
-                                >
-                                    <X size={18} />
-                                </button>
-                            </div>
-
-                            <div className={styles.categoryListWrapper}>
-                                <div className={styles.categoryList}>
-                                    {categories.map((category) => (
-                                        <motion.button
-                                            key={category}
-                                            type="button"
-                                            className={`${styles.categoryItem} ${selectedCategory === category
-                                                    ? styles.categoryItemActive
-                                                    : ''
-                                                }`}
-                                            aria-pressed={selectedCategory === category}
-                                            onClick={() =>
-                                                setSelectedCategory(
-                                                    selectedCategory === category ? null : category
-                                                )
-                                            }
-                                            whileHover={{ y: -1 }}
-                                            transition={{ duration: 0.18 }}
-                                        >
-                                            {category}
-                                        </motion.button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className={styles.panelHeader}>Price range</div>
-                            <div className={styles.priceGrid}>
-                                <input className={styles.priceInput} placeholder="Min" />
-                                <input className={styles.priceInput} placeholder="Max" />
-                                <button type="button" className={styles.priceApply}>
-                                    Apply
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            <ProductDetailsModal
-                isOpen={!!selectedProduct}
-                onClose={() => setSelectedProduct(null)}
-                product={selectedProduct}
-            />
+  return (
+    <div className={styles.marketplacePage} ref={containerRef}>
+      <motion.div
+        className={styles.hero}
+        style={{ y: heroY, opacity: heroOpacity }}
+      >
+        <div className={styles.heroMedia} aria-hidden="true">
+          <video
+            className={styles.heroVideo}
+            src="/marketplace.mp4"
+            autoPlay
+            muted
+            loop
+            playsInline
+          />
+          <div className={styles.heroOverlay} />
         </div>
-    );
+
+        <div className={styles.heroContent}>
+          <span className={styles.kicker}>Marketplace</span>
+          <h1 className={styles.title}>Today&apos;s picks</h1>
+          <p className={styles.subtitle}>
+            Shop locally with trusted sellers, verified listings, and smart discovery.
+          </p>
+          <div className={styles.locationPill}>
+            <MapPin size={14} />
+            Dhaka • 65 km
+          </div>
+        </div>
+
+        <div className={styles.heroCategoryWrap}>
+          <motion.button
+            type="button"
+            className={`${styles.createPill} ${styles.heroCategoryButton}`}
+            onClick={() => setIsCategoriesOpen(true)}
+            aria-expanded={isCategoriesOpen}
+            aria-controls="marketplace-category-modal"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+          >
+            <SlidersHorizontal size={14} />
+            Categories
+            <ChevronDown
+              size={14}
+              className={`${styles.panelToggleIcon} ${isCategoriesOpen ? styles.panelToggleIconOpen : ''}`}
+              aria-hidden="true"
+            />
+          </motion.button>
+        </div>
+
+        <div className={styles.heroCreateWrap}>
+          <motion.button
+            type="button"
+            className={`${styles.createPill} ${styles.heroCreateButton}`}
+            onClick={() => setIsCreateModalOpen(true)}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+          >
+            <Sparkles size={14} />
+            Create new listing
+          </motion.button>
+        </div>
+      </motion.div>
+
+      <motion.div
+        className={styles.toolbar}
+        style={{ opacity: toolbarOpacity, y: toolbarY }}
+      >
+        <div className={styles.searchBox}>
+          <Search size={16} />
+          <input placeholder="Search Marketplace" />
+        </div>
+
+        <div className={styles.filterPills}>
+          <motion.button
+            type="button"
+            className={`${styles.filterPill} ${selectedFilter === 'for-you' ? styles.filterPillActive : ''}`}
+            onClick={() => setSelectedFilter('for-you')}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            For you
+          </motion.button>
+
+          <motion.button
+            type="button"
+            className={`${styles.filterPill} ${selectedFilter === 'nearby' ? styles.filterPillActive : ''}`}
+            onClick={() => setSelectedFilter('nearby')}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            Nearby
+          </motion.button>
+
+          <motion.button
+            type="button"
+            className={`${styles.filterPill} ${selectedFilter === 'top-deals' ? styles.filterPillActive : ''}`}
+            onClick={() => setSelectedFilter('top-deals')}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            Top deals
+          </motion.button>
+
+          <motion.button
+            type="button"
+            className={`${styles.filterPill} ${selectedFilter === 'verified' ? styles.filterPillActive : ''}`}
+            onClick={() => setSelectedFilter('verified')}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            Verified
+          </motion.button>
+        </div>
+      </motion.div>
+
+      {feedError && <div className={styles.feedError}>{feedError}</div>}
+
+      <div className={styles.contentGrid}>
+        {isFeedLoading ? (
+          <div className={styles.feedLoading}>
+            <Loader size={18} className={styles.spinIcon} />
+            Loading marketplace listings...
+          </div>
+        ) : (
+          <motion.section
+            className={styles.cardsGrid}
+            variants={cardContainerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, margin: '0px 0px -100px 0px' }}
+          >
+            {filteredListings.length === 0 && (
+              <div className={styles.emptyState}>No listings found.</div>
+            )}
+
+            {filteredListings
+              .slice(0, displayCount)
+              .map((item) => (
+                <motion.article
+                  key={item.id}
+                  className={styles.card}
+                  variants={cardItemVariants}
+                  whileHover={{ y: -6, rotateX: 2, rotateY: -2 }}
+                  transition={{ duration: 0.2 }}
+                  onClick={() => setSelectedProduct(item)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className={styles.cardImage}>
+                    <img src={item.image} alt={item.title} />
+                    <span className={styles.badge}>{item.badge}</span>
+                  </div>
+
+                  <div className={styles.cardBody}>
+                    <span className={styles.price}>{item.price}</span>
+                    <h3 className={styles.cardTitle}>{item.title}</h3>
+                    <span className={styles.cardLocation}>{item.location}</span>
+                  </div>
+                </motion.article>
+              ))}
+          </motion.section>
+        )}
+
+        {!isFeedLoading && hasMoreListings && (
+          <motion.div
+            className={styles.loadMoreContainer}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <motion.button
+              type="button"
+              className={styles.loadMoreButton}
+              onClick={handleLoadMore}
+              disabled={isLoadingMore}
+              whileHover={{ scale: isLoadingMore ? 1 : 1.04 }}
+              whileTap={{ scale: isLoadingMore ? 1 : 0.98 }}
+            >
+              {isLoadingMore ? (
+                <>
+                  <Loader size={16} className={styles.spinIcon} />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  Load More Listings
+                  <span className={styles.count}>
+                    ({filteredListings.length - displayCount} more)
+                  </span>
+                </>
+              )}
+            </motion.button>
+          </motion.div>
+        )}
+      </div>
+
+      <CreateListingModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreated={handleListingCreated}
+      />
+
+      <AnimatePresence>
+        {isCategoriesOpen && (
+          <motion.div
+            id="marketplace-category-modal"
+            className={styles.categoryOverlay}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setIsCategoriesOpen(false)}
+          >
+            <motion.div
+              className={styles.categoryModal}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={styles.categoryModalHeader}>
+                <h3>Choose Category</h3>
+                <button
+                  type="button"
+                  className={styles.categoryModalClose}
+                  onClick={() => setIsCategoriesOpen(false)}
+                  aria-label="Close category options"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className={styles.categoryListWrapper}>
+                <div className={styles.categoryList}>
+                  {categories.map((category) => (
+                    <motion.button
+                      key={category}
+                      type="button"
+                      className={`${styles.categoryItem} ${selectedCategory === category ? styles.categoryItemActive : ''}`}
+                      aria-pressed={selectedCategory === category}
+                      onClick={() =>
+                        setSelectedCategory(
+                          selectedCategory === category ? null : category
+                        )
+                      }
+                      whileHover={{ y: -1 }}
+                      transition={{ duration: 0.18 }}
+                    >
+                      {category}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              <div className={styles.panelHeader}>Price range</div>
+              <div className={styles.priceGrid}>
+                <input className={styles.priceInput} placeholder="Min" />
+                <input className={styles.priceInput} placeholder="Max" />
+                <button type="button" className={styles.priceApply}>
+                  Apply
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <ProductDetailsModal
+        isOpen={!!selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+        product={selectedProduct}
+      />
+    </div>
+  );
 };
