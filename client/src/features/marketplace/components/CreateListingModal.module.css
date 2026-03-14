@@ -284,6 +284,17 @@
   margin-top: 10px;
 }
 
+.submitError {
+  margin: 0;
+  border-radius: 10px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
 .cancelButton,
 .submitButton {
   flex: 1;
@@ -313,6 +324,12 @@
 
 .submitButton:hover {
   box-shadow: 0 6px 18px rgba(16, 185, 129, 0.3);
+}
+
+.cancelButton:disabled,
+.submitButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 /* =========================
