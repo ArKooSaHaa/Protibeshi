@@ -23,6 +23,14 @@ const ProductDetailsModal = ({ isOpen, onClose, product }) => {
 
     if (!product) return null;
 
+    const detailsText = product.details?.trim() || '';
+    const additionalOptionsPrefix = 'Additional options:';
+    const hasAdditionalOptions = detailsText.includes(additionalOptionsPrefix);
+
+    const [mainDetails, additionalOptions] = hasAdditionalOptions
+        ? detailsText.split(additionalOptionsPrefix)
+        : [detailsText, ''];
+
     /* ================= Actions ================= */
     const handleMessageClick = () => {
         messageInputRef.current?.focus();
@@ -102,7 +110,7 @@ const ProductDetailsModal = ({ isOpen, onClose, product }) => {
                                     <h2 className={styles.sectionTitle}>Details</h2>
                                     <div className={styles.description}>
                                         <p>
-                                            {product.title} is available for purchase at {product.price}.
+                                            {mainDetails.trim() || `${product.title} is available for purchase at ${product.price}.`}
                                         </p>
                                     </div>
 
@@ -115,6 +123,12 @@ const ProductDetailsModal = ({ isOpen, onClose, product }) => {
                                         <span className={styles.detailLabel}>Location</span>
                                         <span className={styles.detailValue}>{product.location}</span>
                                     </div>
+                                    {hasAdditionalOptions && (
+                                        <div className={styles.detailRow}>
+                                            <span className={styles.detailLabel}>User notes</span>
+                                            <span className={styles.detailValue}>{additionalOptions.trim()}</span>
+                                        </div>
+                                    )}
 
                                     {/* ================= MESSAGE ================= */}
                                     <div className={styles.messageSection}>

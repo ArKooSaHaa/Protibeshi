@@ -1,7 +1,7 @@
 /// src/features/marketplace/components/CreateListingModal.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, DollarSign, Tag, FileText, Settings, MapPin } from 'lucide-react';
+import { X, Upload, DollarSign, Tag, FileText, MapPin } from 'lucide-react';
 import { createListing } from '@/services/listingService';
 import styles from './CreateListingModal.module.css';
 
@@ -21,7 +21,6 @@ const CreateListingModal = ({ isOpen, onClose, onCreated }) => {
         category: '',
         location: '',
         details: '',
-        options: '',
     });
 
     const [photoPreview, setPhotoPreview] = useState(null);
@@ -97,7 +96,6 @@ const CreateListingModal = ({ isOpen, onClose, onCreated }) => {
             category: '',
             location: '',
             details: '',
-            options: '',
         });
 
         setPhotoPreview(null);
@@ -126,11 +124,14 @@ const CreateListingModal = ({ isOpen, onClose, onCreated }) => {
         if (selectedPhoto) {
             payload.append('photo', selectedPhoto);
         }
+
+        const mergedDetails = formData.details?.trim() || '';
+
         payload.append('title', formData.title);
             payload.append('price', normalizedPrice);
         payload.append('category', formData.category);
         payload.append('location', formData.location);
-        payload.append('details', formData.details);
+        payload.append('details', mergedDetails);
 
         try {
             setIsSubmitting(true);
@@ -341,24 +342,6 @@ const CreateListingModal = ({ isOpen, onClose, onCreated }) => {
                                     placeholder="Describe your item..."
                                     className={styles.textareaInput}
                                     rows={4}
-                                />
-                            </div>
-
-                            {/* Options */}
-                            <div className={styles.formSection}>
-                                <label htmlFor="options" className={styles.fieldLabel}>
-                                    <Settings size={16} />
-                                    Additional Options
-                                </label>
-
-                                <textarea
-                                    id="options"
-                                    name="options"
-                                    value={formData.options}
-                                    onChange={handleInputChange}
-                                    placeholder="e.g., Warranty included"
-                                    className={styles.textareaInput}
-                                    rows={3}
                                 />
                             </div>
 
