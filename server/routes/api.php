@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ListingController;
+use App\Http\Controllers\RentListingController;
 use App\Http\Controllers\SessionController;
 
 /*
@@ -17,6 +18,8 @@ Route::post('/signup', [AuthController::class, 'signup']);
 Route::post('/signin', [AuthController::class, 'signin']);
 
 Route::get('/listings', [ListingController::class, 'index']);
+Route::get('/rent-listings', [RentListingController::class, 'index']);
+Route::get('/rent-listings/{id}', [RentListingController::class, 'show']);
 
 
 /*
@@ -51,4 +54,9 @@ Route::middleware(['auth:api'])->group(function () {
 
     Route::post('/attendance', [SessionController::class, 'submitAttendance']);
 
+});
+
+Route::middleware(['auth:sanctum,api'])->group(function () {
+    Route::post('/rent-listings', [RentListingController::class, 'store']);
+    Route::delete('/rent-listings/{id}', [RentListingController::class, 'destroy']);
 });
