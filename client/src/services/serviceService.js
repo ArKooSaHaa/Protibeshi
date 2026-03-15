@@ -73,14 +73,14 @@ const buildProviderName = (user) => {
 export const normalizeService = (raw) => {
   const storageBase = getStorageBaseUrl();
   const coverPhotoPath = raw?.cover_photo || null;
+  const userProfilePictureUrl = raw?.user?.profile_picture_url || null;
 
   return {
     id: String(raw?.id ?? ''),
     ownerId: raw?.user?.id ?? null,
     providerName: buildProviderName(raw?.user),
-    avatar: coverPhotoPath
-      ? `${storageBase}/storage/${coverPhotoPath}`
-      : 'https://i.pravatar.cc/120?img=11',
+    avatar: userProfilePictureUrl
+      || (coverPhotoPath ? `${storageBase}/storage/${coverPhotoPath}` : 'https://i.pravatar.cc/120?img=11'),
     coverPhoto: coverPhotoPath,
     coverPhotoUrl: coverPhotoPath ? `${storageBase}/storage/${coverPhotoPath}` : null,
     verified: Boolean(raw?.verified_provider),

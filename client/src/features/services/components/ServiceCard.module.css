@@ -195,19 +195,3 @@
   color: #64748b;
   text-decoration: underline dotted;
 }
-
-.deleteButton {
-  border: 1px solid #fecaca;
-  background: #fff1f2;
-  color: #b91c1c;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 8px;
-  cursor: pointer;
-}
-
-.deleteButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}

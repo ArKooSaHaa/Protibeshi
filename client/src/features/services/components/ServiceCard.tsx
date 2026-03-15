@@ -15,9 +15,6 @@ interface ServiceCardProps {
   onMessage: (service: ServiceItem) => void;
   onViewDetails: (service: ServiceItem) => void;
   onReport: (service: ServiceItem) => void;
-  canDelete?: boolean;
-  isDeleting?: boolean;
-  onDelete?: (serviceId: string) => void;
 }
 
 export const ServiceCard = ({
@@ -28,9 +25,6 @@ export const ServiceCard = ({
   onMessage,
   onViewDetails,
   onReport,
-  canDelete = false,
-  isDeleting = false,
-  onDelete,
 }: ServiceCardProps) => {
   return (
     <motion.article
@@ -127,23 +121,12 @@ export const ServiceCard = ({
         <button type="button" className={styles.textButton} onClick={() => onReport(service)}>
           <CircleAlert size={13} /> Report Service
         </button>
-        {canDelete && onDelete ? (
-          <button
-            type="button"
-            className={styles.deleteButton}
-            onClick={() => onDelete(service.id)}
-            disabled={isDeleting}
-          >
-            {isDeleting ? 'Deleting...' : 'Delete'}
-          </button>
-        ) : (
-          <span
-            className={styles.tooltipText}
-            title={`This service appears because it's ${service.distance}m from your location and within your active filters.`}
-          >
-            Why am I seeing this?
-          </span>
-        )}
+        <span
+          className={styles.tooltipText}
+          title={`This service appears because it's ${service.distance}m from your location and within your active filters.`}
+        >
+          Why am I seeing this?
+        </span>
       </div>
     </motion.article>
   );

@@ -6,6 +6,7 @@ use App\Models\Service;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class ServiceController extends Controller
@@ -133,10 +134,29 @@ class ServiceController extends Controller
             'verified_provider' => (bool) $service->verified_provider,
             'created_at'        => $service->created_at,
             'user'              => $service->user ? [
-                'id'         => $service->user->id,
-                'first_name' => $service->user->first_name,
-                'last_name'  => $service->user->last_name,
+                'id'                  => $service->user->id,
+                'first_name'          => $service->user->first_name,
+                'last_name'           => $service->user->last_name,
+                'profile_picture'     => $service->user->profile_picture,
+                'profile_picture_url' => $this->resolveProfilePictureUrl($service->user->profile_picture),
             ] : null,
         ];
+    }
+
+    private function resolveProfilePictureUrl(?string $profilePicture): string
+    {
+        if (!$profilePicture) {
+            return '';
+        }
+
+        if (filter_var($profilePicture, FILTER_VALIDATE_URL)) {
+            return $profilePicture;
+        }
+
+        if (str_starts_with($profilePicture, '/')) {
+            return url($profilePicture);
+        }
+
+        return url(Storage::url($profilePicture));
     }
 }

@@ -52,10 +52,8 @@ export const ServicesPage = () => {
     chatMessages,
     isLoading,
     isSubmitting,
-    deletingServiceId,
     errorMessage,
     successMessage,
-    currentUserId,
     setFilters,
     setIsOfferModalOpen,
     setIsFilterDrawerOpen,
@@ -64,7 +62,6 @@ export const ServicesPage = () => {
     onToggleBookmark,
     loadServices,
     onAddService,
-    onDeleteService,
     onSendMessage,
     clearFeedback,
     getPriceLabel,
@@ -141,9 +138,6 @@ Our team will review this.`);
                 onMessage={setActiveChat}
                 onViewDetails={setActiveDetails}
                 onReport={handleReport}
-                canDelete={service.ownerId === currentUserId}
-                isDeleting={deletingServiceId === service.id}
-                onDelete={onDeleteService}
               />
             </motion.div>
           ))}
