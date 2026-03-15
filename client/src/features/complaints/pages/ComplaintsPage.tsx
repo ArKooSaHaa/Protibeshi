@@ -58,10 +58,18 @@ export const ComplaintsPage = () => {
     setSelectedComplaint,
     isFormOpen,
     setIsFormOpen,
+    isLoading,
+    isSubmitting,
+    deletingComplaintId,
+    errorMessage,
+    successMessage,
+    currentUserId,
     formState,
     formErrors,
     updateFormValue,
     handleSubmit,
+    onDeleteComplaint,
+    clearFeedback,
   } = useComplaintsBoard();
 
   const [sortBy, setSortBy] = useState<ComplaintSortOption>('Newest');
@@ -90,6 +98,18 @@ export const ComplaintsPage = () => {
     window.addEventListener('keydown', onEscape);
     return () => window.removeEventListener('keydown', onEscape);
   }, [isFilterPanelOpen, isMapPanelOpen]);
+
+  useEffect(() => {
+    if (!successMessage && !errorMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      clearFeedback();
+    }, 2800);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [successMessage, errorMessage, clearFeedback]);
 
   const handleViewDetails = (complaint: ComplaintItem) => {
     setSelectedComplaint(complaint);
@@ -203,6 +223,24 @@ export const ComplaintsPage = () => {
 
       <ComplaintStatsOverview stats={stats} />
 
+      {isLoading && (
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+          Loading complaints...
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {errorMessage}
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {successMessage}
+        </div>
+      )}
+
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <motion.button
@@ -246,7 +284,17 @@ export const ComplaintsPage = () => {
         >
           {sortedComplaints.map((complaint) => (
             <motion.div key={complaint.id} variants={feedItemVariants}>
-              <ComplaintFeedCard complaint={complaint} onViewDetails={handleViewDetails} />
+              <ComplaintFeedCard
+                complaint={complaint}
+                onViewDetails={handleViewDetails}
+                canDelete={
+                  typeof currentUserId === 'number' &&
+                  typeof complaint.userId === 'number' &&
+                  currentUserId === complaint.userId
+                }
+                onDelete={onDeleteComplaint}
+                isDeleting={deletingComplaintId === complaint.recordId}
+              />
             </motion.div>
           ))}
         </motion.div>
@@ -357,7 +405,9 @@ export const ComplaintsPage = () => {
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">No complaints match these filters</h3>
                 <p className="text-xs text-slate-500">
-                  Try widening distance, choosing a broader date range, or clearing status chips.
+                  {isLoading
+                    ? 'Please wait while we load complaints from the server.'
+                    : 'Try widening distance, choosing a broader date range, or clearing status chips.'}
                 </p>
               </div>
             </motion.div>
@@ -411,6 +461,7 @@ export const ComplaintsPage = () => {
                 formErrors={formErrors}
                 onChange={updateFormValue}
                 onSubmit={handleSubmit}
+                isSubmitting={isSubmitting}
               />
             </motion.div>
           </motion.div>

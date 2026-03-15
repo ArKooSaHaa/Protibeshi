@@ -15,11 +15,12 @@ interface ComplaintFormProps {
   formErrors: ComplaintFormErrors;
   onChange: <K extends keyof ComplaintFormState>(key: K, value:
     ComplaintFormState[K]) => void;
-  onSubmit: () => void;
+  onSubmit: () => Promise<boolean>;
+  isSubmitting?: boolean;
 }
 
 export const ComplaintForm = ({ formState, formErrors, onChange,
-  onSubmit }: ComplaintFormProps) => {
+  onSubmit, isSubmitting = false }: ComplaintFormProps) => {
   return (
     <motion.div
       className={styles.formCard} initial={{ opacity: 0, y: 16 }}
@@ -190,9 +191,10 @@ export const ComplaintForm = ({ formState, formErrors, onChange,
         type="button"
         className={styles.submitButton} whileHover={{ y: -1 }}
         whileTap={{ y: 1 }}
+        disabled={isSubmitting}
         onClick={onSubmit}
       >
-        Submit Complaint
+        {isSubmitting ? 'Submitting...' : 'Submit Complaint'}
       </motion.button>
     </motion.div>
   );

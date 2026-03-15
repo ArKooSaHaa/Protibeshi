@@ -49,6 +49,8 @@ export interface ComplaintComment {
 
 export interface ComplaintItem {
     id: string; title: string;
+    recordId?: number;
+    userId?: number;
     category: ComplaintCategory;
     description: string;
     priority: ComplaintPriority;
@@ -60,6 +62,8 @@ export interface ComplaintItem {
     verified: boolean;
     visibility: ComplaintVisibility;
     location: string;
+    photoUrl?: string | null;
+    photoPath?: string | null;
     updates: ComplaintUpdate[]; attachments?: string[];
     resolutionSummary?: string;
     commentThread?: ComplaintComment[];

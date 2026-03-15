@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\ListingController;
 use App\Http\Controllers\RentListingController;
 use App\Http\Controllers\ServiceController;
@@ -23,6 +24,8 @@ Route::get('/rent-listings', [RentListingController::class, 'index']);
 Route::get('/rent-listings/{id}', [RentListingController::class, 'show']);
 Route::get('/services', [ServiceController::class, 'index']);
 Route::get('/services/{id}', [ServiceController::class, 'show']);
+Route::get('/complaints', [ComplaintController::class, 'index']);
+Route::get('/complaints/{id}', [ComplaintController::class, 'show']);
 
 
 /*
@@ -64,4 +67,10 @@ Route::middleware(['auth:sanctum,api'])->group(function () {
     Route::delete('/rent-listings/{id}', [RentListingController::class, 'destroy']);
     Route::post('/services', [ServiceController::class, 'store']);
     Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
+});
+
+Route::middleware(['auth:api'])->group(function () {
+    Route::post('/complaints', [ComplaintController::class, 'store']);
+    Route::delete('/complaints/{id}', [ComplaintController::class, 'destroy']);
+    Route::patch('/complaints/{id}/status', [ComplaintController::class, 'updateStatus']);
 });
