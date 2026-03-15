@@ -137,6 +137,16 @@
   accent-color: #10b981;
 }
 
+.errorMessage {
+  color: #e53e3e;
+  font-size: 13px;
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 8px;
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;

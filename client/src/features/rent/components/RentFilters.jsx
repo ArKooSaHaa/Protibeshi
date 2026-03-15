@@ -41,7 +41,7 @@ const RentFilters = ({ filters, onFilterChange }) => {
       const isActive = filters.maxPrice <= 15000;
       onFilterChange({
         ...filters,
-        maxPrice: isActive ? 50000 : 15000,
+        maxPrice: isActive ? 100000 : 15000,
       });
       return;
     }
@@ -57,7 +57,7 @@ const RentFilters = ({ filters, onFilterChange }) => {
       const isActive = filters.radius <= 800;
       onFilterChange({
         ...filters,
-        radius: isActive ? 1000 : 800,
+        radius: isActive ? 5000 : 800,
       });
       return;
     }

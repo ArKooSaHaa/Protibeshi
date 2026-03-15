@@ -30,7 +30,7 @@ const RentListingCard = ({ listing, onViewDetails, onMessage }) => {
       {/* Image Section */}
       <div className={styles.imageContainer}>
         <motion.img
-          src={listing.image}
+          src={listing.image || 'https://placehold.co/640x420?text=No+Image'}
           alt={listing.title}
           className={styles.image}
           whileHover={{ scale: 1.05 }}
@@ -67,9 +67,9 @@ ${styles[`badge${badgeInfo.color}`]}`}>
         {/* Price */}
         <div className={styles.priceSection}>
           <h3
-            className={styles.price}>₹{listing.price.toLocaleString()}</h3>
+            className={styles.price}>৳{listing.price.toLocaleString()}</h3>
           <p className={styles.deposit}>+
-            ₹{listing.deposit.toLocaleString()} deposit</p>
+            ৳{(listing.deposit ?? 0).toLocaleString()} deposit</p>
         </div>
 
         {/* Title */}
