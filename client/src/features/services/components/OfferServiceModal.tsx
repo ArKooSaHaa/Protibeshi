@@ -14,6 +14,17 @@ interface OfferServiceModalProps {
   onSubmit: (values: OfferServiceFormValues) => void;
 }
 
+type UploadField = 'photo' | 'portfolio';
+
+const imageAccept = 'image/png,image/jpeg,image/webp,image/jpg';
+
+const toDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(String(reader.result || ''));
+  reader.onerror = () => reject(new Error('Unable to read image file'));
+  reader.readAsDataURL(file);
+});
+
 const initialForm: OfferServiceFormValues = {
   serviceTitle: '',
   category: 'Other',
@@ -27,7 +38,7 @@ const initialForm: OfferServiceFormValues = {
   location: 'Motijheel',
   verified: false,
   photo: '',
-  portfolioImages: '',
+  portfolioImages: [],
   certifications: '',
   workingHours: '',
 };
@@ -36,6 +47,8 @@ export const OfferServiceModal = ({ isOpen, onClose, onSubmit }:
   OfferServiceModalProps) => {
   const [form, setForm] = useState(initialForm);
   const [submitted, setSubmitted] = useState(false);
+  const [activeDropField, setActiveDropField] = useState<UploadField | null>(null);
+  const [uploadError, setUploadError] = useState('');
 
   const isValid = useMemo(() => {
     if (!form.serviceTitle.trim()) return false;
@@ -44,6 +57,7 @@ export const OfferServiceModal = ({ isOpen, onClose, onSubmit }:
     if (!form.price || Number(form.price) <= 0) return false;
     if (!form.experience || Number(form.experience) < 0) return false;
     if (!form.location.trim()) return false;
+    if (!form.photo) return false;
     return true;
   }, [form]);
 
@@ -54,8 +68,62 @@ export const OfferServiceModal = ({ isOpen, onClose, onSubmit }:
 
   const handleClose = () => {
     setSubmitted(false);
+    setUploadError('');
+    setActiveDropField(null);
     onClose();
   };
+
+  const handleImageUpload = async (files: FileList | null, field: UploadField) => {
+    if (!files?.length) {
+      return;
+    }
+
+    const pickedFiles = Array.from(files).filter((file) => file.type.startsWith('image/'));
+    if (!pickedFiles.length) {
+      setUploadError('Please choose image files only.');
+      return;
+    }
+
+    setUploadError('');
+    if (field === 'photo') {
+      const firstImage = await toDataUrl(pickedFiles[0]);
+      updateField('photo', firstImage);
+      return;
+    }
+
+    const uploadedImages = await Promise.all(pickedFiles.map((file) => toDataUrl(file)));
+    updateField('portfolioImages', [...form.portfolioImages, ...uploadedImages]);
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLElement>, field: UploadField) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setActiveDropField(null);
+    await handleImageUpload(event.dataTransfer.files, field);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLElement>, field: UploadField) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setActiveDropField(field);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setActiveDropField(null);
+  };
+
+  const removeCoverPhoto = () => {
+    updateField('photo', '');
+  };
+
+  const removePortfolioImage = (indexToRemove: number) => {
+    const remaining = form.portfolioImages.filter((_, index) => index !== indexToRemove);
+    updateField('portfolioImages', remaining);
+  };
+
+  const portfolioImageList = form.portfolioImages;
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -67,6 +135,7 @@ export const OfferServiceModal = ({ isOpen, onClose, onSubmit }:
     onSubmit(form);
     setForm(initialForm);
     setSubmitted(false);
+    setUploadError('');
   };
 
   return (
@@ -183,15 +252,34 @@ export const OfferServiceModal = ({ isOpen, onClose, onSubmit }:
                   />
                 </label>
 
-                <label className={styles.field}>
-                  <span>Upload Photo URL*</span>
-                  <input
-                    value={form.photo}
-                    onChange={(event) => updateField('photo',
-                      event.target.value)}
-                    placeholder="https://..."
-                  />
-                </label>
+                <div className={styles.field}>
+                  <span>Upload Cover Photo*</span>
+                  <label
+                    className={`${styles.uploadZone} ${activeDropField === 'photo' ? styles.uploadZoneActive : ''}`}
+                    onDrop={(event) => void handleDrop(event, 'photo')}
+                    onDragOver={(event) => handleDragOver(event, 'photo')}
+                    onDragLeave={handleDragLeave}
+                  >
+                    <input
+                      type="file"
+                      accept={imageAccept}
+                      className={styles.uploadInput}
+                      onChange={(event) => void handleImageUpload(event.target.files, 'photo')}
+                    />
+                    {form.photo ? (
+                      <>
+                        <img src={form.photo} alt="Cover preview"
+                          className={styles.previewImage} />
+                        <button type="button" className={styles.uploadClear}
+                          onClick={removeCoverPhoto}>
+                          Remove photo
+                        </button>
+                      </>
+                    ) : (
+                      <p className={styles.uploadHint}>Drop image here or click to upload</p>
+                    )}
+                  </label>
+                </div>
 
                 <label className={styles.field}>
                   <span>Service Radius ({form.serviceRadius}m)</span>
@@ -225,14 +313,37 @@ export const OfferServiceModal = ({ isOpen, onClose, onSubmit }:
                   />
                 </label>
 
-                <label className={styles.field}>
-                  <span>Portfolio Images (comma-separated URLs)</span>
-                  <input
-                    value={form.portfolioImages}
-                    onChange={(event) => updateField('portfolioImages',
-                      event.target.value)}
-                  />
-                </label>
+                <div className={styles.field}>
+                  <span>Portfolio Images</span>
+                  <label
+                    className={`${styles.uploadZone} ${activeDropField === 'portfolio' ? styles.uploadZoneActive : ''}`}
+                    onDrop={(event) => void handleDrop(event, 'portfolio')}
+                    onDragOver={(event) => handleDragOver(event, 'portfolio')}
+                    onDragLeave={handleDragLeave}
+                  >
+                    <input
+                      type="file"
+                      accept={imageAccept}
+                      multiple
+                      className={styles.uploadInput}
+                      onChange={(event) => void handleImageUpload(event.target.files, 'portfolio')}
+                    />
+                    <p className={styles.uploadHint}>Drop one or more photos here or click to upload</p>
+                  </label>
+                  {portfolioImageList.length > 0 && (
+                    <div className={styles.previewStrip}>
+                      {portfolioImageList.map((image, index) => (
+                        <button type="button" key={`${image}-${index}`}
+                          className={styles.previewCard}
+                          onClick={() => removePortfolioImage(index)}
+                          title="Remove photo">
+                          <img src={image} alt={`Portfolio ${index + 1}`}
+                            className={styles.previewThumb} />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 <label className={styles.field}>
                   <span>Certifications (comma-separated)</span>
@@ -266,6 +377,7 @@ export const OfferServiceModal = ({ isOpen, onClose, onSubmit }:
 
               {submitted && !isValid && <p
                 className={styles.errorText}>Please complete required fields.</p>}
+              {uploadError && <p className={styles.errorText}>{uploadError}</p>}
 
               <div className={styles.actions}>
                 <motion.button

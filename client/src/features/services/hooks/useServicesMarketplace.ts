@@ -77,12 +77,7 @@ radius`, [filters.distance]);
           .map((item) => item.trim())
           .filter(Boolean)
         : [],
-      gallery: values.portfolioImages
-        ? values.portfolioImages
-          .split(',')
-          .map((item) => item.trim())
-          .filter(Boolean)
-        : [],
+      gallery: values.portfolioImages,
       schedule: values.workingHours
         ? values.workingHours
           .split(',')

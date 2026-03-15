@@ -73,7 +73,7 @@ export interface OfferServiceFormValues {
     location: string;
     verified: boolean;
     photo?: string;
-    portfolioImages: string;
+    portfolioImages: string[];
     certifications: string;
     workingHours: string;
 }

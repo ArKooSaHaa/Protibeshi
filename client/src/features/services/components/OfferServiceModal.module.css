@@ -1,17 +1,22 @@
 /* src/features/services/components/OfferServiceModal.module.css */
 .overlay {
+  --modal-top-offset: clamp(84px, 11vh, 132px);
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.4);
+  background:
+    radial-gradient(circle at 78% 8%, rgba(16, 185, 129, 0.2), transparent 42%),
+    rgba(15, 23, 42, 0.45);
   display: grid;
-  place-items: center;
-  z-index: 70;
-  padding: 20px;
+  justify-items: center;
+  align-items: start;
+  z-index: 140;
+  padding: var(--modal-top-offset) 20px 24px;
+  backdrop-filter: blur(2px);
 }
 
 .modal {
-  width: min(860px, 100%);
-  max-height: 90vh;
+  width: min(880px, 100%);
+  max-height: calc(100vh - var(--modal-top-offset) - 24px);
   overflow-y: auto;
   background: #fff;
   border-radius: 20px;
@@ -80,6 +85,82 @@
   color: #0f172a;
 }
 
+.uploadInput {
+  display: none;
+}
+
+.uploadZone {
+  border: 1.5px dashed #b7c4d6;
+  border-radius: 12px;
+  min-height: 92px;
+  padding: 12px;
+  background: linear-gradient(140deg, #f8fafc, #f1f5f9);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.uploadZone:hover {
+  border-color: #10b981;
+}
+
+.uploadZoneActive {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+  transform: translateY(-1px);
+}
+
+.uploadHint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #475569;
+}
+
+.previewImage {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.uploadClear {
+  border: none;
+  background: transparent;
+  color: #047857;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.previewStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 8px;
+}
+
+.previewCard {
+  border: 1px solid #d6e0ec;
+  border-radius: 10px;
+  padding: 0;
+  overflow: hidden;
+  background: #fff;
+  cursor: pointer;
+}
+
+.previewThumb {
+  width: 100%;
+  height: 76px;
+  object-fit: cover;
+  display: block;
+}
+
 .fieldFull {
   grid-column: 1 / -1;
 }
@@ -126,6 +207,16 @@
 }
 
 @media (max-width: 768px) {
+  .overlay {
+    --modal-top-offset: clamp(66px, 8vh, 88px);
+    padding-inline: 12px;
+    padding-bottom: 16px;
+  }
+
+  .modal {
+    max-height: calc(100vh - var(--modal-top-offset) - 16px);
+  }
+
   .grid {
     grid-template-columns: 1fr;
   }
