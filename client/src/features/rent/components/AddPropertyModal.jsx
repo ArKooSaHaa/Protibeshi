@@ -1,7 +1,8 @@
 // src/features/rent/components/AddPropertyModal.jsx
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Upload, X } from 'lucide-react';
+import { createRentListing } from '@/services/rentService';
 import styles from './AddPropertyModal.module.css';
 
 const initialForm = {
@@ -21,10 +22,13 @@ const initialForm = {
   badge: 'verified',
 };
 
-const AddPropertyModal = ({ onClose, onSubmit }) => {
+const AddPropertyModal = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState(initialForm);
   const [imagePreview, setImagePreview] = useState('');
   const [imageName, setImageName] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   const isDatedAvailability = formData.availability === 'dated';
 
@@ -65,29 +69,50 @@ const AddPropertyModal = ({ onClose, onSubmit }) => {
     const objectUrl = URL.createObjectURL(file);
     setImagePreview(objectUrl);
     setImageName(file.name);
+    setImageFile(file);
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!formValid) return;
+    if (!formValid || isSubmitting) return;
 
-    onSubmit({
-      title: formData.title.trim(),
-      price: Number(formData.price),
-      deposit: Number(formData.deposit),
-      location: formData.location.trim(),
-      distance: Number(formData.distance),
-      beds: Number(formData.beds),
-      baths: Number(formData.baths),
-      sqft: Number(formData.sqft),
-      image: imagePreview,
-      badge: formData.badge,
-      availability: formData.availability,
-      availabilityDate: isDatedAvailability ? formData.availabilityDate : null,
-      verified: formData.verified,
-      furnishing: formData.furnishing,
-      type: formData.type,
-    });
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setSubmitError('You must be signed in to add a property.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const data = new FormData();
+      if (imageFile) data.append('photo', imageFile);
+      data.append('title', formData.title.trim());
+      data.append('location', formData.location.trim());
+      data.append('price', formData.price);
+      data.append('deposit', formData.deposit);
+      data.append('distance', formData.distance);
+      data.append('size_sqft', formData.sqft);
+      data.append('beds', formData.beds);
+      data.append('baths', formData.baths);
+      data.append('type', formData.type);
+      data.append('furnishing', formData.furnishing);
+      data.append('availability',
+        formData.availability === 'dated' && formData.availabilityDate
+          ? formData.availabilityDate
+          : formData.availability);
+      data.append('badge', formData.badge);
+      data.append('verified_landlord', formData.verified ? '1' : '0');
+
+      const result = await createRentListing(data, token);
+      onSuccess?.(result.listing);
+      onClose();
+    } catch (error) {
+      setSubmitError(error.message || 'Something went wrong. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -266,6 +291,10 @@ const AddPropertyModal = ({ onClose, onSubmit }) => {
             <span>Mark as verified landlord</span>
           </label>
 
+          {submitError && (
+            <p className={styles.errorMessage}>{submitError}</p>
+          )}
+
           <div className={styles.actions}>
             <motion.button
               type="button"
@@ -281,9 +310,9 @@ const AddPropertyModal = ({ onClose, onSubmit }) => {
               className={styles.primaryButton}
               whileHover={{ y: -2, scale: 1.02 }}
               whileTap={{ y: 1, scale: 0.98 }}
-              disabled={!formValid}
+              disabled={!formValid || isSubmitting}
             >
-              Add to Rent Feed
+              {isSubmitting ? 'Saving…' : 'Add to Rent Feed'}
             </motion.button>
           </div>
         </form>
