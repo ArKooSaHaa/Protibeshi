@@ -28,6 +28,7 @@ export const filterComplaints = (
     complaints: ComplaintItem[],
     filters: ComplaintFilterState,
     currentUser: string,
+    currentUserId?: number | null,
 ) => {
     return complaints.filter((item) => {
         if (
@@ -59,8 +60,17 @@ export const filterComplaints = (
             return false;
         }
 
-        if (filters.myComplaints && item.reportedBy !== currentUser) {
-            return false;
+        if (filters.myComplaints) {
+            if (
+                typeof currentUserId === 'number' &&
+                typeof item.userId === 'number'
+            ) {
+                if (item.userId !== currentUserId) {
+                    return false;
+                }
+            } else if (item.reportedBy !== currentUser) {
+                return false;
+            }
         }
 
         return true;
