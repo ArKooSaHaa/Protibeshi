@@ -48,6 +48,11 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(RentListing::class);
     }
 
+    public function complaints()
+    {
+        return $this->hasMany(Complaint::class);
+    }
+
     /**
      * Return JWT identifier
      */
