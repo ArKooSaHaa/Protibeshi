@@ -38,6 +38,11 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Listing::class);
     }
 
+    public function services()
+    {
+        return $this->hasMany(Service::class);
+    }
+
     public function rentListings()
     {
         return $this->hasMany(RentListing::class);
