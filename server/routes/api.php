@@ -6,6 +6,7 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ListingController;
 use App\Http\Controllers\RentListingController;
+use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SessionController;
 
 /*
@@ -20,6 +21,8 @@ Route::post('/signin', [AuthController::class, 'signin']);
 Route::get('/listings', [ListingController::class, 'index']);
 Route::get('/rent-listings', [RentListingController::class, 'index']);
 Route::get('/rent-listings/{id}', [RentListingController::class, 'show']);
+Route::get('/services', [ServiceController::class, 'index']);
+Route::get('/services/{id}', [ServiceController::class, 'show']);
 
 
 /*
@@ -59,4 +62,6 @@ Route::middleware(['auth:api'])->group(function () {
 Route::middleware(['auth:sanctum,api'])->group(function () {
     Route::post('/rent-listings', [RentListingController::class, 'store']);
     Route::delete('/rent-listings/{id}', [RentListingController::class, 'destroy']);
+    Route::post('/services', [ServiceController::class, 'store']);
+    Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
 });

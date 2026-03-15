@@ -118,13 +118,6 @@ export const OfferServiceModal = ({ isOpen, onClose, onSubmit }:
     updateField('photo', '');
   };
 
-  const removePortfolioImage = (indexToRemove: number) => {
-    const remaining = form.portfolioImages.filter((_, index) => index !== indexToRemove);
-    updateField('portfolioImages', remaining);
-  };
-
-  const portfolioImageList = form.portfolioImages;
-
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitted(true);
@@ -309,47 +302,6 @@ export const OfferServiceModal = ({ isOpen, onClose, onSubmit }:
                     rows={4}
                     value={form.fullDescription}
                     onChange={(event) => updateField('fullDescription',
-                      event.target.value)}
-                  />
-                </label>
-
-                <div className={styles.field}>
-                  <span>Portfolio Images</span>
-                  <label
-                    className={`${styles.uploadZone} ${activeDropField === 'portfolio' ? styles.uploadZoneActive : ''}`}
-                    onDrop={(event) => void handleDrop(event, 'portfolio')}
-                    onDragOver={(event) => handleDragOver(event, 'portfolio')}
-                    onDragLeave={handleDragLeave}
-                  >
-                    <input
-                      type="file"
-                      accept={imageAccept}
-                      multiple
-                      className={styles.uploadInput}
-                      onChange={(event) => void handleImageUpload(event.target.files, 'portfolio')}
-                    />
-                    <p className={styles.uploadHint}>Drop one or more photos here or click to upload</p>
-                  </label>
-                  {portfolioImageList.length > 0 && (
-                    <div className={styles.previewStrip}>
-                      {portfolioImageList.map((image, index) => (
-                        <button type="button" key={`${image}-${index}`}
-                          className={styles.previewCard}
-                          onClick={() => removePortfolioImage(index)}
-                          title="Remove photo">
-                          <img src={image} alt={`Portfolio ${index + 1}`}
-                            className={styles.previewThumb} />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <label className={styles.field}>
-                  <span>Certifications (comma-separated)</span>
-                  <input
-                    value={form.certifications}
-                    onChange={(event) => updateField('certifications',
                       event.target.value)}
                   />
                 </label>
