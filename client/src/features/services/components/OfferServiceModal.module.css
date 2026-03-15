@@ -206,6 +206,11 @@
   color: #fff;
 }
 
+.submitButton:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
   .overlay {
     --modal-top-offset: clamp(66px, 8vh, 88px);

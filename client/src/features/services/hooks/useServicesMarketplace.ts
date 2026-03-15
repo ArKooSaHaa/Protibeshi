@@ -1,6 +1,10 @@
 // src/features/services/hooks/useServicesMarketplace.ts 
-import { useMemo, useState } from 'react';
-import { servicesData } from '../mock/servicesData';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  createService,
+  deleteService,
+  getServices,
+} from '@/services/serviceService';
 import {
   OfferServiceFormValues,
   ServiceChatMessage,
@@ -13,6 +17,37 @@ import { DEFAULT_SERVICE_FILTERS, useServiceFilters } from
 const createId = () => `svc-${Math.random().toString(36).slice(2,
   10)}`;
 
+const getCurrentUserIdFromToken = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const token = window.localStorage.getItem('token');
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const payloadSegment = token.split('.')[1];
+    if (!payloadSegment) {
+      return null;
+    }
+
+    const normalizedPayload = payloadSegment.replace(/-/g, '+').replace(/_/g, '/');
+    const paddedPayload = normalizedPayload.padEnd(
+      normalizedPayload.length + (4 - (normalizedPayload.length % 4 || 4)),
+      '=',
+    );
+
+    const payload = JSON.parse(atob(paddedPayload));
+    const userId = Number(payload?.sub ?? payload?.user_id ?? payload?.id);
+
+    return Number.isFinite(userId) ? userId : null;
+  } catch {
+    return null;
+  }
+};
+
 const priceSuffixMap: Record<OfferServiceFormValues['priceUnit'],
   string> = {
   hour: 'hour',
@@ -21,7 +56,7 @@ const priceSuffixMap: Record<OfferServiceFormValues['priceUnit'],
 };
 
 export const useServicesMarketplace = () => {
-  const [services, setServices] = useState<ServiceItem[]>(servicesData);
+  const [services, setServices] = useState<ServiceItem[]>([]);
   const [filters, setFilters] =
     useState<ServiceFilterState>(DEFAULT_SERVICE_FILTERS);
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
@@ -33,11 +68,37 @@ export const useServicesMarketplace = () => {
     null>(null);
   const [chatMessages, setChatMessages] = useState<Record<string,
     ServiceChatMessage[]>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingServiceId, setDeletingServiceId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   const filteredServices = useServiceFilters(services, filters);
 
+  const loadServices = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const data = await getServices();
+      setServices(data);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load services';
+      setErrorMessage(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const locationLabel = useMemo(() => `Motijheel • ${filters.distance}m 
 radius`, [filters.distance]);
+
+  useEffect(() => {
+    setCurrentUserId(getCurrentUserIdFromToken());
+    void loadServices();
+  }, [loadServices]);
 
   const onToggleBookmark = (serviceId: string) => {
     setBookmarkedIds((prev) =>
@@ -46,51 +107,83 @@ radius`, [filters.distance]);
     );
   };
 
-  const onAddService = (values: OfferServiceFormValues) => {
-    const createdService: ServiceItem = {
-      id: createId(),
-      providerName: 'You',
-      avatar: values.photo || 'https://i.pravatar.cc/120?img=11',
-      verified: values.verified,
-      rating: values.verified ? 4.5 : 4,
-      reviews: 0,
-      distance: 220,
-      category: values.category,
-      title: values.serviceTitle.trim(),
-      shortDescription: values.shortDescription.trim(),
-      fullDescription: values.fullDescription.trim(),
-      price: Number(values.price),
-      priceUnit: values.priceUnit,
-      availability: values.availability,
-      experience: Number(values.experience),
-      radius: values.serviceRadius,
-      createdAt: Date.now(),
-      responseTime: 'Usually replies in 20 mins',
-      skills: values.shortDescription
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean)
-        .slice(0, 4),
-      certifications: values.certifications
-        ? values.certifications
-          .split(',')
-          .map((item) => item.trim())
-          .filter(Boolean)
-        : [],
-      gallery: values.portfolioImages,
-      schedule: values.workingHours
-        ? values.workingHours
-          .split(',')
-          .map((item) => item.trim())
-          .filter(Boolean)
-        : ['Flexible schedule'],
-      location: values.location,
-    };
+  const onAddService = useCallback(async (values: OfferServiceFormValues) => {
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
 
-    setServices((prev) => [createdService, ...prev]);
-    setIsOfferModalOpen(false);
-    setActiveDetails(createdService);
-    setFilters((prev) => ({ ...prev, sortBy: 'Recently Added' }));
+    if (!token) {
+      setErrorMessage('You need to sign in before posting a service.');
+      return false;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const formData = new FormData();
+    if (values.photo) {
+      formData.append('cover_photo', values.photo);
+    }
+
+    formData.append('title', values.serviceTitle.trim());
+    formData.append('category', values.category);
+    formData.append('short_description', values.shortDescription.trim());
+    formData.append('full_description', values.fullDescription.trim());
+    formData.append('price', values.price);
+    formData.append('price_type', values.priceUnit);
+    formData.append('availability', values.availability || 'Flexible');
+    formData.append('experience_years', values.experience || '0');
+    formData.append('service_radius', String(values.serviceRadius));
+    formData.append('location', values.location.trim());
+    formData.append('working_hours', values.workingHours.trim());
+    formData.append('verified_provider', values.verified ? '1' : '0');
+
+    try {
+      const response = await createService(formData, token);
+      setSuccessMessage(response.message || 'Service created successfully');
+      setIsOfferModalOpen(false);
+      setFilters((prev) => ({ ...prev, sortBy: 'Recently Added' }));
+      await loadServices();
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create service';
+      setErrorMessage(message);
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [loadServices]);
+
+  const onDeleteService = useCallback(async (id: string) => {
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
+
+    if (!token) {
+      setErrorMessage('You need to sign in before deleting a service.');
+      return;
+    }
+
+    setDeletingServiceId(id);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await deleteService(id, token);
+      setSuccessMessage(response?.message || 'Service deleted successfully');
+      await loadServices();
+
+      setActiveDetails((prev) => (prev?.id === id ? null : prev));
+      setActiveChat((prev) => (prev?.id === id ? null : prev));
+      setBookmarkedIds((prev) => prev.filter((serviceId) => serviceId !== id));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete service';
+      setErrorMessage(message);
+    } finally {
+      setDeletingServiceId(null);
+    }
+  }, [loadServices]);
+
+  const clearFeedback = () => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
   };
 
   const onSendMessage = (serviceId: string, text: string) => {
@@ -133,6 +226,12 @@ ${priceSuffixMap[service.priceUnit]}`;
     activeDetails,
     activeChat,
     chatMessages,
+    isLoading,
+    isSubmitting,
+    deletingServiceId,
+    errorMessage,
+    successMessage,
+    currentUserId,
     locationLabel,
     setFilters,
     setIsOfferModalOpen,
@@ -140,8 +239,11 @@ ${priceSuffixMap[service.priceUnit]}`;
     setActiveDetails,
     setActiveChat,
     onToggleBookmark,
+    loadServices,
     onAddService,
+    onDeleteService,
     onSendMessage,
+    clearFeedback,
     getPriceLabel,
   };
 };

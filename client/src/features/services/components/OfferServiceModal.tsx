@@ -1,6 +1,6 @@
 
 // src/features/services/components/OfferServiceModal.tsx 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { availabilityOptions, serviceCategories } from
@@ -11,19 +11,13 @@ import styles from './OfferServiceModal.module.css';
 interface OfferServiceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (values: OfferServiceFormValues) => void;
+  onSubmit: (values: OfferServiceFormValues) => Promise<boolean>;
+  isSubmitting?: boolean;
 }
 
-type UploadField = 'photo' | 'portfolio';
+type UploadField = 'photo';
 
 const imageAccept = 'image/png,image/jpeg,image/webp,image/jpg';
-
-const toDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onload = () => resolve(String(reader.result || ''));
-  reader.onerror = () => reject(new Error('Unable to read image file'));
-  reader.readAsDataURL(file);
-});
 
 const initialForm: OfferServiceFormValues = {
   serviceTitle: '',
@@ -37,18 +31,27 @@ const initialForm: OfferServiceFormValues = {
   serviceRadius: 350,
   location: 'Motijheel',
   verified: false,
-  photo: '',
+  photo: null,
   portfolioImages: [],
   certifications: '',
   workingHours: '',
 };
 
-export const OfferServiceModal = ({ isOpen, onClose, onSubmit }:
+export const OfferServiceModal = ({ isOpen, onClose, onSubmit, isSubmitting = false }:
   OfferServiceModalProps) => {
   const [form, setForm] = useState(initialForm);
   const [submitted, setSubmitted] = useState(false);
   const [activeDropField, setActiveDropField] = useState<UploadField | null>(null);
   const [uploadError, setUploadError] = useState('');
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (coverPreviewUrl) {
+        URL.revokeObjectURL(coverPreviewUrl);
+      }
+    };
+  }, [coverPreviewUrl]);
 
   const isValid = useMemo(() => {
     if (!form.serviceTitle.trim()) return false;
@@ -86,13 +89,18 @@ export const OfferServiceModal = ({ isOpen, onClose, onSubmit }:
 
     setUploadError('');
     if (field === 'photo') {
-      const firstImage = await toDataUrl(pickedFiles[0]);
+      const firstImage = pickedFiles[0];
       updateField('photo', firstImage);
+
+      setCoverPreviewUrl((previous) => {
+        if (previous) {
+          URL.revokeObjectURL(previous);
+        }
+        return URL.createObjectURL(firstImage);
+      });
+
       return;
     }
-
-    const uploadedImages = await Promise.all(pickedFiles.map((file) => toDataUrl(file)));
-    updateField('portfolioImages', [...form.portfolioImages, ...uploadedImages]);
   };
 
   const handleDrop = async (event: React.DragEvent<HTMLElement>, field: UploadField) => {
@@ -115,20 +123,34 @@ export const OfferServiceModal = ({ isOpen, onClose, onSubmit }:
   };
 
   const removeCoverPhoto = () => {
-    updateField('photo', '');
+    updateField('photo', null);
+    setCoverPreviewUrl((previous) => {
+      if (previous) {
+        URL.revokeObjectURL(previous);
+      }
+      return null;
+    });
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitted(true);
     if (!isValid) {
       return;
     }
 
-    onSubmit(form);
-    setForm(initialForm);
-    setSubmitted(false);
-    setUploadError('');
+    const isCreated = await onSubmit(form);
+    if (isCreated) {
+      setForm(initialForm);
+      setSubmitted(false);
+      setUploadError('');
+      setCoverPreviewUrl((previous) => {
+        if (previous) {
+          URL.revokeObjectURL(previous);
+        }
+        return null;
+      });
+    }
   };
 
   return (
@@ -259,9 +281,9 @@ export const OfferServiceModal = ({ isOpen, onClose, onSubmit }:
                       className={styles.uploadInput}
                       onChange={(event) => void handleImageUpload(event.target.files, 'photo')}
                     />
-                    {form.photo ? (
+                    {form.photo && coverPreviewUrl ? (
                       <>
-                        <img src={form.photo} alt="Cover preview"
+                        <img src={coverPreviewUrl} alt="Cover preview"
                           className={styles.previewImage} />
                         <button type="button" className={styles.uploadClear}
                           onClick={removeCoverPhoto}>
@@ -346,8 +368,9 @@ export const OfferServiceModal = ({ isOpen, onClose, onSubmit }:
                   className={styles.submitButton}
                   whileHover={{ y: -1 }}
                   whileTap={{ y: 1 }}
+                  disabled={isSubmitting}
                 >
-                  Submit Service
+                  {isSubmitting ? 'Submitting...' : 'Submit Service'}
                 </motion.button>
               </div>
             </form>

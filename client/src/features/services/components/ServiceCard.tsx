@@ -15,6 +15,9 @@ interface ServiceCardProps {
   onMessage: (service: ServiceItem) => void;
   onViewDetails: (service: ServiceItem) => void;
   onReport: (service: ServiceItem) => void;
+  canDelete?: boolean;
+  isDeleting?: boolean;
+  onDelete?: (serviceId: string) => void;
 }
 
 export const ServiceCard = ({
@@ -25,6 +28,9 @@ export const ServiceCard = ({
   onMessage,
   onViewDetails,
   onReport,
+  canDelete = false,
+  isDeleting = false,
+  onDelete,
 }: ServiceCardProps) => {
   return (
     <motion.article
@@ -32,6 +38,14 @@ export const ServiceCard = ({
       whileHover={{ y: -4, scale: 1.01 }}
       transition={{ duration: 0.22 }}
     >
+      {service.coverPhotoUrl && (
+        <img
+          className={styles.coverPhoto}
+          src={service.coverPhotoUrl}
+          alt={service.title}
+        />
+      )}
+
       <div className={styles.topRow}>
         <div className={styles.profileWrap}>
           <img className={styles.avatar} src={service.avatar}
@@ -83,6 +97,10 @@ export const ServiceCard = ({
       </div>
 
       <div className={styles.responseTime}>{service.responseTime}</div>
+      <div className={styles.metaInfo}>Location: {service.location}</div>
+      <div className={styles.metaInfo}>
+        Working hours: {service.schedule?.[0] || 'Not specified'}
+      </div>
 
       <div className={styles.actionRow}>
         <motion.button
@@ -109,12 +127,23 @@ export const ServiceCard = ({
         <button type="button" className={styles.textButton} onClick={() => onReport(service)}>
           <CircleAlert size={13} /> Report Service
         </button>
-        <span
-          className={styles.tooltipText}
-          title={`This service appears because it's ${service.distance}m from your location and within your active filters.`}
-        >
-          Why am I seeing this?
-        </span>
+        {canDelete && onDelete ? (
+          <button
+            type="button"
+            className={styles.deleteButton}
+            onClick={() => onDelete(service.id)}
+            disabled={isDeleting}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </button>
+        ) : (
+          <span
+            className={styles.tooltipText}
+            title={`This service appears because it's ${service.distance}m from your location and within your active filters.`}
+          >
+            Why am I seeing this?
+          </span>
+        )}
       </div>
     </motion.article>
   );
