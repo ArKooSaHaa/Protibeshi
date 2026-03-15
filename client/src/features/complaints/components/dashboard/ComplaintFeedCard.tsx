@@ -1,10 +1,13 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, CalendarDays, MapPin, ShieldCheck, Timer } from 'lucide-react';
+import { ArrowRight, CalendarDays, MapPin, ShieldCheck, Timer, Trash2 } from 'lucide-react';
 import { type ComplaintItem } from '../../types/complaint.types';
 
 interface ComplaintFeedCardProps {
   complaint: ComplaintItem;
   onViewDetails: (complaint: ComplaintItem) => void;
+  canDelete?: boolean;
+  onDelete?: (recordId: number) => void;
+  isDeleting?: boolean;
 }
 
 const statusTone: Record<ComplaintItem['status'], string> = {
@@ -34,7 +37,13 @@ const reporterTag = (complaint: ComplaintItem) => {
   return 'Resident report';
 };
 
-export const ComplaintFeedCard = ({ complaint, onViewDetails }: ComplaintFeedCardProps) => {
+export const ComplaintFeedCard = ({
+  complaint,
+  onViewDetails,
+  canDelete = false,
+  onDelete,
+  isDeleting = false,
+}: ComplaintFeedCardProps) => {
   return (
     <motion.article
       className="group relative rounded-2xl bg-linear-to-br from-white to-slate-50/60 p-px shadow-[0_22px_35px_-26px_rgba(15,23,42,0.52)]"
@@ -46,7 +55,7 @@ export const ComplaintFeedCard = ({ complaint, onViewDetails }: ComplaintFeedCar
 
         <div className="relative flex flex-wrap items-center justify-between gap-2">
           <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-slate-500">
-            <span className="rounded-md bg-slate-100 px-2 py-1 text-slate-700">{complaint.id}</span>
+            <span className="rounded-md bg-slate-100 px-2 py-1 text-slate-700">Code: {complaint.id}</span>
             <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1">{complaint.category}</span>
           </div>
           <div className="flex items-center gap-2">
@@ -73,6 +82,17 @@ export const ComplaintFeedCard = ({ complaint, onViewDetails }: ComplaintFeedCar
           <h3 className="text-lg font-semibold tracking-tight text-slate-900">{complaint.title}</h3>
           <p className="line-clamp-3 text-sm leading-6 text-slate-600">{complaint.description}</p>
         </div>
+
+        {complaint.photoUrl && (
+          <div className="relative mt-4 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+            <img
+              src={complaint.photoUrl}
+              alt="complaint"
+              className="h-44 w-full object-cover"
+              loading="lazy"
+            />
+          </div>
+        )}
 
         <div className="relative mt-4 grid gap-2 text-xs text-slate-500 sm:grid-cols-2">
           <div className="inline-flex items-center gap-1.5">
@@ -101,20 +121,33 @@ export const ComplaintFeedCard = ({ complaint, onViewDetails }: ComplaintFeedCar
         </div>
 
         <div className="relative mt-4 flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => onViewDetails(complaint)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-          >
-            View Details
-          </button>
-          <button
-            type="button"
-            onClick={() => onViewDetails(complaint)}
-            className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
-          >
-            Track Progress <ArrowRight size={13} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onViewDetails(complaint)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            >
+              View Details
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewDetails(complaint)}
+              className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+            >
+              Track Progress <ArrowRight size={13} />
+            </button>
+          </div>
+
+          {canDelete && typeof complaint.recordId === 'number' && onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(complaint.recordId as number)}
+              disabled={isDeleting}
+              className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <Trash2 size={13} /> {isDeleting ? 'Deleting...' : 'Delete'}
+            </button>
+          )}
         </div>
       </div>
     </motion.article>
