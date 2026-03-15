@@ -1,5 +1,5 @@
 //  src/features/rent/pages/RentPage.jsx 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useScroll, useTransform } from
   'framer-motion';
 import RentFilters from '../components/RentFilters';
@@ -7,23 +7,24 @@ import RentListingCard from '../components/RentListingCard';
 import AddPropertyModal from '../components/AddPropertyModal';
 import RentDetailsDrawer from '../components/RentDetailsDrawer';
 import RentChatDrawer from '../components/RentChatDrawer';
-import { rentListings } from '../mock/rentData';
+import { getRentListings } from '@/services/rentService';
 import styles from './RentPage.module.css';
 
 export const RentPage = () => {
   const containerRef = useRef(null);
-  const [allListings, setAllListings] = useState(rentListings);
-  const [filteredListings, setFilteredListings] =
-    useState(rentListings);
+  const [allListings, setAllListings] = useState([]);
+  const [filteredListings, setFilteredListings] = useState([]);
   const [isAddPropertyOpen, setIsAddPropertyOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [activeDetails, setActiveDetails] = useState(null);
   const [activeChat, setActiveChat] = useState(null);
   const [chatMessages, setChatMessages] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [feedError, setFeedError] = useState(null);
   const [filters, setFilters] = useState({
-    radius: 1000,
-    minPrice: 5000,
-    maxPrice: 50000,
+    radius: 5000,
+    minPrice: 0,
+    maxPrice: 100000,
     propertyTypes: [],
     bedrooms: [],
     furnishing: [],
@@ -44,6 +45,23 @@ export const RentPage = () => {
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
   };
+
+  const fetchRentListings = useCallback(async () => {
+    setIsLoading(true);
+    setFeedError(null);
+    try {
+      const data = await getRentListings();
+      setAllListings(data);
+    } catch (error) {
+      setFeedError(error.message || 'Failed to load rent listings.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRentListings();
+  }, [fetchRentListings]);
 
   const applyFilters = (currentFilters, sourceListings = allListings) => {
     let results = [...sourceListings];
@@ -114,20 +132,13 @@ export const RentPage = () => {
     applyFilters(filters, allListings);
   }, [filters, allListings]);
 
-  const handleAddProperty = (newProperty) => {
-    const nextId = allListings.length ?
-      Math.max(...allListings.map((item) => item.id)) + 1 : 1;
-
-    setAllListings((prev) => [
-      {
-        ...newProperty,
-        id: nextId,
-        views: 0,
-        listedDays: 0,
-      },
-      ...prev,
-    ]);
-
+  const handlePropertyAdded = (newListing) => {
+    // Optimistically prepend the new listing if the API returned it,
+    // then refresh from server to stay in sync.
+    if (newListing) {
+      setAllListings((prev) => [newListing, ...prev]);
+    }
+    fetchRentListings();
     setIsAddPropertyOpen(false);
   };
 
@@ -231,7 +242,15 @@ export const RentPage = () => {
           initial="hidden"
           animate="visible"
         >
-          {filteredListings.length > 0 ? (
+          {isLoading ? (
+            <div className={styles.feedStatus}>
+              <p>Loading listings…</p>
+            </div>
+          ) : feedError ? (
+            <div className={styles.feedStatus}>
+              <p className={styles.feedError}>{feedError}</p>
+            </div>
+          ) : filteredListings.length > 0 ? (
             filteredListings.map((listing) => (
               <motion.div key={listing.id} variants={cardVariants}>
                 <RentListingCard
@@ -286,7 +305,7 @@ export const RentPage = () => {
         {isAddPropertyOpen && (
           <AddPropertyModal
             onClose={() => setIsAddPropertyOpen(false)}
-            onSubmit={handleAddProperty}
+            onSuccess={handlePropertyAdded}
           />
         )}
       </AnimatePresence>

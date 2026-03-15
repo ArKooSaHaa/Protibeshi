@@ -250,6 +250,18 @@
   color: #64748b;
 }
 
+.feedStatus {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 80px 20px;
+  font-size: 16px;
+  color: #64748b;
+}
+
+.feedError {
+  color: #e53e3e;
+}
+
 /* ============================= */
 /* FLOATING ADD PROPERTY BUTTON */
 /* ============================= */
