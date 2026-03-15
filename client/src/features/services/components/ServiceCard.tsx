@@ -32,6 +32,14 @@ export const ServiceCard = ({
       whileHover={{ y: -4, scale: 1.01 }}
       transition={{ duration: 0.22 }}
     >
+      {service.coverPhotoUrl && (
+        <img
+          className={styles.coverPhoto}
+          src={service.coverPhotoUrl}
+          alt={service.title}
+        />
+      )}
+
       <div className={styles.topRow}>
         <div className={styles.profileWrap}>
           <img className={styles.avatar} src={service.avatar}
@@ -83,6 +91,10 @@ export const ServiceCard = ({
       </div>
 
       <div className={styles.responseTime}>{service.responseTime}</div>
+      <div className={styles.metaInfo}>Location: {service.location}</div>
+      <div className={styles.metaInfo}>
+        Working hours: {service.schedule?.[0] || 'Not specified'}
+      </div>
 
       <div className={styles.actionRow}>
         <motion.button

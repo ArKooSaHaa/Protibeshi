@@ -50,14 +50,20 @@ export const ServicesPage = () => {
     activeDetails,
     activeChat,
     chatMessages,
+    isLoading,
+    isSubmitting,
+    errorMessage,
+    successMessage,
     setFilters,
     setIsOfferModalOpen,
     setIsFilterDrawerOpen,
     setActiveDetails,
     setActiveChat,
     onToggleBookmark,
+    loadServices,
     onAddService,
     onSendMessage,
+    clearFeedback,
     getPriceLabel,
   } = useServicesMarketplace();
 
@@ -74,6 +80,18 @@ export const ServicesPage = () => {
     window.alert(`Service report submitted for ${service.providerName}. 
 Our team will review this.`);
   };
+
+  useEffect(() => {
+    if (!successMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      clearFeedback();
+    }, 2600);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [successMessage, clearFeedback]);
 
   useEffect(() => {
     if (!isFilterDrawerOpen) {
@@ -100,6 +118,10 @@ Our team will review this.`);
       />
 
       <section className={styles.servicesColumn}>
+        {isLoading && <p className={styles.stateInfo}>Loading services...</p>}
+        {errorMessage && <p className={styles.errorBanner}>{errorMessage}</p>}
+        {successMessage && <p className={styles.successBanner}>{successMessage}</p>}
+
         <motion.div
           className={styles.servicesGrid}
           variants={cardContainerVariants}
@@ -130,8 +152,21 @@ Our team will review this.`);
               exit={{ opacity: 0, y: 8 }}
             >
               <TriangleAlert size={20} />
-              <h3>No services match these filters</h3>
-              <p>Try increasing distance or removing one filter.</p>
+              <h3>{isLoading ? 'Fetching services...' : 'No services match these filters'}</h3>
+              <p>
+                {isLoading
+                  ? 'Please wait while we load neighborhood services.'
+                  : 'Try increasing distance or removing one filter.'}
+              </p>
+              {!isLoading && (
+                <button
+                  type="button"
+                  className={styles.retryButton}
+                  onClick={() => void loadServices()}
+                >
+                  Reload Services
+                </button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -177,6 +212,7 @@ Our team will review this.`);
         isOpen={isOfferModalOpen}
         onClose={() => setIsOfferModalOpen(false)}
         onSubmit={onAddService}
+        isSubmitting={isSubmitting}
       />
 
       <ServiceDetailsDrawer

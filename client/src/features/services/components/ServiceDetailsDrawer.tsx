@@ -66,6 +66,14 @@ export const ServiceDetailsDrawer = ({
               className={`${styles.scrollContent} ${atBottom ? styles.atBottom : ''
                 }`}
             >
+              {service.coverPhotoUrl && (
+                <img
+                  src={service.coverPhotoUrl}
+                  alt={service.title}
+                  className={styles.coverPhoto}
+                />
+              )}
+
               <div className={styles.providerRow}>
                 <img
                   src={service.avatar}
@@ -78,14 +86,23 @@ export const ServiceDetailsDrawer = ({
               </div>
 
               <h4 className={styles.title}>{service.title}</h4>
+              <p className={styles.leadText}>{service.shortDescription}</p>
               <p className={styles.body}>
                 {service.fullDescription}
               </p>
 
               <div className={styles.metaGrid}>
                 <div>
+                  <span>Category</span>
+                  <strong>{service.category}</strong>
+                </div>
+                <div>
                   <span>Price</span>
                   <strong>{priceLabel}</strong>
+                </div>
+                <div>
+                  <span>Availability</span>
+                  <strong>{service.availability}</strong>
                 </div>
                 <div>
                   <span>Experience</span>
@@ -94,49 +111,54 @@ export const ServiceDetailsDrawer = ({
                   </strong>
                 </div>
                 <div>
-                  <span>Rating</span>
-                  <strong>
-                    {service.rating.toFixed(1)} (
-                    {service.reviews} reviews)
-                  </strong>
-                </div>
-                <div>
                   <span>Service Radius</span>
                   <strong>{service.radius}m</strong>
+                </div>
+                <div>
+                  <span>Location</span>
+                  <strong>{service.location}</strong>
+                </div>
+                <div>
+                  <span>Verified Provider</span>
+                  <strong>{service.verified ? 'Yes' : 'No'}</strong>
+                </div>
+                <div>
+                  <span>Published</span>
+                  <strong>{new Date(service.createdAt).toLocaleDateString()}</strong>
                 </div>
               </div>
 
               <section className={styles.section}>
-                <h5>Skills</h5>
-                <ul>
-                  {service.skills.map((skill) => (
-                    <li key={skill}>{skill}</li>
-                  ))}
-                </ul>
-              </section>
-
-              <section className={styles.section}>
-                <h5>Certifications</h5>
-                {service.certifications.length ? (
+                <h5>Working Hours</h5>
+                {service.schedule.length ? (
                   <ul>
-                    {service.certifications.map((item) => (
-                      <li key={item}>{item}</li>
+                    {service.schedule.map((line) => (
+                      <li key={line}>{line}</li>
                     ))}
                   </ul>
                 ) : (
                   <p className={styles.muted}>
-                    No certifications listed yet.
+                    No working hours provided.
                   </p>
                 )}
               </section>
 
               <section className={styles.section}>
-                <h5>Availability Schedule</h5>
-                <ul>
-                  {service.schedule.map((line) => (
-                    <li key={line}>{line}</li>
-                  ))}
-                </ul>
+                <h5>Provider Snapshot</h5>
+                <div className={styles.detailList}>
+                  <div className={styles.detailItem}>
+                    <span>Provider name</span>
+                    <strong>{service.providerName}</strong>
+                  </div>
+                  <div className={styles.detailItem}>
+                    <span>Response time</span>
+                    <strong>{service.responseTime}</strong>
+                  </div>
+                  <div className={styles.detailItem}>
+                    <span>Price type</span>
+                    <strong>{service.priceUnit}</strong>
+                  </div>
+                </div>
               </section>
             </div>
 

@@ -25,8 +25,11 @@ export type ServicePriceUnit = 'hour' | 'session' | 'fixed';
 
 export interface ServiceItem {
     id: string;
+    ownerId?: number | null;
     providerName: string;
     avatar: string;
+    coverPhoto?: string | null;
+    coverPhotoUrl?: string | null;
     verified: boolean;
     rating: number;
     reviews: number;
@@ -72,8 +75,8 @@ export interface OfferServiceFormValues {
     serviceRadius: number;
     location: string;
     verified: boolean;
-    photo?: string;
-    portfolioImages: string;
+    photo: File | null;
+    portfolioImages: string[];
     certifications: string;
     workingHours: string;
 }
