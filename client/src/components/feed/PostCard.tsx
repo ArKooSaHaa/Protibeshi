@@ -1,5 +1,16 @@
 import { FormEvent, useMemo, useState } from 'react';
-import { Bookmark, Flag, Heart, Loader2, MapPin, MessageCircle, ShieldAlert } from 'lucide-react';
+import {
+  Bookmark,
+  Flag,
+  Heart,
+  Loader2,
+  MessageSquare,
+  MoreVertical,
+  Paperclip,
+  SendHorizontal,
+  ShieldAlert,
+  Smile,
+} from 'lucide-react';
 import { FeedPost, resolvePostImageUrl } from '@/api/feedApi';
 import styles from './PostCard.module.css';
 
@@ -32,12 +43,14 @@ export const PostCard = ({
   onReport,
 }: PostCardProps) => {
   const [showReport, setShowReport] = useState(false);
+  const [showMoreActions, setShowMoreActions] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reporting, setReporting] = useState(false);
   const [reportFeedback, setReportFeedback] = useState<string | null>(null);
 
   const imageUrl = useMemo(() => resolvePostImageUrl(post.image), [post.image]);
   const isEmergency = (post.post_type || '').toLowerCase() === 'emergency';
+  const previewText = post.content || post.short_description || '';
 
   const handleReportSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -72,24 +85,39 @@ export const PostCard = ({
               ) : null}
               {post.label ? <span className={styles.labelBadge}>{post.label}</span> : null}
             </div>
-            <div className={styles.subMeta}>
-              <span>{formatTime(post.created_at)}</span>
-              {post.location ? (
-                <>
-                  <span>•</span>
-                  <span className={styles.locationText}>
-                    <MapPin size={12} /> {post.location}
-                  </span>
-                </>
-              ) : null}
-            </div>
+            <div className={styles.subMeta}>{formatTime(post.created_at)}</div>
           </div>
+        </div>
+
+        <div className={styles.moreWrap}>
+          <button
+            type="button"
+            className={styles.moreButton}
+            onClick={() => setShowMoreActions((previous) => !previous)}
+            aria-label="More actions"
+          >
+            <MoreVertical size={16} />
+          </button>
+          {showMoreActions ? (
+            <div className={styles.moreMenu}>
+              <button
+                type="button"
+                className={styles.moreMenuItem}
+                onClick={() => {
+                  setShowReport(true);
+                  setShowMoreActions(false);
+                }}
+              >
+                <Flag size={14} /> Report post
+              </button>
+            </div>
+          ) : null}
         </div>
       </header>
 
       <div className={styles.body}>
         <h3 className={styles.title}>{post.title}</h3>
-        <p className={styles.description}>{post.short_description || post.content}</p>
+        {previewText ? <p className={styles.description}>{previewText}</p> : null}
         {imageUrl ? (
           <div className={styles.imageWrap}>
             <img src={imageUrl} alt={post.title} className={styles.image} />
@@ -98,41 +126,54 @@ export const PostCard = ({
       </div>
 
       <footer className={styles.footer}>
-        <div className={styles.stats}>
-          <span>{post.likes_count} likes</span>
-          <span>{post.comments_count} comments</span>
-        </div>
-
-        <div className={styles.actions}>
+        <div className={styles.metricsRow}>
           <button
             type="button"
-            className={`${styles.actionButton} ${post.liked ? styles.actionActive : ''}`}
+            className={`${styles.metricButton} ${post.liked ? styles.actionActive : ''}`}
             onClick={() => onLike(post.id)}
             disabled={likePending}
           >
             {likePending ? <Loader2 className={styles.spin} size={15} /> : <Heart size={15} />}
-            Like
+            {post.likes_count} Likes
           </button>
 
-          <button type="button" className={styles.actionButton} onClick={() => onOpenComments(post.id)}>
-            <MessageCircle size={15} />
-            Comment
+          <button type="button" className={styles.metricButton} onClick={() => onOpenComments(post.id)}>
+            <MessageSquare size={15} />
+            {post.comments_count} Comments
           </button>
+
+          <span className={styles.metricText}>
+            <SendHorizontal size={15} />
+            {post.shares_count || 0} Share
+          </span>
 
           <button
             type="button"
-            className={`${styles.actionButton} ${post.saved ? styles.actionActive : ''}`}
+            className={`${styles.metricButton} ${post.saved ? styles.actionActive : ''}`}
             onClick={() => onSave(post.id)}
             disabled={savePending}
           >
             {savePending ? <Loader2 className={styles.spin} size={15} /> : <Bookmark size={15} />}
-            Save
+            {post.saved ? 'Saved' : 'Save'}
           </button>
+        </div>
 
-          <button type="button" className={styles.actionButton} onClick={() => setShowReport(true)}>
-            <Flag size={15} />
-            Report
+        <div className={styles.commentBar}>
+          <div className={styles.commentAvatar}>{(post.user?.name || 'Y').charAt(0).toUpperCase()}</div>
+          <button type="button" className={styles.commentInputFake} onClick={() => onOpenComments(post.id)}>
+            Write your comment..
           </button>
+          <div className={styles.commentTools}>
+            <button type="button" className={styles.toolButton} onClick={() => onOpenComments(post.id)}>
+              <Paperclip size={16} />
+            </button>
+            <button type="button" className={styles.toolButton} onClick={() => onOpenComments(post.id)}>
+              <Smile size={16} />
+            </button>
+            <button type="button" className={styles.sendButton} onClick={() => onOpenComments(post.id)}>
+              <SendHorizontal size={16} />
+            </button>
+          </div>
         </div>
 
         {reportFeedback ? <p className={styles.feedback}>{reportFeedback}</p> : null}
