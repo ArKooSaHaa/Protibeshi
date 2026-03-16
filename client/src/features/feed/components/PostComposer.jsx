@@ -9,7 +9,7 @@ export const PostComposer = () => {
     const [isExpanded, setIsExpanded] = useState(false);
     const { addPost } = useFeedStore();
 
-    const handleSubmit = ({ headline, description, details }) => {
+    const handleSubmit = ({ headline, description, details, labels = [] }) => {
         const trimmedHeadline = headline.trim();
         if (!trimmedHeadline) return;
 
@@ -18,11 +18,18 @@ export const PostComposer = () => {
 
         const content = contentParts.length > 0 ? contentParts.join('\n\n')
             : trimmedHeadline;
+        const sanitizedLabels = labels
+            .map((label) => String(label).trim())
+            .filter(Boolean);
+        const tags = sanitizedLabels.length > 0 ? sanitizedLabels : ['Community'];
+        const isEmergencyPost = tags.some((tag) => tag.toLowerCase() === 'emergency');
 
         addPost({
             title: trimmedHeadline,
             content,
-            tags: ['Community'],
+            tags,
+            type: isEmergencyPost ? 'emergency' : 'community',
+            priority: isEmergencyPost ? 'high' : 'low',
         });
 
         setIsExpanded(false);
