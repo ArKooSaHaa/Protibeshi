@@ -1,0 +1,129 @@
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px 14px 30px;
+}
+
+.centerColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.composerCard {
+  border-radius: 16px;
+  border: 1px solid #e6ebf2;
+  background: white;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  padding: 14px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.composerAvatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--emerald-100);
+  color: var(--emerald-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.composerButton {
+  border: 1px solid var(--slate-200);
+  border-radius: 999px;
+  background: var(--slate-50);
+  color: var(--slate-500);
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.composerButton:hover {
+  background: white;
+  border-color: var(--emerald-300);
+}
+
+.quickPostBtn {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, var(--emerald-500), var(--emerald-600));
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.feedList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.loadingState,
+.emptyState {
+  border-radius: 14px;
+  border: 1px dashed #cbd5e1;
+  background: white;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.errorBanner {
+  margin: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 680px) {
+  .page {
+    padding: 16px 10px 22px;
+  }
+
+  .composerCard {
+    grid-template-columns: auto 1fr;
+  }
+
+  .quickPostBtn {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+}

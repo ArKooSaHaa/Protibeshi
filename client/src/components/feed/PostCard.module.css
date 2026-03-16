@@ -1,0 +1,271 @@
+.card {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #e6ebf2;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.emergencyCard {
+  border-color: rgba(239, 68, 68, 0.35);
+  box-shadow: 0 16px 28px rgba(220, 38, 38, 0.12);
+}
+
+.header,
+.body,
+.footer {
+  padding: 14px 16px;
+}
+
+.header {
+  padding-bottom: 10px;
+}
+
+.userSection {
+  display: flex;
+  gap: 10px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--slate-200);
+  color: var(--slate-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.userMeta {
+  min-width: 0;
+}
+
+.nameRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.userName {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--slate-800);
+}
+
+.labelBadge,
+.emergencyBadge {
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.labelBadge {
+  background: var(--emerald-100);
+  color: var(--emerald-700);
+}
+
+.emergencyBadge {
+  background: var(--red-100);
+  color: var(--red-600);
+}
+
+.subMeta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+  color: var(--slate-500);
+  font-size: 12px;
+}
+
+.locationText {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.25;
+  color: var(--slate-800);
+}
+
+.description {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--slate-600);
+}
+
+.imageWrap {
+  margin-top: 12px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #edf2f7;
+  background: #f8fafc;
+}
+
+.image {
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+  display: block;
+}
+
+.footer {
+  border-top: 1px solid var(--slate-200);
+}
+
+.stats {
+  display: flex;
+  gap: 12px;
+  color: var(--slate-500);
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.actionButton {
+  border: 1px solid var(--slate-200);
+  border-radius: 10px;
+  background: white;
+  color: var(--slate-700);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.actionButton:hover {
+  background: var(--slate-100);
+}
+
+.actionActive {
+  border-color: var(--emerald-500);
+  color: var(--emerald-700);
+  background: var(--emerald-50);
+}
+
+.feedback {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--emerald-700);
+  font-weight: 600;
+}
+
+.reportOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(3px);
+  z-index: 75;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+
+.reportModal {
+  width: min(480px, 100%);
+  border-radius: 14px;
+  border: 1px solid var(--slate-200);
+  background: white;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+  padding: 14px;
+}
+
+.reportTitle {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: var(--slate-800);
+}
+
+.reportForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reportInput {
+  border: 1px solid var(--slate-200);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--slate-700);
+  outline: none;
+}
+
+.reportInput:focus {
+  border-color: var(--emerald-500);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.reportActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.cancelBtn,
+.submitBtn {
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cancelBtn {
+  border: 1px solid var(--slate-200);
+  background: white;
+  color: var(--slate-600);
+}
+
+.submitBtn {
+  border: none;
+  background: var(--red-500);
+  color: white;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 780px) {
+  .actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .title {
+    font-size: 18px;
+  }
+}
