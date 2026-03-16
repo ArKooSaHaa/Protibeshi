@@ -1,0 +1,156 @@
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  max-width: none;
+  margin: 0;
+  padding: 24px 0 30px 14px;
+}
+
+.centerColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.composerCard {
+  width: 100%;
+  max-width: 680px;
+  margin: 0;
+  border-radius: 20px;
+  border: 1px solid #dde4ee;
+  background: #f7f9fc;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.composerAvatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #bcefd8;
+  color: #0f8f62;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 24px;
+  overflow: hidden;
+}
+
+.composerAvatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.composerButton {
+  border: 1px solid #d3dbe7;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #5c708b;
+  text-align: left;
+  padding: 14px 18px;
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.composerButton:hover {
+  background: #ffffff;
+  border-color: #bcc9d9;
+}
+
+.quickPostBtn {
+  border: none;
+  border-radius: 999px;
+  padding: 14px 20px;
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, #18b880, #10a86f);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 5px 12px rgba(16, 168, 111, 0.28);
+}
+
+.quickPostBtn:hover {
+  filter: brightness(1.03);
+}
+
+.feedList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.loadingState,
+.emptyState {
+  border-radius: 14px;
+  border: 1px dashed #cbd5e1;
+  background: white;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.errorBanner {
+  margin: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 680px) {
+  .page {
+    padding: 16px 10px 22px;
+  }
+
+  .composerAvatar {
+    width: 42px;
+    height: 42px;
+    font-size: 18px;
+  }
+
+  .composerButton {
+    padding: 11px 14px;
+    font-size: 16px;
+  }
+
+  .quickPostBtn {
+    padding: 11px 14px;
+    font-size: 16px;
+  }
+}

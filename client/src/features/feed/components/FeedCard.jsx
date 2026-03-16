@@ -30,7 +30,7 @@ export const FeedCard = ({ post, index }) => {
         post.commentsList || post.commentsData || []
     );
     const isEmergency = post.type === 'emergency';
-    const isCommunity = post.type === 'community';
+    const commentCount = comments.length > 0 ? comments.length : (post.comments || 0);
     const handleLike = () => {
         if (!isLiked) {
             likePost(post.id);
@@ -164,7 +164,65 @@ export const FeedCard = ({ post, index }) => {
             </div>
             {/* Actions */}
             <div className={styles.actions}>
-                {isEmergency ? (
+                <div className={styles.actionButtons}>
+                    <motion.button
+                        className={`${styles.actionButton} ${isLiked ?
+                            styles.actionButtonActive : ''}`}
+                        onClick={handleLike}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                    >
+                        <ThumbsUp size={18} />
+                        <span>{post.likes}</span>
+                    </motion.button>
+                    <motion.button
+                        className={styles.actionButton}
+                        onClick={() => setShowComments(true)}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                    >
+                        <MessageCircle size={18} />
+                        <span>{commentCount}</span>
+                    </motion.button>
+                    <div className={styles.menuWrapper}>
+                        <motion.button
+                            className={styles.actionButton}
+                            onClick={() => setShowMenu((prev) => !prev)}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            aria-expanded={showMenu}
+                            aria-haspopup="menu"
+                        >
+                            <MoreHorizontal size={18} />
+                        </motion.button>
+                        {showMenu && (
+                            <div className={styles.menu} role="menu">
+                                <button
+                                    className={styles.menuItem}
+                                    type="button"
+                                    onClick={() => {
+                                        setIsSaved((prev) => !prev);
+                                        setShowMenu(false);
+                                    }}
+                                >
+                                    {isSaved ? 'Saved' : 'Save post'}
+                                </button>
+                                <button
+                                    className={`${styles.menuItem}
+${styles.menuItemDanger}`}
+                                    type="button"
+                                    onClick={() => {
+                                        setShowReport(true);
+                                        setShowMenu(false);
+                                    }}
+                                >
+                                    Report
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                {isEmergency && (
                     <motion.button
                         className={styles.viewDetailsButton}
                         whileHover={{ scale: 1.02 }}
@@ -172,105 +230,8 @@ export const FeedCard = ({ post, index }) => {
                     >
                         View details
                     </motion.button>
-                ) : (
-                    <div className={styles.actionButtons}>
-                        <motion.button
-                            className={`${styles.actionButton} ${isLiked ?
-                                styles.actionButtonActive : ''}`}
-                            onClick={handleLike}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                        >
-                            <ThumbsUp size={18} />
-                            <span>{post.likes}</span>
-                        </motion.button>
-                        <motion.button
-                            className={styles.actionButton}
-                            onClick={() => setShowComments((prev) => !prev)}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                        >
-                            <MessageCircle size={18} />
-                            <span>{comments.length || post.comments}</span></motion.button>
-                        <div className={styles.menuWrapper}>
-                            <motion.button
-                                className={styles.actionButton}
-                                onClick={() => setShowMenu((prev) => !prev)}
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                aria-expanded={showMenu}
-                                aria-haspopup="menu"
-                            >
-                                <MoreHorizontal size={18} />
-                            </motion.button>
-                            {showMenu && (
-                                <div className={styles.menu} role="menu">
-                                    <button
-                                        className={styles.menuItem}
-                                        type="button"
-                                        onClick={() => {
-                                            setIsSaved((prev) => !prev);
-                                            setShowMenu(false);
-                                        }}
-                                    >
-                                        {isSaved ? 'Saved' : 'Save post'}
-                                    </button>
-                                    <button
-                                        className={`${styles.menuItem}
-${styles.menuItemDanger}`}
-                                        type="button"
-                                        onClick={() => {
-                                            setShowReport(true);
-                                            setShowMenu(false);
-                                        }}
-                                    >
-                                        Report
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
                 )}
-            </div>{showComments && !isEmergency && (
-                <div className={styles.commentsSection}>
-                    <div className={styles.commentList}>
-                        {comments.length === 0 ? (
-                            <p className={styles.emptyComments}>Be the first to
-                                comment.</p>
-                        ) : (
-                            comments.map((comment) => (
-                                <div key={comment.id} className={styles.commentItem}>
-                                    <div className={styles.commentAvatar}>
-                                        {comment.author.charAt(0)}
-                                    </div>
-                                    <div className={styles.commentBody}>
-                                        <span
-                                            className={styles.commentAuthor}>{comment.author}</span>
-                                        <span
-                                            className={styles.commentText}>{comment.text}</span>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                    <form className={styles.commentForm}
-                        onSubmit={handleAddComment}>
-                        <input
-                            className={styles.commentInput}
-                            placeholder="Write a comment..."
-                            value={commentInput}
-                            onChange={(event) => setCommentInput(event.target.value)}
-                        />
-                        <button
-                            type="submit"
-                            className={styles.commentSubmit}
-                            disabled={!commentInput.trim()}
-                        >
-                            Post
-                        </button>
-                    </form>
-                </div>
-            )}
+            </div>
             {/* Footer Note */}
             {isEmergency && (<p className={styles.footerNote}>
                 Why am I seeing this? (Based on proximity & category affinity)
@@ -337,6 +298,57 @@ ${styles.menuItemDanger}`}
                                     Submit report
                                 </button>
                             </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {showComments && (
+                <div className={styles.commentsOverlay} onClick={() => setShowComments(false)}>
+                    <div className={styles.commentsModal} onClick={(event) => event.stopPropagation()}>
+                        <div className={styles.commentsHeader}>
+                            <h4 className={styles.commentsTitle}>Comments</h4>
+                            <button
+                                type="button"
+                                className={styles.commentsClose}
+                                onClick={() => setShowComments(false)}
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        <div className={styles.commentList}>
+                            {comments.length === 0 ? (
+                                <p className={styles.emptyComments}>Be the first to comment.</p>
+                            ) : (
+                                comments.map((comment) => (
+                                    <div key={comment.id} className={styles.commentItem}>
+                                        <div className={styles.commentAvatar}>
+                                            {comment.author.charAt(0)}
+                                        </div>
+                                        <div className={styles.commentBody}>
+                                            <span className={styles.commentAuthor}>{comment.author}</span>
+                                            <span className={styles.commentText}>{comment.text}</span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        <form className={styles.commentForm} onSubmit={handleAddComment}>
+                            <input
+                                className={styles.commentInput}
+                                placeholder="Write a comment..."
+                                value={commentInput}
+                                onChange={(event) => setCommentInput(event.target.value)}
+                            />
+                            <button
+                                type="submit"
+                                className={styles.commentSubmit}
+                                disabled={!commentInput.trim()}
+                            >
+                                Post
+                            </button>
                         </form>
                     </div>
                 </div>

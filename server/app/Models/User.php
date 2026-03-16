@@ -53,6 +53,11 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Complaint::class);
     }
 
+    public function posts()
+    {
+        return $this->hasMany(Post::class);
+    }
+
     /**
      * Return JWT identifier
      */
