@@ -12,7 +12,7 @@ class CreatePostsTable extends Migration
 
             $table->id();
 
-            // post owner
+            // post owner 
             $table->unsignedBigInteger('user_id');
 
             // main post content

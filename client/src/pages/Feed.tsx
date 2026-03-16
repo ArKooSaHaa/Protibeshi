@@ -317,6 +317,7 @@ export const Feed = () => {
               savePending={savePendingId === post.id}
               onLike={handleLike}
               onOpenComments={handleOpenComments}
+              onSubmitComment={handleCommentSubmit}
               onSave={handleSave}
               onReport={handleReport}
             />

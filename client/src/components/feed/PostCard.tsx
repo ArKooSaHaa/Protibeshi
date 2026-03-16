@@ -1,16 +1,5 @@
 import { FormEvent, useMemo, useState } from 'react';
-import {
-  Bookmark,
-  Flag,
-  Heart,
-  Loader2,
-  MessageSquare,
-  MoreVertical,
-  Paperclip,
-  SendHorizontal,
-  ShieldAlert,
-  Smile,
-} from 'lucide-react';
+import { Bookmark, Flag, Heart, Loader2, MapPin, MessageCircle, Send, ShieldAlert, Smile } from 'lucide-react';
 import { FeedPost, resolvePostImageUrl } from '@/api/feedApi';
 import styles from './PostCard.module.css';
 
@@ -20,6 +9,7 @@ type PostCardProps = {
   savePending?: boolean;
   onLike: (postId: number) => Promise<void>;
   onOpenComments: (postId: number) => Promise<void>;
+  onSubmitComment: (postId: number, comment: string) => Promise<void>;
   onSave: (postId: number) => Promise<void>;
   onReport: (postId: number, reason: string) => Promise<void>;
 };
@@ -33,24 +23,89 @@ const formatTime = (rawDate: string) => {
   return date.toLocaleString();
 };
 
+const DEFAULT_API_BASE = 'http://127.0.0.1:8000';
+
+const resolveUserImageUrl = (rawPath: string | null | undefined) => {
+  if (!rawPath) {
+    return null;
+  }
+
+  if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
+    return rawPath;
+  }
+
+  const baseUrl = import.meta.env.VITE_API_URL || DEFAULT_API_BASE;
+
+  if (rawPath.startsWith('/')) {
+    return `${baseUrl}${rawPath}`;
+  }
+
+  if (rawPath.startsWith('storage/')) {
+    return `${baseUrl}/${rawPath}`;
+  }
+
+  return `${baseUrl}/storage/${rawPath}`;
+};
+
+const getUserProfilePhoto = (post: FeedPost) => {
+  const user = post.user as (Record<string, unknown> & { name?: string }) | null;
+  if (!user) {
+    return null;
+  }
+
+  const possibleFields = [
+    'avatar',
+    'avatar_url',
+    'avatarUrl',
+    'photo',
+    'profile_photo',
+    'profile_photo_url',
+    'profilePhoto',
+    'profilePicture',
+    'profile_picture',
+    'image',
+    'image_url',
+  ];
+
+  for (const field of possibleFields) {
+    const value = user[field];
+    if (typeof value === 'string' && value.trim()) {
+      return resolveUserImageUrl(value.trim());
+    }
+  }
+
+  return null;
+};
+
 export const PostCard = ({
   post,
   likePending,
   savePending,
   onLike,
   onOpenComments,
+  onSubmitComment,
   onSave,
   onReport,
 }: PostCardProps) => {
   const [showReport, setShowReport] = useState(false);
-  const [showMoreActions, setShowMoreActions] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reporting, setReporting] = useState(false);
   const [reportFeedback, setReportFeedback] = useState<string | null>(null);
+  const [inlineComment, setInlineComment] = useState('');
+  const [commenting, setCommenting] = useState(false);
+  const [commentFeedback, setCommentFeedback] = useState<string | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
+  const [profileImageFailed, setProfileImageFailed] = useState(false);
 
   const imageUrl = useMemo(() => resolvePostImageUrl(post.image), [post.image]);
+  const profilePhoto = useMemo(() => getUserProfilePhoto(post), [post]);
   const isEmergency = (post.post_type || '').toLowerCase() === 'emergency';
-  const previewText = post.content || post.short_description || '';
+  const shortDescription = (post.short_description || '').trim();
+  const fallbackSummary = (post.content || '').trim();
+  const summaryText = shortDescription || fallbackSummary;
+  const detailText = (post.content || '').trim();
+  const hasDetailText = !!detailText && detailText !== summaryText;
+  const hasExpandableContent = hasDetailText || !!imageUrl;
 
   const handleReportSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -70,11 +125,44 @@ export const PostCard = ({
     }
   };
 
+  const handleInlineCommentSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const trimmed = inlineComment.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    setCommenting(true);
+    setCommentFeedback(null);
+
+    try {
+      await onSubmitComment(post.id, trimmed);
+      setInlineComment('');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to add comment';
+      setCommentFeedback(message);
+    } finally {
+      setCommenting(false);
+    }
+  };
+
   return (
     <article className={`${styles.card} ${isEmergency ? styles.emergencyCard : ''}`}>
       <header className={styles.header}>
         <div className={styles.userSection}>
-          <div className={styles.avatar}>{(post.user?.name || 'N').charAt(0).toUpperCase()}</div>
+          <div className={styles.avatar}>
+            {profilePhoto && !profileImageFailed ? (
+              <img
+                src={profilePhoto}
+                alt={post.user?.name || 'User profile'}
+                className={styles.profileImage}
+                onError={() => setProfileImageFailed(true)}
+              />
+            ) : (
+              (post.user?.name || 'N').charAt(0).toUpperCase()
+            )}
+          </div>
           <div className={styles.userMeta}>
             <div className={styles.nameRow}>
               <span className={styles.userName}>{post.user?.name || 'Neighbor'}</span>
@@ -85,98 +173,120 @@ export const PostCard = ({
               ) : null}
               {post.label ? <span className={styles.labelBadge}>{post.label}</span> : null}
             </div>
-            <div className={styles.subMeta}>{formatTime(post.created_at)}</div>
-          </div>
-        </div>
-
-        <div className={styles.moreWrap}>
-          <button
-            type="button"
-            className={styles.moreButton}
-            onClick={() => setShowMoreActions((previous) => !previous)}
-            aria-label="More actions"
-          >
-            <MoreVertical size={16} />
-          </button>
-          {showMoreActions ? (
-            <div className={styles.moreMenu}>
-              <button
-                type="button"
-                className={styles.moreMenuItem}
-                onClick={() => {
-                  setShowReport(true);
-                  setShowMoreActions(false);
-                }}
-              >
-                <Flag size={14} /> Report post
-              </button>
+            <div className={styles.subMeta}>
+              <span>{formatTime(post.created_at)}</span>
+              {post.location ? (
+                <>
+                  <span>•</span>
+                  <span className={styles.locationText}>
+                    <MapPin size={12} /> {post.location}
+                  </span>
+                </>
+              ) : null}
             </div>
-          ) : null}
+          </div>
         </div>
       </header>
 
       <div className={styles.body}>
         <h3 className={styles.title}>{post.title}</h3>
-        {previewText ? <p className={styles.description}>{previewText}</p> : null}
-        {imageUrl ? (
-          <div className={styles.imageWrap}>
-            <img src={imageUrl} alt={post.title} className={styles.image} />
+        <p className={styles.shortDescription}>{summaryText}</p>
+
+        {hasExpandableContent ? (
+          <button
+            type="button"
+            className={styles.viewMoreButton}
+            onClick={() => setShowDetails((previous) => !previous)}
+          >
+            {showDetails ? 'View less' : 'View more'}
+          </button>
+        ) : null}
+
+        {showDetails ? (
+          <div className={styles.detailsSection}>
+            {hasDetailText ? <p className={styles.detailText}>{detailText}</p> : null}
+            {imageUrl ? (
+              <div className={styles.imageWrap}>
+                <img src={imageUrl} alt={post.title} className={styles.image} />
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>
 
+      {!hasExpandableContent && imageUrl ? (
+        <div className={styles.imageWrap}>
+          <img src={imageUrl} alt={post.title} className={styles.image} />
+        </div>
+      ) : null}
+
       <footer className={styles.footer}>
-        <div className={styles.metricsRow}>
+        <div className={styles.stats}>
+          <span>{post.likes_count} likes</span>
+          <span>{post.comments_count} comments</span>
+        </div>
+
+        <div className={styles.actions}>
           <button
             type="button"
-            className={`${styles.metricButton} ${post.liked ? styles.actionActive : ''}`}
+            className={`${styles.actionButton} ${post.liked ? styles.actionActive : ''}`}
             onClick={() => onLike(post.id)}
             disabled={likePending}
           >
             {likePending ? <Loader2 className={styles.spin} size={15} /> : <Heart size={15} />}
-            {post.likes_count} Likes
+            Like
           </button>
 
-          <button type="button" className={styles.metricButton} onClick={() => onOpenComments(post.id)}>
-            <MessageSquare size={15} />
-            {post.comments_count} Comments
+          <button type="button" className={styles.actionButton} onClick={() => onOpenComments(post.id)}>
+            <MessageCircle size={15} />
+            Comment
           </button>
-
-          <span className={styles.metricText}>
-            <SendHorizontal size={15} />
-            {post.shares_count || 0} Share
-          </span>
 
           <button
             type="button"
-            className={`${styles.metricButton} ${post.saved ? styles.actionActive : ''}`}
+            className={`${styles.actionButton} ${post.saved ? styles.actionActive : ''}`}
             onClick={() => onSave(post.id)}
             disabled={savePending}
           >
             {savePending ? <Loader2 className={styles.spin} size={15} /> : <Bookmark size={15} />}
-            {post.saved ? 'Saved' : 'Save'}
+            Save
+          </button>
+
+          <button
+            type="button"
+            className={styles.actionButton}
+            onClick={() => setShowReport(true)}
+          >
+            <Flag size={15} />
+            Report
           </button>
         </div>
 
-        <div className={styles.commentBar}>
-          <div className={styles.commentAvatar}>{(post.user?.name || 'Y').charAt(0).toUpperCase()}</div>
-          <button type="button" className={styles.commentInputFake} onClick={() => onOpenComments(post.id)}>
-            Write your comment..
+        <form className={styles.commentComposer} onSubmit={handleInlineCommentSubmit}>
+          <div className={styles.commentAvatar}>Y</div>
+          <input
+            className={styles.commentInput}
+            type="text"
+            placeholder="Write your comment..."
+            value={inlineComment}
+            onChange={(event) => setInlineComment(event.target.value)}
+            disabled={commenting}
+          />
+          <button type="button" className={styles.commentIconBtn} aria-label="emoji picker" disabled>
+            <Smile size={15} />
           </button>
-          <div className={styles.commentTools}>
-            <button type="button" className={styles.toolButton} onClick={() => onOpenComments(post.id)}>
-              <Paperclip size={16} />
-            </button>
-            <button type="button" className={styles.toolButton} onClick={() => onOpenComments(post.id)}>
-              <Smile size={16} />
-            </button>
-            <button type="button" className={styles.sendButton} onClick={() => onOpenComments(post.id)}>
-              <SendHorizontal size={16} />
-            </button>
-          </div>
-        </div>
+          <button
+            type="submit"
+            className={styles.commentSendBtn}
+            aria-label="send comment"
+            disabled={commenting || !inlineComment.trim()}
+          >
+            {commenting ? <Loader2 className={styles.spin} size={14} /> : <Send size={14} />}
+          </button>
+        </form>
 
         {reportFeedback ? <p className={styles.feedback}>{reportFeedback}</p> : null}
+        {commentFeedback ? <p className={styles.feedback}>{commentFeedback}</p> : null}
       </footer>
 
       {showReport ? (
