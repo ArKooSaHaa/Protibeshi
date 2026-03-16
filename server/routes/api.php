@@ -6,7 +6,12 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\ListingController;
+use App\Http\Controllers\PostCommentController;
+use App\Http\Controllers\PostController;
+use App\Http\Controllers\PostLikeController;
+use App\Http\Controllers\PostReportController;
 use App\Http\Controllers\RentListingController;
+use App\Http\Controllers\SavedPostController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SessionController;
 
@@ -26,6 +31,8 @@ Route::get('/services', [ServiceController::class, 'index']);
 Route::get('/services/{id}', [ServiceController::class, 'show']);
 Route::get('/complaints', [ComplaintController::class, 'index']);
 Route::get('/complaints/{id}', [ComplaintController::class, 'show']);
+Route::get('/posts', [PostController::class, 'index']);
+Route::get('/posts/{id}', [PostController::class, 'show']);
 
 
 /*
@@ -59,6 +66,13 @@ Route::middleware(['auth:api'])->group(function () {
         ->middleware('check.admin');
 
     Route::post('/attendance', [SessionController::class, 'submitAttendance']);
+
+    Route::post('/posts', [PostController::class, 'createPost']);
+    Route::delete('/posts/{id}', [PostController::class, 'deletePost']);
+    Route::post('/posts/{id}/like', [PostLikeController::class, 'toggleLike']);
+    Route::post('/posts/{id}/comment', [PostCommentController::class, 'addComment']);
+    Route::post('/posts/{id}/save', [SavedPostController::class, 'toggleSave']);
+    Route::post('/posts/{id}/report', [PostReportController::class, 'report']);
 
 });
 

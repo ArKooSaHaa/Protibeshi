@@ -97,6 +97,35 @@
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }
 
+.labelOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.labelOption {
+  border: 1px solid var(--slate-200);
+  background: white;
+  color: var(--slate-700);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.labelOption:hover {
+  border-color: var(--emerald-300);
+  color: var(--emerald-700);
+}
+
+.labelOptionActive {
+  border-color: var(--emerald-500);
+  background: var(--emerald-50);
+  color: var(--emerald-700);
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;

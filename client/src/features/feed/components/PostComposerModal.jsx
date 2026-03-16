@@ -4,14 +4,38 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import styles from './PostComposerModal.module.css';
 
+const LABEL_OPTIONS = [
+    'Emergency',
+    'Community',
+    'Help Needed',
+    'Service',
+    'Utilities',
+    'Safety',
+    'Marketplace',
+    'Events',
+    'Lost & Found',
+    'Traffic',
+];
+
 export const PostComposerModal = ({ onClose, onSubmit }) => {
     const [headline, setHeadline] = useState('');
     const [description, setDescription] = useState('');
     const [details, setDetails] = useState('');
+    const [selectedLabels, setSelectedLabels] = useState(['Community']);
+
+    const toggleLabel = (label) => {
+        setSelectedLabels((previous) => {
+            if (previous.includes(label)) {
+                return previous.filter((item) => item !== label);
+            }
+
+            return [...previous, label];
+        });
+    };
 
     const handleSubmit = (event) => {
         event.preventDefault();
-        onSubmit({ headline, description, details });
+        onSubmit({ headline, description, details, labels: selectedLabels });
     };
 
     return (
@@ -78,6 +102,27 @@ info"
                                 rows={5}
                             />
                         </label>
+
+                        <div className={styles.field}>
+                            <span className={styles.label}>Labels</span>
+                            <div className={styles.labelOptions}>
+                                {LABEL_OPTIONS.map((label) => {
+                                    const isSelected = selectedLabels.includes(label);
+
+                                    return (
+                                        <button
+                                            key={label}
+                                            type="button"
+                                            className={`${styles.labelOption} ${isSelected ? styles.labelOptionActive : ''}`}
+                                            onClick={() => toggleLabel(label)}
+                                            aria-pressed={isSelected}
+                                        >
+                                            {label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
 
                         <div className={styles.actions}>
                             <button
