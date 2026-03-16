@@ -5,6 +5,9 @@ import styles from './PostCard.module.css';
 
 type PostCardProps = {
   post: FeedPost & { liked?: boolean; saved?: boolean };
+  currentUserId?: number | null;
+  currentUserName?: string | null;
+  currentUserAvatarUrl?: string | null;
   likePending?: boolean;
   savePending?: boolean;
   onLike: (postId: number) => Promise<void>;
@@ -30,21 +33,60 @@ const resolveUserImageUrl = (rawPath: string | null | undefined) => {
     return null;
   }
 
-  if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
-    return rawPath;
+  const normalizedPath = rawPath.replace(/\\/g, '/').trim();
+  if (!normalizedPath) {
+    return null;
+  }
+
+  if (normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')) {
+    return normalizedPath;
   }
 
   const baseUrl = import.meta.env.VITE_API_URL || DEFAULT_API_BASE;
 
-  if (rawPath.startsWith('/')) {
-    return `${baseUrl}${rawPath}`;
+  if (normalizedPath.startsWith('/')) {
+    return `${baseUrl}${normalizedPath}`;
   }
 
-  if (rawPath.startsWith('storage/')) {
-    return `${baseUrl}/${rawPath}`;
+  if (normalizedPath.startsWith('storage/')) {
+    return `${baseUrl}/${normalizedPath}`;
   }
 
-  return `${baseUrl}/storage/${rawPath}`;
+  if (normalizedPath.startsWith('public/storage/')) {
+    return `${baseUrl}/${normalizedPath.replace(/^public\//, '')}`;
+  }
+
+  return `${baseUrl}/storage/${normalizedPath}`;
+};
+
+const getStringAtPath = (source: Record<string, unknown>, path: string) => {
+  const segments = path.split('.');
+  let current: unknown = source;
+
+  for (const segment of segments) {
+    if (!current || typeof current !== 'object') {
+      return null;
+    }
+
+    current = (current as Record<string, unknown>)[segment];
+  }
+
+  return typeof current === 'string' && current.trim() ? current.trim() : null;
+};
+
+const getValueAtPath = (source: Record<string, unknown>, path: string) => {
+  const segments = path.split('.');
+  let current: unknown = source;
+
+  for (const segment of segments) {
+    if (!current || typeof current !== 'object') {
+      return null;
+    }
+
+    current = (current as Record<string, unknown>)[segment];
+  }
+
+  return current ?? null;
 };
 
 const getUserProfilePhoto = (post: FeedPost) => {
@@ -57,6 +99,8 @@ const getUserProfilePhoto = (post: FeedPost) => {
     'avatar',
     'avatar_url',
     'avatarUrl',
+    'profile_picture_url',
+    'profilePictureUrl',
     'photo',
     'profile_photo',
     'profile_photo_url',
@@ -65,12 +109,91 @@ const getUserProfilePhoto = (post: FeedPost) => {
     'profile_picture',
     'image',
     'image_url',
+    'profile.avatar',
+    'profile.avatar_url',
+    'profile.profile_picture_url',
+    'profile.photo',
   ];
 
   for (const field of possibleFields) {
-    const value = user[field];
-    if (typeof value === 'string' && value.trim()) {
-      return resolveUserImageUrl(value.trim());
+    const value = getStringAtPath(user, field);
+    if (value) {
+      return resolveUserImageUrl(value);
+    }
+  }
+
+  return null;
+};
+
+const getLocalUser = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const keys = ['user', 'auth_user', 'authUser', 'currentUser', 'profile'];
+  for (const key of keys) {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (parsed && typeof parsed === 'object') {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+};
+
+const getLocalUserProfilePhotoForPost = (post: FeedPost) => {
+  const localUser = getLocalUser();
+  if (!localUser) {
+    return null;
+  }
+
+  const localName = getStringAtPath(localUser, 'name') || getStringAtPath(localUser, 'user.name');
+  const localIdRaw = getValueAtPath(localUser, 'id') ?? getValueAtPath(localUser, 'user.id');
+  const localId = typeof localIdRaw === 'number' ? localIdRaw : typeof localIdRaw === 'string' ? Number(localIdRaw) : null;
+
+  const postUserName = post.user?.name || null;
+  const postUserId = typeof post.user?.id === 'number' ? post.user.id : null;
+
+  const sameUserById = localId !== null && postUserId !== null && localId === postUserId;
+  const sameUserByName = !!localName && !!postUserName && localName.trim() === postUserName.trim();
+
+  if (!sameUserById && !sameUserByName) {
+    return null;
+  }
+
+  const possibleFields = [
+    'avatar',
+    'avatar_url',
+    'avatarUrl',
+    'profile_picture_url',
+    'profilePictureUrl',
+    'photo',
+    'profile_photo',
+    'profile_photo_url',
+    'profilePicture',
+    'profile.avatar',
+    'profile.avatar_url',
+    'profile.profile_picture_url',
+    'profile.photo',
+    'user.avatar',
+    'user.avatar_url',
+    'user.profile_picture_url',
+    'user.photo',
+  ];
+
+  for (const field of possibleFields) {
+    const value = getStringAtPath(localUser, field);
+    if (value) {
+      return resolveUserImageUrl(value);
     }
   }
 
@@ -79,6 +202,9 @@ const getUserProfilePhoto = (post: FeedPost) => {
 
 export const PostCard = ({
   post,
+  currentUserId = null,
+  currentUserName = null,
+  currentUserAvatarUrl = null,
   likePending,
   savePending,
   onLike,
@@ -98,7 +224,24 @@ export const PostCard = ({
   const [profileImageFailed, setProfileImageFailed] = useState(false);
 
   const imageUrl = useMemo(() => resolvePostImageUrl(post.image), [post.image]);
-  const profilePhoto = useMemo(() => getUserProfilePhoto(post), [post]);
+  const profilePhoto = useMemo(() => {
+    const postPhoto = getUserProfilePhoto(post);
+    if (postPhoto) {
+      return postPhoto;
+    }
+
+    const postUserName = post.user?.name?.trim() || null;
+    const postUserId = typeof post.user?.id === 'number' ? post.user.id : null;
+    const matchesCurrentUserById = currentUserId !== null && postUserId !== null && currentUserId === postUserId;
+    const matchesCurrentUserByName =
+      !!currentUserName && !!postUserName && currentUserName.trim() === postUserName;
+
+    if (currentUserAvatarUrl && (matchesCurrentUserById || matchesCurrentUserByName)) {
+      return resolveUserImageUrl(currentUserAvatarUrl) || currentUserAvatarUrl;
+    }
+
+    return getLocalUserProfilePhotoForPost(post);
+  }, [post, currentUserAvatarUrl, currentUserId, currentUserName]);
   const isEmergency = (post.post_type || '').toLowerCase() === 'emergency';
   const shortDescription = (post.short_description || '').trim();
   const fallbackSummary = (post.content || '').trim();

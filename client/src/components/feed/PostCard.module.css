@@ -11,8 +11,17 @@
 }
 
 .emergencyCard {
-  border-color: rgba(239, 68, 68, 0.35);
-  box-shadow: 0 16px 28px rgba(220, 38, 38, 0.12);
+  border-color: rgba(234, 88, 12, 0.45);
+  background: linear-gradient(180deg, rgba(255, 237, 213, 0.45) 0%, rgba(254, 242, 242, 0.7) 100%);
+  box-shadow: 0 16px 28px rgba(234, 88, 12, 0.16);
+}
+
+.emergencyCard .header {
+  background: linear-gradient(90deg, rgba(251, 146, 60, 0.14) 0%, rgba(248, 113, 113, 0.12) 100%);
+}
+
+.emergencyCard .footer {
+  border-top-color: rgba(248, 113, 113, 0.35);
 }
 
 .header,
@@ -86,8 +95,21 @@
 }
 
 .emergencyBadge {
-  background: var(--red-100);
-  color: var(--red-600);
+  background: linear-gradient(90deg, #fed7aa 0%, #fecaca 100%);
+  color: #9f1239;
+  border: 1px solid rgba(249, 115, 22, 0.35);
+}
+
+.emergencyCard .title {
+  color: #7c2d12;
+}
+
+.emergencyCard .shortDescription {
+  color: #9a3412;
+}
+
+.emergencyCard .viewMoreButton {
+  color: #c2410c;
 }
 
 .subMeta {

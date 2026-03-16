@@ -15,12 +15,19 @@ import {
 import { PostCard } from '@/components/feed/PostCard';
 import { PostComments } from '@/components/feed/PostComments';
 import { CreatePostModal, CreatePostPayload } from '@/components/feed/CreatePostModal';
+import { fetchAccountProfile } from '@/features/account/services/accountService';
 import styles from './Feed.module.css';
 
 type ViewPost = FeedPost & {
   liked?: boolean;
   saved?: boolean;
   comments?: FeedComment[];
+};
+
+type CurrentAccountProfile = {
+  id: number | null;
+  name: string | null;
+  avatarUrl: string | null;
 };
 
 const getErrorMessage = (error: unknown, fallback: string) => {
@@ -86,11 +93,150 @@ export const Feed = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [creatingPost, setCreatingPost] = useState(false);
   const [createPostError, setCreatePostError] = useState<string | null>(null);
+  const [composerImageFailed, setComposerImageFailed] = useState(false);
+  const [currentProfile, setCurrentProfile] = useState<CurrentAccountProfile | null>(null);
+
+  const getStringAtPath = (source: Record<string, unknown>, path: string) => {
+    const segments = path.split('.');
+    let current: unknown = source;
+
+    for (const segment of segments) {
+      if (!current || typeof current !== 'object') {
+        return null;
+      }
+      current = (current as Record<string, unknown>)[segment];
+    }
+
+    return typeof current === 'string' && current.trim() ? current.trim() : null;
+  };
+
+  const resolveUserImageUrl = (rawPath: string | null | undefined) => {
+    if (!rawPath) {
+      return null;
+    }
+
+    const normalizedPath = rawPath.replace(/\\/g, '/').trim();
+    if (!normalizedPath) {
+      return null;
+    }
+
+    if (normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')) {
+      return normalizedPath;
+    }
+
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+    if (normalizedPath.startsWith('/')) {
+      return `${baseUrl}${normalizedPath}`;
+    }
+    if (normalizedPath.startsWith('storage/')) {
+      return `${baseUrl}/${normalizedPath}`;
+    }
+    if (normalizedPath.startsWith('public/storage/')) {
+      return `${baseUrl}/${normalizedPath.replace(/^public\//, '')}`;
+    }
+
+    return `${baseUrl}/storage/${normalizedPath}`;
+  };
+
+  const extractUserPhoto = (source: Record<string, unknown> | null | undefined) => {
+    if (!source) {
+      return null;
+    }
+
+    const fields = [
+      'avatar',
+      'avatar_url',
+      'avatarUrl',
+      'profile_picture_url',
+      'profilePictureUrl',
+      'photo',
+      'profile_photo',
+      'profile_photo_url',
+      'profilePicture',
+      'profile.avatar',
+      'profile.avatar_url',
+      'profile.profile_picture_url',
+      'profile.photo',
+    ];
+
+    for (const field of fields) {
+      const value = getStringAtPath(source, field);
+      if (value) {
+        return resolveUserImageUrl(value);
+      }
+    }
+
+    return null;
+  };
+
+  const getLocalUser = () => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    const keys = ['user', 'auth_user', 'authUser', 'currentUser', 'profile'];
+    for (const key of keys) {
+      const raw = window.localStorage.getItem(key);
+      if (!raw) {
+        continue;
+      }
+
+      try {
+        const parsed = JSON.parse(raw) as unknown;
+        if (parsed && typeof parsed === 'object') {
+          return parsed as Record<string, unknown>;
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    return null;
+  };
 
   const activePost = useMemo(
     () => posts.find((post) => post.id === activePostId) || null,
     [activePostId, posts],
   );
+
+  const localUser = useMemo(() => getLocalUser(), []);
+
+  const composerName = useMemo(() => {
+    if (currentProfile?.name) {
+      return currentProfile.name;
+    }
+
+    const localName = localUser ? getStringAtPath(localUser, 'name') || getStringAtPath(localUser, 'user.name') : null;
+    if (localName) {
+      return localName;
+    }
+
+    const fromFeed = posts.find((post) => post.user?.name)?.user?.name;
+    return fromFeed || 'You';
+  }, [currentProfile?.name, localUser, posts]);
+
+  const composerPhoto = useMemo(() => {
+    if (currentProfile?.avatarUrl) {
+      const resolved = resolveUserImageUrl(currentProfile.avatarUrl);
+      if (resolved) {
+        return resolved;
+      }
+    }
+
+    const localPhoto = extractUserPhoto(localUser || undefined);
+    if (localPhoto) {
+      return localPhoto;
+    }
+
+    for (const post of posts) {
+      const candidate = extractUserPhoto((post.user || undefined) as Record<string, unknown> | undefined);
+      if (candidate) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }, [currentProfile?.avatarUrl, localUser, posts]);
 
   const loadPosts = async () => {
     setLoading(true);
@@ -108,6 +254,38 @@ export const Feed = () => {
 
   useEffect(() => {
     void loadPosts();
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadCurrentProfile = async () => {
+      try {
+        const profile = await fetchAccountProfile();
+        if (!mounted) {
+          return;
+        }
+
+        const parsedId = typeof profile.id === 'number' ? profile.id : Number(profile.id);
+        const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim();
+
+        setCurrentProfile({
+          id: Number.isNaN(parsedId) ? null : parsedId,
+          name: profile.full_name || fullName || profile.username || null,
+          avatarUrl: profile.profile_picture_url || null,
+        });
+      } catch {
+        if (mounted) {
+          setCurrentProfile(null);
+        }
+      }
+    };
+
+    void loadCurrentProfile();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleOpenComments = async (postId: number) => {
@@ -286,7 +464,18 @@ export const Feed = () => {
     <div className={styles.page}>
       <main className={styles.centerColumn}>
         <section className={styles.composerCard}>
-          <div className={styles.composerAvatar}>Y</div>
+          <div className={styles.composerAvatar}>
+            {composerPhoto && !composerImageFailed ? (
+              <img
+                src={composerPhoto}
+                alt={composerName}
+                className={styles.composerAvatarImage}
+                onError={() => setComposerImageFailed(true)}
+              />
+            ) : (
+              composerName.charAt(0).toUpperCase()
+            )}
+          </div>
           <button type="button" className={styles.composerButton} onClick={() => setCreateModalOpen(true)}>
             What's happening in your neighborhood?
           </button>
@@ -313,6 +502,9 @@ export const Feed = () => {
             <PostCard
               key={post.id}
               post={post}
+              currentUserId={currentProfile?.id ?? null}
+              currentUserName={currentProfile?.name ?? null}
+              currentUserAvatarUrl={currentProfile?.avatarUrl ?? null}
               likePending={likePendingId === post.id}
               savePending={savePendingId === post.id}
               onLike={handleLike}
