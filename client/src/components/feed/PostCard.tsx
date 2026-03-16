@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useRef, useState } from 'react';
 import { Bookmark, Flag, Heart, Loader2, MapPin, MessageCircle, Send, ShieldAlert, Smile } from 'lucide-react';
 import { FeedPost, resolvePostImageUrl } from '@/api/feedApi';
 import styles from './PostCard.module.css';
@@ -222,6 +222,7 @@ export const PostCard = ({
   const [commentFeedback, setCommentFeedback] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [profileImageFailed, setProfileImageFailed] = useState(false);
+  const commentInputRef = useRef<HTMLInputElement | null>(null);
 
   const imageUrl = useMemo(() => resolvePostImageUrl(post.image), [post.image]);
   const profilePhoto = useMemo(() => {
@@ -380,7 +381,14 @@ export const PostCard = ({
             Like
           </button>
 
-          <button type="button" className={styles.actionButton} onClick={() => onOpenComments(post.id)}>
+          <button
+            type="button"
+            className={styles.actionButton}
+            onClick={() => {
+              commentInputRef.current?.focus();
+              void onOpenComments(post.id);
+            }}
+          >
             <MessageCircle size={15} />
             Comment
           </button>
@@ -408,6 +416,7 @@ export const PostCard = ({
         <form className={styles.commentComposer} onSubmit={handleInlineCommentSubmit}>
           <div className={styles.commentAvatar}>Y</div>
           <input
+            ref={commentInputRef}
             className={styles.commentInput}
             type="text"
             placeholder="Write your comment..."

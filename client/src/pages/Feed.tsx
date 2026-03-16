@@ -296,10 +296,18 @@ export const Feed = () => {
 
     try {
       const fullPost = await getPost(postId);
+      if (!fullPost || typeof fullPost !== 'object') {
+        throw new Error('Invalid post response.');
+      }
+
+      const safeComments = Array.isArray(fullPost.comments) ? fullPost.comments : [];
+      const safeCommentsCount =
+        typeof fullPost.comments_count === 'number' ? fullPost.comments_count : safeComments.length;
+
       setPosts((previous) =>
         previous.map((post) =>
           post.id === postId
-            ? { ...post, comments: fullPost.comments || [], comments_count: fullPost.comments_count }
+            ? { ...post, comments: safeComments, comments_count: safeCommentsCount }
             : post,
         ),
       );
@@ -329,9 +337,15 @@ export const Feed = () => {
 
     try {
       const result = await likePost(postId);
+      const nextServerLiked = typeof result?.liked === 'boolean' ? result.liked : nextLiked;
+      const nextServerLikesCount =
+        typeof result?.likes_count === 'number' ? result.likes_count : optimisticLikes;
+
       setPosts((items) =>
         items.map((post) =>
-          post.id === postId ? { ...post, liked: result.liked, likes_count: result.likes_count } : post,
+          post.id === postId
+            ? { ...post, liked: nextServerLiked, likes_count: nextServerLikesCount }
+            : post,
         ),
       );
     } catch (requestError) {
@@ -354,7 +368,8 @@ export const Feed = () => {
 
     try {
       const result = await savePost(postId);
-      setPosts((items) => items.map((post) => (post.id === postId ? { ...post, saved: result.saved } : post)));
+      const nextSaved = typeof result?.saved === 'boolean' ? result.saved : !target.saved;
+      setPosts((items) => items.map((post) => (post.id === postId ? { ...post, saved: nextSaved } : post)));
     } catch (requestError) {
       setPosts(previous);
       setError(getErrorMessage(requestError, 'Unable to save this post.'));
@@ -395,6 +410,18 @@ export const Feed = () => {
 
     try {
       const result = await commentPost(postId, comment);
+      if (!result || typeof result !== 'object') {
+        throw new Error('Invalid comment response.');
+      }
+
+      const nextComment = result.comment;
+      const hasCommentObject = !!nextComment && typeof nextComment === 'object';
+      if (!hasCommentObject) {
+        throw new Error('Comment was not returned by server.');
+      }
+
+      const nextCommentsCount =
+        typeof result.comments_count === 'number' ? result.comments_count : (previous.find((p) => p.id === postId)?.comments_count || 0) + 1;
 
       setPosts((items) =>
         items.map((post) => {
@@ -406,8 +433,8 @@ export const Feed = () => {
 
           return {
             ...post,
-            comments_count: result.comments_count,
-            comments: [...cleanedComments, result.comment],
+            comments_count: nextCommentsCount,
+            comments: [...cleanedComments, nextComment],
           };
         }),
       );
