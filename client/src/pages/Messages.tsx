@@ -176,7 +176,7 @@ export const Messages = () => {
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       void loadConversationList();
-    }, 8000);
+    }, 2500);
 
     return () => window.clearInterval(intervalId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -194,7 +194,7 @@ export const Messages = () => {
       } catch {
         // Ignore transient polling errors.
       }
-    }, 4000);
+    }, 2000);
 
     return () => window.clearInterval(intervalId);
   }, [activeConversationId]);

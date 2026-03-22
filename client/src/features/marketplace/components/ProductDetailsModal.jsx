@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { startConversation } from '@/api/chatApi';
+import { sendMessage as sendChatMessage, startConversation } from '@/api/chatApi';
 import { ROUTES } from '@/config/routes.config';
 import styles from './ProductDetailsModal.module.css';
 
@@ -45,6 +45,7 @@ const ProductDetailsModal = ({ isOpen, onClose, product }) => {
         e.preventDefault();
         if (!message.trim() || !product?.sellerId || !product?.id) return;
 
+        const initialMessage = message.trim();
         setIsSending(true);
         try {
             const res = await startConversation(Number(product.sellerId), Number(product.id));
@@ -53,6 +54,8 @@ const ProductDetailsModal = ({ isOpen, onClose, product }) => {
             if (!conversationId) {
                 throw new Error('Conversation could not be created');
             }
+
+            await sendChatMessage(Number(conversationId), initialMessage);
 
             setMessage('');
             onClose();
