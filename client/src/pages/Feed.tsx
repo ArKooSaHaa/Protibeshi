@@ -228,15 +228,8 @@ export const Feed = () => {
       return localPhoto;
     }
 
-    for (const post of posts) {
-      const candidate = extractUserPhoto((post.user || undefined) as Record<string, unknown> | undefined);
-      if (candidate) {
-        return candidate;
-      }
-    }
-
     return null;
-  }, [currentProfile?.avatarUrl, localUser, posts]);
+  }, [currentProfile?.avatarUrl, localUser]);
 
   const loadPosts = async () => {
     setLoading(true);
