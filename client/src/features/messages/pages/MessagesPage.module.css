@@ -17,6 +17,7 @@
   gap: 0;
   color: var(--ink-900);
   margin: -24px;
+  overflow: hidden;
 }
 
 .messagingShell {
@@ -179,6 +180,7 @@
 .chatPane {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background:
     linear-gradient(rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.86)),
     radial-gradient(circle at 0 0, rgba(37, 211, 102, 0.14), transparent 36%),
@@ -187,6 +189,8 @@
 }
 
 .chatHeader {
+  position: sticky;
+  top: 0;
   padding: 14px 18px;
   border-bottom: 1px solid var(--border-soft);
   display: flex;
@@ -195,6 +199,7 @@
   gap: 12px;
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(8px);
+  z-index: 3;
 }
 
 .chatIdentity {
@@ -236,8 +241,10 @@
 
 .messageStream {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   scroll-behavior: smooth;
+  overscroll-behavior: contain;
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -299,6 +306,8 @@
 }
 
 .composer {
+  position: sticky;
+  bottom: 0;
   border-top: 1px solid var(--border-soft);
   padding: 12px;
   display: grid;
@@ -306,6 +315,7 @@
   gap: 8px;
   align-items: center;
   background: rgba(255, 255, 255, 0.94);
+  z-index: 3;
 }
 
 .composer input {
