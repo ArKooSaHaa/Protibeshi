@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import { getPosts, type FeedPost } from '@/api/feedApi';
+import { getListings } from '@/services/listingService';
+import { getRentListings } from '@/services/rentService';
+import { getServices } from '@/services/serviceService';
+import { getComplaints } from '@/services/complaintService';
 import {
   fetchAccountProfile,
   getAccountErrorMessage,
@@ -88,8 +93,6 @@ interface UserPostsResult {
 
 const PAGE_SIZE = 6;
 
-const mockAuthorId = 'user-1';
-
 const initialProfile: UserProfile = {
   id: '',
   fullName: '',
@@ -104,180 +107,6 @@ const initialProfile: UserProfile = {
   emailVerified: false,
   verificationStatus: 'unverified',
 };
-
-const seedPosts: UserPost[] = [
-  {
-    id: 'f-1',
-    authorId: mockAuthorId,
-    tab: 'feed',
-    title: 'Gas leak detected - evacuate immediately',
-    description: 'Strong smell near lane 3. Fire service has been informed.',
-    datePosted: '2 hours ago',
-    location: 'Motijheel',
-    status: 'active',
-  },
-  {
-    id: 'f-2',
-    authorId: mockAuthorId,
-    tab: 'feed',
-    title: 'Community clean-up this Friday',
-    description: 'Volunteers needed at 8am near the playground.',
-    datePosted: '1 day ago',
-    location: 'Motijheel Park',
-    status: 'active',
-  },
-  {
-    id: 'm-1',
-    authorId: mockAuthorId,
-    tab: 'marketplace',
-    title: 'iPhone 12 - 128GB Blue',
-    description: 'Excellent condition with charger and original box.',
-    datePosted: '4 hours ago',
-    location: 'Motijheel',
-    status: 'active',
-    imageUrl:
-      'https://images.unsplash.com/photo-1605236453806-6ff36851218e?auto=format&fit=crop&w=480&q=80',
-    price: '৳52,000',
-    condition: 'Used - Like New',
-    category: 'Electronics',
-  },
-  {
-    id: 'm-2',
-    authorId: mockAuthorId,
-    tab: 'marketplace',
-    title: 'Wooden study desk',
-    description: 'Sturdy desk, minor scratches.',
-    datePosted: '2 days ago',
-    location: 'Shapla Chattar',
-    status: 'active',
-    imageUrl:
-      'https://images.unsplash.com/photo-1505693314120-0d443867891c?auto=format&fit=crop&w=480&q=80',
-    price: '৳8,000',
-    condition: 'Used - Good',
-    category: 'Furniture',
-  },
-  {
-    id: 'r-1',
-    authorId: mockAuthorId,
-    tab: 'rent',
-    title: '2 bed apartment near Motijheel',
-    description: 'Family-friendly unit, lift and generator available.',
-    datePosted: '1 day ago',
-    location: 'Motijheel Block B',
-    status: 'active',
-    imageUrl:
-      'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=480&q=80',
-    price: '৳28,000/month',
-    bedrooms: 2,
-  },
-  {
-    id: 'r-2',
-    authorId: mockAuthorId,
-    tab: 'rent',
-    title: 'Single room sublet',
-    description: 'Ideal for students, utility bills shared.',
-    datePosted: '5 days ago',
-    location: 'Motijheel Lane 4',
-    status: 'expired',
-    imageUrl:
-      'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=480&q=80',
-    price: '৳9,500/month',
-    bedrooms: 1,
-  },
-  {
-    id: 's-1',
-    authorId: mockAuthorId,
-    tab: 'services',
-    title: 'Home plumbing support',
-    description: 'Pipe leak repairs and quick emergency checks.',
-    datePosted: '3 hours ago',
-    location: 'Motijheel',
-    status: 'active',
-    category: 'Home Repair',
-    priceRange: '৳500 - ৳2,500',
-  },
-  {
-    id: 's-2',
-    authorId: mockAuthorId,
-    tab: 'services',
-    title: 'Math tutor (Class 8-12)',
-    description: 'Evening sessions available on weekdays.',
-    datePosted: '3 days ago',
-    location: 'Motijheel',
-    status: 'active',
-    category: 'Education',
-    priceRange: '৳1,000 - ৳3,000',
-  },
-  {
-    id: 'c-1',
-    authorId: mockAuthorId,
-    tab: 'complaints',
-    title: 'Broken street light near block C',
-    description: 'Street has remained dark for three nights.',
-    datePosted: '9 hours ago',
-    location: 'Motijheel Block C',
-    status: 'pending',
-    priority: 'medium',
-  },
-  {
-    id: 'c-2',
-    authorId: mockAuthorId,
-    tab: 'complaints',
-    title: 'Drain overflow after rain',
-    description: 'Waterlogging making road unusable in evening.',
-    datePosted: '2 days ago',
-    location: 'Inner Road 7',
-    status: 'active',
-    priority: 'high',
-  },
-  {
-    id: 'rp-1',
-    authorId: mockAuthorId,
-    tab: 'relief',
-    title: 'Need food supplies for elderly neighbors',
-    description: 'Requesting dry food packs for 3 families.',
-    datePosted: '6 hours ago',
-    location: 'Motijheel',
-    status: 'open',
-    reliefType: 'request',
-  },
-  {
-    id: 'rp-2',
-    authorId: mockAuthorId,
-    tab: 'relief',
-    title: 'Offering blankets and warm clothes',
-    description: 'Can provide pickup from community center.',
-    datePosted: '1 day ago',
-    location: 'Community Center',
-    status: 'open',
-    reliefType: 'offer',
-  },
-  {
-    id: 'f-3',
-    authorId: mockAuthorId,
-    tab: 'feed',
-    title: 'Water line maintenance notice',
-    description: 'Supply may be interrupted from 11pm to 4am.',
-    datePosted: '5 hours ago',
-    location: 'Ward 12',
-    status: 'active',
-  },
-  {
-    id: 'm-3',
-    authorId: mockAuthorId,
-    tab: 'marketplace',
-    title: 'Bicycle for daily commute',
-    description: 'Smooth ride, recently serviced.',
-    datePosted: '7 days ago',
-    location: 'Motijheel',
-    status: 'expired',
-    imageUrl:
-      'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=480&q=80',
-    price: '৳12,500',
-    condition: 'Used',
-    category: 'Sports',
-  },
-];
 
 const allTabs: Array<{ key: AccountPostTab; label: string }> = [
   { key: 'feed', label: 'Feed Posts' },
@@ -303,19 +132,46 @@ const mapAccountProfile = (profile: AccountProfileApi): UserProfile => ({
   verificationStatus: profile.verification_status === 'verified' ? 'verified' : 'unverified',
 });
 
+const formatDatePosted = (rawDate: unknown): string => {
+  if (typeof rawDate !== 'string' || !rawDate) {
+    return 'Recently';
+  }
+
+  const parsed = new Date(rawDate);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'Recently';
+  }
+
+  return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+const toNumberId = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : -1;
+};
+
+const looksLikeReliefPost = (post: FeedPost): boolean => {
+  const label = (post.label ?? '').toLowerCase();
+  const type = (post.post_type ?? '').toLowerCase();
+
+  return label.includes('relief')
+    || label.includes('help needed')
+    || type.includes('relief');
+};
+
 export const useUserPosts = (): UserPostsResult => {
   const [profile, setProfile] = useState<UserProfile>(initialProfile);
   const [activeTab, setActiveTab] = useState<AccountPostTab>('feed');
-  const [postsState, setPostsState] = useState<UserPost[]>(seedPosts);
+  const [postsState, setPostsState] = useState<UserPost[]>([]);
   const [loadedTabs, setLoadedTabs] = useState<Record<AccountPostTab, boolean>>({
-    feed: false,
-    marketplace: false,
-    rent: false,
-    services: false,
-    complaints: false,
-    relief: false,
+    feed: true,
+    marketplace: true,
+    rent: true,
+    services: true,
+    complaints: true,
+    relief: true,
   });
-  const [loadingTab, setLoadingTab] = useState<AccountPostTab | null>(null);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(false);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -344,21 +200,152 @@ export const useUserPosts = (): UserPostsResult => {
     };
   }, [ownedPosts]);
 
-  const loadTab = useCallback((tab: AccountPostTab) => {
-    if (loadedTabs[tab] || loadingTab === tab) {
+  const loadPosts = useCallback(async (profileId: string) => {
+    const currentUserId = toNumberId(profileId);
+
+    if (currentUserId < 0) {
+      setPostsState([]);
       return;
     }
 
-    setLoadingTab(tab);
-    window.setTimeout(() => {
-      setLoadedTabs((prev) => ({ ...prev, [tab]: true }));
-      setLoadingTab((current) => (current === tab ? null : current));
-    }, 450);
-  }, [loadedTabs, loadingTab]);
+    setIsLoadingPosts(true);
 
-  useEffect(() => {
-    loadTab(activeTab);
-  }, [activeTab, loadTab]);
+    const [feedResult, listingsResult, rentResult, servicesResult, complaintsResult] = await Promise.allSettled([
+      getPosts(),
+      getListings(),
+      getRentListings(),
+      getServices(),
+      getComplaints(),
+    ]);
+
+    const mapped: UserPost[] = [];
+
+    if (feedResult.status === 'fulfilled') {
+      const ownFeed = feedResult.value.filter((post) => toNumberId(post?.user?.id) === currentUserId);
+
+      ownFeed.forEach((post) => {
+        const isRelief = looksLikeReliefPost(post);
+
+        mapped.push({
+          id: `feed-${post.id}`,
+          authorId: profileId,
+          tab: isRelief ? 'relief' : 'feed',
+          title: post.title || 'Untitled post',
+          description: post.short_description || post.content || '',
+          datePosted: formatDatePosted(post.created_at),
+          location: post.location || 'Not specified',
+          status: isRelief ? 'open' : 'active',
+          reliefType: isRelief ? 'request' : undefined,
+        });
+      });
+    }
+
+    if (listingsResult.status === 'fulfilled') {
+      const ownListings = listingsResult.value.filter((item: any) => toNumberId(item?.user?.id) === currentUserId);
+
+      ownListings.forEach((item: any) => {
+        mapped.push({
+          id: `marketplace-${item.id}`,
+          authorId: profileId,
+          tab: 'marketplace',
+          title: item.title || 'Untitled listing',
+          description: item.details || '',
+          datePosted: formatDatePosted(item.created_at),
+          location: item.location || 'Not specified',
+          status: item.is_active === false ? 'expired' : 'active',
+          imageUrl: item.photo_url || undefined,
+          price: typeof item.price === 'number' ? `৳${item.price}` : String(item.price || 'N/A'),
+          category: item.category || '',
+        });
+      });
+    }
+
+    if (rentResult.status === 'fulfilled') {
+      const ownRent = rentResult.value.filter((item: any) => toNumberId(item?.user?.id) === currentUserId);
+
+      ownRent.forEach((item: any) => {
+        mapped.push({
+          id: `rent-${item.id}`,
+          authorId: profileId,
+          tab: 'rent',
+          title: item.title || 'Untitled rent listing',
+          description: item.type || 'Rent listing',
+          datePosted: formatDatePosted(item.created_at),
+          location: item.location || 'Not specified',
+          status: 'active',
+          imageUrl: item.image || undefined,
+          bedrooms: Number.isFinite(Number(item.beds)) ? Number(item.beds) : undefined,
+          price: typeof item.price === 'number' ? `৳${item.price}/month` : String(item.price || 'N/A'),
+        });
+      });
+    }
+
+    if (servicesResult.status === 'fulfilled') {
+      const ownServices = servicesResult.value.filter((item: any) => toNumberId(item?.ownerId) === currentUserId);
+
+      ownServices.forEach((item: any) => {
+        mapped.push({
+          id: `service-${item.id}`,
+          authorId: profileId,
+          tab: 'services',
+          title: item.title || 'Untitled service',
+          description: item.shortDescription || item.fullDescription || '',
+          datePosted: formatDatePosted(item.createdAt ? new Date(item.createdAt).toISOString() : ''),
+          location: item.location || 'Not specified',
+          status: 'active',
+          category: item.category || '',
+          priceRange: typeof item.price === 'number' ? `৳${item.price}` : String(item.price || 'N/A'),
+        });
+      });
+    }
+
+    if (complaintsResult.status === 'fulfilled') {
+      const payload = complaintsResult.value;
+      const complaintList = Array.isArray(payload)
+        ? payload
+        : (Array.isArray((payload as any)?.complaints) ? (payload as any).complaints : []);
+
+      const ownComplaints = complaintList.filter((item: any) => toNumberId(item?.user?.id) === currentUserId);
+
+      ownComplaints.forEach((item: any) => {
+        const status = String(item.status || '').toLowerCase() === 'pending' ? 'pending' : 'active';
+
+        mapped.push({
+          id: `complaint-${item.id}`,
+          authorId: profileId,
+          tab: 'complaints',
+          title: item.title || 'Untitled complaint',
+          description: item.description || '',
+          datePosted: formatDatePosted(item.created_at),
+          location: item.location || 'Not specified',
+          status,
+          priority: item.priority || undefined,
+        });
+      });
+    }
+
+    mapped.sort((a, b) => {
+      const aTime = Date.parse(a.datePosted);
+      const bTime = Date.parse(b.datePosted);
+
+      if (Number.isNaN(aTime) || Number.isNaN(bTime)) {
+        return 0;
+      }
+
+      return bTime - aTime;
+    });
+
+    setPostsState(mapped);
+    setLoadedTabs({
+      feed: true,
+      marketplace: true,
+      rent: true,
+      services: true,
+      complaints: true,
+      relief: true,
+    });
+    setIsLoadingPosts(false);
+  }, []);
 
   const loadProfile = useCallback(async () => {
     setIsProfileLoading(true);
@@ -366,14 +353,17 @@ export const useUserPosts = (): UserPostsResult => {
 
     try {
       const nextProfile = await fetchAccountProfile();
-      setProfile(mapAccountProfile(nextProfile));
+      const mappedProfile = mapAccountProfile(nextProfile);
+
+      setProfile(mappedProfile);
+      await loadPosts(mappedProfile.id);
     } catch (error: unknown) {
       const message = getAccountErrorMessage(error, 'Unable to load your account details right now.');
       setProfileError(message);
     } finally {
       setIsProfileLoading(false);
     }
-  }, []);
+  }, [loadPosts]);
 
   useEffect(() => {
     void loadProfile();
@@ -393,14 +383,14 @@ export const useUserPosts = (): UserPostsResult => {
 
   const stats = useMemo<FeedSummary>(() => {
     return {
-      totalPosts: ownedPosts.length,
+      totalPosts: postsByTab.feed.length,
       marketplaceListings: postsByTab.marketplace.length,
       rentListings: postsByTab.rent.length,
       servicesOffered: postsByTab.services.length,
       complaintsSubmitted: postsByTab.complaints.length,
       reliefPosts: postsByTab.relief.length,
     };
-  }, [ownedPosts.length, postsByTab]);
+  }, [postsByTab]);
 
   const updateProfile = useCallback(async (payload: Partial<UserProfile>) => {
     setIsSavingProfile(true);
@@ -477,7 +467,7 @@ export const useUserPosts = (): UserPostsResult => {
     posts,
     totalCount,
     hasMore,
-    isLoading: loadingTab === activeTab,
+    isLoading: isLoadingPosts,
     isProfileLoading,
     isSavingProfile,
     profileError,
