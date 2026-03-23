@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\ListingController;
 use App\Http\Controllers\PostCommentController;
@@ -42,6 +43,14 @@ Route::get('/posts/{id}', [PostController::class, 'show']);
 */
 
 Route::middleware(['auth:api'])->group(function () {
+
+    Route::post('/conversations', [ChatController::class, 'startConversation']);
+    Route::get('/conversations', [ChatController::class, 'getUserConversations']);
+
+    Route::post('/messages', [ChatController::class, 'sendMessage']);
+    Route::get('/conversations/{id}/messages', [ChatController::class, 'getMessages']);
+    Route::post('/messages/read', [ChatController::class, 'markAsRead']);
+    Route::delete('/conversations/{id}', [ChatController::class, 'deleteConversation']);
 
     Route::post('/listings', [ListingController::class, 'store']);
 

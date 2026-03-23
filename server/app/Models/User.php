@@ -58,6 +58,17 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Post::class);
     }
 
+    public function conversations()
+    {
+        return $this->hasMany(Conversation::class, 'user_one_id')
+            ->orWhere('user_two_id', $this->id);
+    }
+
+    public function messages()
+    {
+        return $this->hasMany(Message::class, 'sender_id');
+    }
+
     /**
      * Return JWT identifier
      */

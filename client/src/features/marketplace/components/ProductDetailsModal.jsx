@@ -1,12 +1,17 @@
 /// src/features/marketplace/components/ProductDetailsModal.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, MessageCircle } from 'lucide-react';
+import { X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { sendMessage as sendChatMessage, startConversation } from '@/api/chatApi';
+import { ROUTES } from '@/config/routes.config';
 import styles from './ProductDetailsModal.module.css';
 
 const ProductDetailsModal = ({ isOpen, onClose, product }) => {
     const [message, setMessage] = useState('');
+    const [isSending, setIsSending] = useState(false);
     const messageInputRef = useRef(null);
+    const navigate = useNavigate();
 
     /* ================= Scroll Lock ================= */
     useEffect(() => {
@@ -36,11 +41,41 @@ const ProductDetailsModal = ({ isOpen, onClose, product }) => {
         messageInputRef.current?.focus();
     };
 
-    const handleSendMessage = (e) => {
+    const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (!message.trim()) return;
-        console.log('Sending message:', message);
-        setMessage('');
+        if (!message.trim() || !product?.sellerId || !product?.id) return;
+
+        const buyerNote = message.trim();
+        const productSummary = [
+            `Product: ${product.title || 'N/A'}`,
+            `Price: ${product.price || 'N/A'}`,
+            `Category: ${product.category || 'N/A'}`,
+            `Location: ${product.location || 'N/A'}`,
+            `Details: ${mainDetails.trim() || 'No additional details provided'}`,
+        ].join('\n');
+
+        const composedMessage = `Hello, I am interested in this listing.\n\n${productSummary}\n\nBuyer note: ${buyerNote}`;
+
+        setIsSending(true);
+        try {
+            const res = await startConversation(Number(product.sellerId), Number(product.id));
+            const conversationId = res?.conversation?.id;
+
+            if (!conversationId) {
+                throw new Error('Conversation could not be created');
+            }
+
+            await sendChatMessage(Number(conversationId), composedMessage.slice(0, 4900));
+
+            setMessage('');
+            onClose();
+            navigate(`${ROUTES.MESSAGES}?conversation=${conversationId}`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to open conversation';
+            window.alert(errorMessage);
+        } finally {
+            setIsSending(false);
+        }
     };
 
     return (
@@ -146,9 +181,9 @@ const ProductDetailsModal = ({ isOpen, onClose, product }) => {
                                             <button
                                                 type="submit"
                                                 className={styles.sendButton}
-                                                disabled={!message.trim()}
+                                                disabled={!message.trim() || !product?.sellerId || isSending}
                                             >
-                                                Send Message
+                                                {isSending ? 'Opening chat...' : 'Send Message'}
                                             </button>
                                         </form>
                                     </div>
