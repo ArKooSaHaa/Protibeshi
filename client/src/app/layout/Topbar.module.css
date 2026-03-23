@@ -159,6 +159,14 @@
   font-weight: 600;
 }
 
+.userAvatarImage {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
 @media (max-width: 1024px) {
   .topbar {
     left: 0;
