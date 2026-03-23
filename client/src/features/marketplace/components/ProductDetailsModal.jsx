@@ -1,7 +1,7 @@
 /// src/features/marketplace/components/ProductDetailsModal.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, MessageCircle } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { sendMessage as sendChatMessage, startConversation } from '@/api/chatApi';
 import { ROUTES } from '@/config/routes.config';
@@ -45,7 +45,17 @@ const ProductDetailsModal = ({ isOpen, onClose, product }) => {
         e.preventDefault();
         if (!message.trim() || !product?.sellerId || !product?.id) return;
 
-        const initialMessage = message.trim();
+        const buyerNote = message.trim();
+        const productSummary = [
+            `Product: ${product.title || 'N/A'}`,
+            `Price: ${product.price || 'N/A'}`,
+            `Category: ${product.category || 'N/A'}`,
+            `Location: ${product.location || 'N/A'}`,
+            `Details: ${mainDetails.trim() || 'No additional details provided'}`,
+        ].join('\n');
+
+        const composedMessage = `Hello, I am interested in this listing.\n\n${productSummary}\n\nBuyer note: ${buyerNote}`;
+
         setIsSending(true);
         try {
             const res = await startConversation(Number(product.sellerId), Number(product.id));
@@ -55,7 +65,7 @@ const ProductDetailsModal = ({ isOpen, onClose, product }) => {
                 throw new Error('Conversation could not be created');
             }
 
-            await sendChatMessage(Number(conversationId), initialMessage);
+            await sendChatMessage(Number(conversationId), composedMessage.slice(0, 4900));
 
             setMessage('');
             onClose();

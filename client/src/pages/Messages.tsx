@@ -11,6 +11,7 @@ import {
 import { ConversationList } from '@/components/chat/ConversationList';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { ROUTES } from '@/config/routes.config';
+import { getEcho } from '@/lib/echo';
 import styles from '@/features/messages/pages/MessagesPage.module.css';
 
 const extractStoredUserId = (): number | null => {
@@ -69,6 +70,17 @@ export const Messages = () => {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const appendMessageWithoutDuplicates = (nextMessage: ChatMessage) => {
+    setMessages((previous) => {
+      const exists = previous.some((item) => String(item.id) === String(nextMessage.id));
+      if (exists) {
+        return previous;
+      }
+
+      return [...previous, nextMessage];
+    });
+  };
 
   const filteredConversations = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -174,30 +186,49 @@ export const Messages = () => {
   }, [messages]);
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      void loadConversationList();
-    }, 2500);
-
-    return () => window.clearInterval(intervalId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
     if (!activeConversationId) {
       return;
     }
 
-    const intervalId = window.setInterval(async () => {
-      try {
-        const latest = await getMessages(activeConversationId);
-        setMessages(latest);
-      } catch {
-        // Ignore transient polling errors.
-      }
-    }, 2000);
+    const channelName = `chat.${activeConversationId}`;
+    const echo = getEcho();
 
-    return () => window.clearInterval(intervalId);
-  }, [activeConversationId]);
+    if (!echo) {
+      return;
+    }
+
+    echo
+      .channel(channelName)
+      .listen('.message.sent', (event: { message?: ChatMessage }) => {
+        const incoming = event?.message;
+        if (!incoming) {
+          return;
+        }
+
+        if (currentUserId !== null && Number(incoming.sender_id) === Number(currentUserId)) {
+          return;
+        }
+
+        appendMessageWithoutDuplicates(incoming);
+        setConversations((previous) =>
+          previous.map((conversation) =>
+            conversation.id === activeConversationId
+              ? {
+                  ...conversation,
+                  last_message: incoming.message,
+                  updated_at: incoming.updated_at ?? new Date().toISOString(),
+                }
+              : conversation,
+          ),
+        );
+
+        void markAsRead(activeConversationId);
+      });
+
+    return () => {
+      echo.leave(channelName);
+    };
+  }, [activeConversationId, currentUserId]);
 
   const handleSelectConversation = (conversationId: number) => {
     setActiveConversationId(conversationId);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MessageSent;
 use App\Models\Conversation;
 use App\Models\Message;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -121,6 +122,8 @@ class ChatController extends Controller
 
         $conversation->last_message = $message->message;
         $conversation->save();
+
+        broadcast(new MessageSent($message))->toOthers();
 
         return response()->json([
             'success' => true,
