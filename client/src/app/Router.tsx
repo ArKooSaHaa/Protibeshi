@@ -3,6 +3,7 @@ import { Navigate, createBrowserRouter, RouteObject } from 'react-router-dom';
 import { RootLayout } from './layout/RootLayout';
 import { ROUTES } from '@/config/routes.config';
 import { FeedPage } from '@/features/feed/pages/FeedPage';
+import { MessagesPage } from '@/features/messages/pages/MessagesPage';
 import { MarketplacePage } from '@/features/marketplace/pages/MarketplacePage';
 import { RentPage } from '@/features/rent/pages/RentPage';
 import { ServicesPage } from '@/features/services/pages/ServicesPage';
@@ -61,6 +62,7 @@ const routes: RouteObject[] = [
     children: [
       { index: true, element: <FeedPage /> },
       { path: ROUTES.FEED, element: <FeedPage /> },
+      { path: ROUTES.MESSAGES, element: <MessagesPage /> },
       { path: ROUTES.MARKETPLACE, element: <MarketplacePage /> },
       { path: ROUTES.RENT, element: <RentPage /> },
       { path: ROUTES.SERVICES, element: <ServicesPage /> },

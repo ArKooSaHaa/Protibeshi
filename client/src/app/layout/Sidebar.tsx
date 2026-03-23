@@ -29,7 +29,7 @@ const navigation: NavigationItem[] = [
   { id: 'services', label: 'Services', icon: Wrench, path: ROUTES.SERVICES },
   { id: 'complaints', label: 'Complaints', icon: AlertCircle, path: ROUTES.COMPLAINTS },
   { id: 'relief', label: 'Relief', icon: Heart, path: ROUTES.RELIEF },
-  { id: 'messages', label: 'Messages', icon: MessageSquare },
+  { id: 'messages', label: 'Messages', icon: MessageSquare, path: ROUTES.MESSAGES },
 ];
 
 const containerVariants: Variants = {

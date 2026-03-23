@@ -104,6 +104,8 @@ class PostController extends Controller
                 'user' => $comment->user ? [
                     'id' => $comment->user->id,
                     'name' => $this->resolveUserName($comment->user),
+                    'profile_picture' => $comment->user->profile_picture,
+                    'profile_picture_url' => $this->resolveProfilePictureUrl($comment->user->profile_picture),
                 ] : null,
             ];
         })->values();
@@ -167,8 +169,27 @@ class PostController extends Controller
             'user' => $post->user ? [
                 'id' => $post->user->id,
                 'name' => $this->resolveUserName($post->user),
+                'profile_picture' => $post->user->profile_picture,
+                'profile_picture_url' => $this->resolveProfilePictureUrl($post->user->profile_picture),
             ] : null,
         ];
+    }
+
+    private function resolveProfilePictureUrl(?string $profilePicture): string
+    {
+        if (!$profilePicture) {
+            return '';
+        }
+
+        if (filter_var($profilePicture, FILTER_VALIDATE_URL)) {
+            return $profilePicture;
+        }
+
+        if (str_starts_with($profilePicture, '/')) {
+            return url($profilePicture);
+        }
+
+        return url(Storage::url($profilePicture));
     }
 
     private function resolveUserName($user): string

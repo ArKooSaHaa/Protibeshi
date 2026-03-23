@@ -38,6 +38,8 @@ const mapListingToCard = (listing) => {
 
   return {
     id: listing.id,
+    listingId: listing.id,
+    sellerId: listing?.user?.id || listing?.user_id || null,
     title: listing.title || 'Untitled listing',
     price: `BDT ${safePrice.toLocaleString()}`,
     priceValue: safePrice,
