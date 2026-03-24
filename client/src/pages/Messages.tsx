@@ -230,6 +230,42 @@ export const Messages = () => {
     };
   }, [activeConversationId, currentUserId]);
 
+  useEffect(() => {
+    if (!activeConversationId) {
+      return;
+    }
+
+    let stopped = false;
+
+    const syncMessages = async () => {
+      try {
+        const latest = await getMessages(activeConversationId);
+        if (stopped) {
+          return;
+        }
+
+        setMessages((previous) => {
+          if (previous.length === latest.length) {
+            return previous;
+          }
+
+          return latest;
+        });
+      } catch {
+        // Keep realtime fallback silent to avoid noisy UI on transient network issues.
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      void syncMessages();
+    }, 3000);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(intervalId);
+    };
+  }, [activeConversationId]);
+
   const handleSelectConversation = (conversationId: number) => {
     setActiveConversationId(conversationId);
     navigate(`${ROUTES.MESSAGES}?conversation=${conversationId}`, { replace: true });
