@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Complaint;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Throwable;
 
 class ComplaintController extends Controller
@@ -15,13 +17,31 @@ class ComplaintController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:120',
-            'category' => 'required|string',
-            'description' => 'required|string',
-            'location' => 'required|string',
-            'priority' => 'required|string',
-            'visibility' => 'required|string',
-            'photo' => 'nullable|image',
+            'category' => ['required', 'string'],
+            'description' => 'required|string|max:2000',
+            'location' => 'required|string|max:255',
+            'priority' => ['required', 'string'],
+            'visibility' => ['required', 'string'],
+            'photo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
+
+        $category = Complaint::normalizeCategory($validated['category']);
+        $priority = Complaint::normalizePriority($validated['priority']);
+        $visibility = Complaint::normalizeVisibility($validated['visibility']);
+
+        if (!in_array($category, Complaint::ALLOWED_CATEGORIES, true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid complaint category',
+            ], 422);
+        }
+
+        if (!in_array($priority, Complaint::ALLOWED_PRIORITIES, true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid complaint priority',
+            ], 422);
+        }
 
         $photoPath = null;
 
@@ -38,14 +58,15 @@ class ComplaintController extends Controller
 
         $complaint = Complaint::create([
             'user_id' => Auth::id(),
+            'complaint_code' => $this->generateTemporaryComplaintCode(),
             'title' => $validated['title'],
-            'category' => $validated['category'],
+            'category' => $category,
             'description' => $validated['description'],
             'location' => $validated['location'],
-            'priority' => $validated['priority'],
-            'visibility' => $validated['visibility'],
+            'priority' => $priority,
+            'visibility' => $visibility,
             'photo' => $photoPath,
-            'status' => 'pending',
+            'status' => Complaint::STATUS_PENDING,
             'distance' => null,
         ]);
 
@@ -63,15 +84,58 @@ class ComplaintController extends Controller
 
     public function index()
     {
-        $complaints = Complaint::with('user')
-            ->latest()
-            ->get()
+        $query = Complaint::query()->with('user');
+
+        $query->where('visibility', Complaint::VISIBILITY_PUBLIC);
+        $this->applyFilters($query, request());
+
+        $perPage = min(max((int) request()->query('per_page', 15), 1), 100);
+        $paginatedComplaints = $query->latest()->paginate($perPage);
+
+        $complaints = collect($paginatedComplaints->items())
             ->map(fn (Complaint $complaint) => $this->formatComplaint($complaint))
             ->values();
 
         return response()->json([
             'success' => true,
             'complaints' => $complaints,
+            'pagination' => [
+                'current_page' => $paginatedComplaints->currentPage(),
+                'last_page' => $paginatedComplaints->lastPage(),
+                'per_page' => $paginatedComplaints->perPage(),
+                'total' => $paginatedComplaints->total(),
+                'from' => $paginatedComplaints->firstItem(),
+                'to' => $paginatedComplaints->lastItem(),
+            ],
+        ], 200);
+    }
+
+    public function myComplaints(Request $request)
+    {
+        $query = Complaint::query()
+            ->with('user')
+            ->where('user_id', Auth::id());
+
+        $this->applyFilters($query, $request);
+
+        $perPage = min(max((int) $request->query('per_page', 15), 1), 100);
+        $paginatedComplaints = $query->latest()->paginate($perPage);
+
+        $complaints = collect($paginatedComplaints->items())
+            ->map(fn (Complaint $complaint) => $this->formatComplaint($complaint))
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'complaints' => $complaints,
+            'pagination' => [
+                'current_page' => $paginatedComplaints->currentPage(),
+                'last_page' => $paginatedComplaints->lastPage(),
+                'per_page' => $paginatedComplaints->perPage(),
+                'total' => $paginatedComplaints->total(),
+                'from' => $paginatedComplaints->firstItem(),
+                'to' => $paginatedComplaints->lastItem(),
+            ],
         ], 200);
     }
 
@@ -79,6 +143,13 @@ class ComplaintController extends Controller
     {
         try {
             $complaint = Complaint::with('user')->findOrFail($id);
+
+            if (!$this->canViewComplaint($complaint)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Complaint not found',
+                ], 404);
+            }
 
             return response()->json([
                 'success' => true,
@@ -110,6 +181,10 @@ class ComplaintController extends Controller
             ], 403);
         }
 
+        if (!empty($complaint->photo)) {
+            Storage::disk('public')->delete($complaint->photo);
+        }
+
         $complaint->delete();
 
         return response()->json([
@@ -121,17 +196,8 @@ class ComplaintController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $validated = $request->validate([
-            'status' => 'required|in:pending,under_review,in_progress,resolved,rejected',
+            'status' => ['required', Rule::in(Complaint::ALLOWED_STATUSES)],
         ]);
-
-        $user = Auth::user();
-
-        if (!$user || !$this->canUpdateComplaintStatus($user)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You are not authorized to update complaint status',
-            ], 403);
-        }
 
         try {
             $complaint = Complaint::with('user')->findOrFail($id);
@@ -140,6 +206,18 @@ class ComplaintController extends Controller
                 'success' => false,
                 'message' => 'Complaint not found',
             ], 404);
+        }
+
+        $user = Auth::guard('api')->user() ?? Auth::user();
+
+        $isOwner = $user && ((int) $complaint->user_id === (int) $user->id);
+        $canModerate = $user && $this->canUpdateComplaintStatus($user);
+
+        if (!$isOwner && !$canModerate) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to update complaint status',
+            ], 403);
         }
 
         $complaint->status = $validated['status'];
@@ -173,6 +251,43 @@ class ComplaintController extends Controller
                 'name' => $this->resolveUserName($complaint),
             ] : null,
         ];
+    }
+
+    private function applyFilters(Builder $query, Request $request): void
+    {
+        if ($request->filled('category')) {
+            $category = Complaint::normalizeCategory((string) $request->query('category'));
+            if (in_array($category, Complaint::ALLOWED_CATEGORIES, true)) {
+                $query->where('category', $category);
+            }
+        }
+
+        if ($request->filled('priority')) {
+            $priority = Complaint::normalizePriority((string) $request->query('priority'));
+            if (in_array($priority, Complaint::ALLOWED_PRIORITIES, true)) {
+                $query->where('priority', $priority);
+            }
+        }
+
+        if ($request->filled('status')) {
+            $status = strtolower((string) $request->query('status'));
+            if (in_array($status, Complaint::ALLOWED_STATUSES, true)) {
+                $query->where('status', $status);
+            }
+        }
+
+        if ($request->filled('search')) {
+            $keyword = trim((string) $request->query('search'));
+            if ($keyword !== '') {
+                $query->where(function (Builder $subQuery) use ($keyword): void {
+                    $subQuery
+                        ->where('title', 'like', "%{$keyword}%")
+                        ->orWhere('description', 'like', "%{$keyword}%")
+                        ->orWhere('location', 'like', "%{$keyword}%")
+                        ->orWhere('complaint_code', 'like', "%{$keyword}%");
+                });
+            }
+        }
     }
 
     private function resolvePhotoUrl(?string $photoPath): ?string
@@ -215,6 +330,30 @@ class ComplaintController extends Controller
         $paddedId = str_pad((string) $id, 4, '0', STR_PAD_LEFT);
 
         return sprintf('CMP-%d-%s', $year, $paddedId);
+    }
+
+    private function generateTemporaryComplaintCode(): string
+    {
+        return 'TMP-'.strtoupper(uniqid());
+    }
+
+    private function canViewComplaint(Complaint $complaint): bool
+    {
+        if ($complaint->visibility === Complaint::VISIBILITY_PUBLIC) {
+            return true;
+        }
+
+        $currentUser = Auth::guard('api')->user() ?? Auth::user();
+
+        if (!$currentUser) {
+            return false;
+        }
+
+        if ((int) $currentUser->id === (int) $complaint->user_id) {
+            return true;
+        }
+
+        return $this->canUpdateComplaintStatus($currentUser);
     }
 
     private function canUpdateComplaintStatus($user): bool

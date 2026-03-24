@@ -93,6 +93,7 @@ Route::middleware(['auth:sanctum,api'])->group(function () {
 });
 
 Route::middleware(['auth:api'])->group(function () {
+    Route::get('/account/complaints', [ComplaintController::class, 'myComplaints']);
     Route::post('/complaints', [ComplaintController::class, 'store']);
     Route::delete('/complaints/{id}', [ComplaintController::class, 'destroy']);
     Route::patch('/complaints/{id}/status', [ComplaintController::class, 'updateStatus']);
