@@ -3,9 +3,12 @@
 namespace App\Exceptions;
 
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\QueryException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use PDOException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
@@ -80,6 +83,22 @@ class Handler extends ExceptionHandler
                     'success' => false,
                     'message' => $exception->getMessage() ?: 'Request failed.',
                 ], $exception->getStatusCode());
+            }
+
+            if ($exception instanceof QueryException || $exception instanceof PDOException) {
+                Log::error('Database exception during API request', [
+                    'method' => $request->method(),
+                    'path' => $request->path(),
+                    'exception' => get_class($exception),
+                    'message' => $exception->getMessage(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => config('app.debug')
+                        ? ($exception->getMessage() ?: 'Database request failed.')
+                        : 'Database request failed. Check server logs.',
+                ], 500);
             }
 
             return response()->json([

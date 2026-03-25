@@ -40,7 +40,7 @@ export type UseSignInResult = {
 };
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_MIN_LENGTH = 6;
 
 const sanitizeEmailInput = (value: string): string => {
   return value.trim().toLowerCase();
