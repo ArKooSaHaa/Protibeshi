@@ -1,4 +1,4 @@
-#!/bin/sh
+﻿#!/bin/sh
 set -eu
 
 cd /var/www
@@ -12,7 +12,6 @@ mkdir -p storage/framework/cache storage/framework/sessions storage/framework/vi
 touch storage/logs/laravel.log
 chmod -R 775 storage bootstrap/cache || true
 
-# Clear stale cache so DB host/credentials from the current container env are used.
 php artisan config:clear >/dev/null 2>&1 || true
 php artisan cache:clear >/dev/null 2>&1 || true
 
