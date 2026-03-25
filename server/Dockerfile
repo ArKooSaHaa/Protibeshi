@@ -1,39 +1,41 @@
 FROM php:8.3-cli
 
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     curl \
     git \
     libzip-dev \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
     unzip \
     zip \
-    && docker-php-ext-install pdo_mysql zip \
+    && docker-php-ext-install pdo_mysql zip bcmath gd \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Get Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www
 
-ENV VIEW_COMPILED_PATH=/var/www/storage/framework/views
-
+# Copy files
 COPY . /var/www
 
-RUN ls -la && test -f artisan
-
-RUN test -f /var/www/.env || cp /var/www/.env.example /var/www/.env
-
+# Ensure directory structure exists for Laravel
 RUN mkdir -p \
-    /var/www/storage/framework/cache \
-    /var/www/storage/framework/sessions \
-    /var/www/storage/framework/views \
-    /var/www/storage/logs \
-    /var/www/bootstrap/cache
+    storage/framework/cache/data \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/logs \
+    bootstrap/cache
 
-RUN chmod -R 775 /var/www/storage /var/www/bootstrap/cache
-
+# Install dependencies
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
-RUN composer dump-autoload --optimize
+# Set permissions (Important for the webserver to write logs/cache)
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache \
+    && chmod -R 775 /var/www/storage /var/www/bootstrap/cache
 
 EXPOSE 8000
 EXPOSE 6001

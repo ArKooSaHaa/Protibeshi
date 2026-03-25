@@ -23,7 +23,14 @@ services:
     container_name: protibeshi_backend
     restart: unless-stopped
     working_dir: /var/www
-    command: sh -c "php artisan storage:link || true && php artisan serve --host=0.0.0.0 --port=8000"
+    command: sh /var/www/docker/entrypoint.sh
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: protibeshi_db
+      DB_USERNAME: root
+      DB_PASSWORD: root
     ports:
       - "8000:8000"
     volumes:
@@ -51,6 +58,13 @@ services:
     restart: unless-stopped
     working_dir: /var/www
     command: php artisan queue:work --tries=3 --timeout=90
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: protibeshi_db
+      DB_USERNAME: root
+      DB_PASSWORD: root
     volumes:
       - ./server:/var/www
     depends_on:
