@@ -90,7 +90,7 @@ Route::middleware(['auth:api'])->group(function () {
 
 
 // Offer Help API
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:api'])->group(function () {
     Route::post('/offers', [\App\Http\Controllers\Api\OfferController::class, 'store']);
     Route::delete('/offers/{id}', [\App\Http\Controllers\Api\OfferController::class, 'destroy']);
 });

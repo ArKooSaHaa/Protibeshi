@@ -1,4 +1,5 @@
 // src/features/relief/components/HelpOfferCard.tsx 
+import { forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Clock, MapPin, RefreshCw } from 'lucide-react';
 import type { HelpOffer } from '../types/relief.types';
@@ -12,13 +13,14 @@ interface HelpOfferCardProps {
   onRequestSupport: (o: HelpOffer) => void;
 }
 
-export const HelpOfferCard = ({
+export const HelpOfferCard = forwardRef<HTMLDivElement, HelpOfferCardProps>(({ 
   offer,
   onViewDetails,
   onRequestSupport,
-}: HelpOfferCardProps) => {
+}, ref) => {
   return (
     <motion.div
+      ref={ref}
       className={styles.card}
       layout
       initial={{ opacity: 0, y: 8 }}
@@ -105,4 +107,6 @@ export const HelpOfferCard = ({
       </div>
     </motion.div>
   );
-}; 
+});
+
+HelpOfferCard.displayName = 'HelpOfferCard';

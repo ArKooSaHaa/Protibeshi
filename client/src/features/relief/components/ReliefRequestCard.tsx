@@ -1,4 +1,5 @@
 // src/features/relief/components/ReliefRequestCard.tsx 
+import { forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Clock, MapPin, Users } from 'lucide-react';
 import type { ReliefRequest } from '../types/relief.types';
@@ -20,7 +21,7 @@ interface ReliefRequestCardProps {
   onDelete?: (r: ReliefRequest) => void;
 }
 
-export const ReliefRequestCard = ({
+export const ReliefRequestCard = forwardRef<HTMLDivElement, ReliefRequestCardProps>(({
   request,
   onViewDetails,
   onVolunteer,
@@ -28,7 +29,7 @@ export const ReliefRequestCard = ({
   canDelete = false,
   isDeleting = false,
   onDelete,
-}: ReliefRequestCardProps) => {
+}, ref) => {
   const urg = urgencyConfig[request.urgency];
   const stat = statusConfig[request.status];
 
@@ -41,6 +42,7 @@ export const ReliefRequestCard = ({
 
   return (
     <motion.div
+      ref={ref}
       className={`${styles.card} ${urgentClass}`}
       layout
       initial={{ opacity: 0, y: 8 }}
@@ -140,5 +142,7 @@ ${styles[stat.colorClass]}`}>
       </div>
     </motion.div>
   );
-};
+});
+
+ReliefRequestCard.displayName = 'ReliefRequestCard';
 

@@ -6,8 +6,9 @@ import {
   getReliefs,
   offerHelp,
   ReliefApiError,
-  type ReliefApiItem,
 } from '@/api/relief';
+import type { ReliefApiItem } from '@/api/relief';
+import { createOffer } from '@/api/offerApi';
 import type {
   HelpOffer,
   HelpOfferFormState,
@@ -215,6 +216,33 @@ const validateOfferForm = (
   return errors;
 };
 
+const mapOfferHelpTypeToApi = (value: HelpOfferFormState['helpType']) => {
+  const map: Record<string, string> = {
+    Food: 'food',
+    Medical: 'medical',
+    Shelter: 'shelter',
+    Transportation: 'transportation',
+    Financial: 'financial',
+    Utilities: 'utilities',
+    'Disaster Relief': 'disaster_relief',
+    Other: 'other',
+  };
+
+  return map[String(value)] || 'other';
+};
+
+const mapOfferAvailabilityToApi = (value: HelpOfferFormState['availability']) => {
+  const map: Record<string, string> = {
+    'Today only': 'today',
+    'This week': 'this_week',
+    Weekends: 'weekends',
+    'On-call': 'on_call',
+    Recurring: 'recurring',
+  };
+
+  return map[String(value)] || 'today';
+};
+
 type UseReliefBoardOptions = {
   onUnauthorized?: () => void;
 };
@@ -223,7 +251,7 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
   const { onUnauthorized } = options;
 
   const [requests, setRequests] = useState<ReliefRequest[]>([]);
-  const [offers, setOffers] = useState<HelpOffer[]>([]);
+  const [offers] = useState<HelpOffer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [offeringRequestId, setOfferingRequestId] = useState<string | null>(null);
@@ -340,35 +368,77 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
     }
   };
 
-  const handleSubmitOffer = () => {
+  const handleSubmitOffer = async () => {
     const errors = validateOfferForm(offerForm);
     if (Object.keys(errors).length > 0) {
       setOfferFormErrors(errors);
       return;
     }
 
-    const newOffer: HelpOffer = {
-      id: `OFF-2026-${String(offers.length + 1).padStart(3, '0')}`,
-      type: 'offer',
-      helpType: offerForm.helpType as HelpOffer['helpType'],
-      title: offerForm.title,
-      description: offerForm.description,
-      availability: offerForm.availability as HelpOffer['availability'],
-      serviceRadius: offerForm.serviceRadius,
-      contactPreference: offerForm.contactPreference,
-      isRecurring: offerForm.isRecurring,
-      location: 'Motijheel, Dhaka',
-      distance: Math.floor(Math.random() * 500) + 50,
-      createdAt: new Date().toISOString(),
-      postedBy: 'You',
-      avatarInitials: 'YO',
-      verified: true,
+    // Build payload for backend
+    const payload = {
+      short_summary: offerForm.title.trim(),
+      description: offerForm.description.trim(),
+      help_types: offerForm.helpType ? [mapOfferHelpTypeToApi(offerForm.helpType)] : [],
+      availability: offerForm.availability
+        ? [mapOfferAvailabilityToApi(offerForm.availability)]
+        : [],
+      service_radius: Math.round(offerForm.serviceRadius),
+      contact_preference: offerForm.contactPreference === 'In-app message' ? 'in_app' : 'phone',
+      is_recurring: offerForm.isRecurring,
     };
 
-    setOffers((prev) => [newOffer, ...prev]);
-    setOfferForm(initialOfferForm);
-    setOfferFormErrors({});
-    setModalMode(null);
+    try {
+      const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
+      if (!token) {
+        setErrorMessage('Please sign in to offer help.');
+        onUnauthorized?.();
+        return;
+      }
+
+      await createOffer(payload, token);
+      setSuccessMessage('Offer submitted successfully!');
+      setOfferForm(initialOfferForm);
+      setOfferFormErrors({});
+      setModalMode(null);
+    } catch (error: any) {
+      if (error?.response?.status === 401) {
+        setErrorMessage('Unauthorized. Please log in again.');
+        onUnauthorized?.();
+      } else if (error?.response?.status === 422 && error?.response?.data?.errors) {
+        const backendErrors = error.response.data.errors as Record<string, string[] | string>;
+        const mappedErrors: ReliefFormErrors<HelpOfferFormState> = {};
+
+        if (backendErrors.short_summary) {
+          mappedErrors.title = Array.isArray(backendErrors.short_summary)
+            ? backendErrors.short_summary[0]
+            : String(backendErrors.short_summary);
+        }
+
+        if (backendErrors.description) {
+          mappedErrors.description = Array.isArray(backendErrors.description)
+            ? backendErrors.description[0]
+            : String(backendErrors.description);
+        }
+
+        if (backendErrors.help_types || backendErrors['help_types.0']) {
+          const value = backendErrors.help_types || backendErrors['help_types.0'];
+          mappedErrors.helpType = Array.isArray(value) ? value[0] : String(value);
+        }
+
+        if (backendErrors.availability || backendErrors['availability.0']) {
+          const value = backendErrors.availability || backendErrors['availability.0'];
+          mappedErrors.availability = Array.isArray(value) ? value[0] : String(value);
+        }
+
+        setOfferFormErrors(mappedErrors);
+        setErrorMessage('Please correct the highlighted offer fields.');
+      } else if (error?.response?.status === 500) {
+        setErrorMessage('Server error. Please try again later.');
+      } else {
+        setErrorMessage('Failed to submit offer.');
+      }
+    }
   };
 
   const onOfferHelp = useCallback(async (request: ReliefRequest) => {
