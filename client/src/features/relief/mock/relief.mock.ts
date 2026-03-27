@@ -59,7 +59,7 @@ export const mockReliefRequests: ReliefRequest[] = [
     description:
       'My 72-year-old father is diabetic and ran out of insulin. We cannot reach the pharmacy quickly due to flooding in our lane. Any neighbor with spare Lantus or Humulin-N would save his life right now.',
     urgency: 'Critical',
-    status: 'Volunteers Assigned',
+    status: 'Assigned',
     visibility: 'Public',
     contactPreference: 'Phone',
     timeSensitivity: 'Immediate',
@@ -96,7 +96,7 @@ export const mockReliefRequests: ReliefRequest[] = [
     description:
       'Our roof partially collapsed after last night\'s storm. We are a family of 4 including 2 young children. We need shelter for 2-3 nights while repairs are arranged. We have sleeping supplies but need a safe space.',
     urgency: 'Urgent',
-    status: 'In Progress',
+    status: 'Assigned',
     visibility: 'Public',
     contactPreference: 'In-app message',
     timeSensitivity: 'Immediate',

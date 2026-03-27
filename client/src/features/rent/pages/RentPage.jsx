@@ -2,29 +2,30 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useScroll, useTransform } from
   'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import RentFilters from '../components/RentFilters';
 import RentListingCard from '../components/RentListingCard';
 import AddPropertyModal from '../components/AddPropertyModal';
 import RentDetailsDrawer from '../components/RentDetailsDrawer';
-import RentChatDrawer from '../components/RentChatDrawer';
+import { getMessages, sendMessage, startConversation } from '@/api/chatApi';
+import { ROUTES } from '@/config/routes.config';
 import { getRentListings } from '@/services/rentService';
 import styles from './RentPage.module.css';
 
 export const RentPage = () => {
   const containerRef = useRef(null);
+  const navigate = useNavigate();
   const [allListings, setAllListings] = useState([]);
   const [filteredListings, setFilteredListings] = useState([]);
   const [isAddPropertyOpen, setIsAddPropertyOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [activeDetails, setActiveDetails] = useState(null);
-  const [activeChat, setActiveChat] = useState(null);
-  const [chatMessages, setChatMessages] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [feedError, setFeedError] = useState(null);
   const [filters, setFilters] = useState({
-    radius: 5000,
+    radius: null,
     minPrice: 0,
-    maxPrice: 100000,
+    maxPrice: null,
     propertyTypes: [],
     bedrooms: [],
     furnishing: [],
@@ -66,15 +67,25 @@ export const RentPage = () => {
   const applyFilters = (currentFilters, sourceListings = allListings) => {
     let results = [...sourceListings];
 
-    // Filter by price 
-    results = results.filter(
-      (item) => item.price >= currentFilters.minPrice && item.price <=
-        currentFilters.maxPrice
-    );
+    // Filter by minimum price.
+    const minPrice = Number(currentFilters.minPrice) || 0;
+    results = results.filter((item) => Number(item.price) >= minPrice);
 
-    // Filter by distance 
-    results = results.filter((item) => item.distance <=
-      currentFilters.radius);
+    // Apply max price only when user has explicitly set one.
+    if (currentFilters.maxPrice !== null && currentFilters.maxPrice !== undefined) {
+      const maxPrice = Number(currentFilters.maxPrice);
+      if (!Number.isNaN(maxPrice)) {
+        results = results.filter((item) => Number(item.price) <= maxPrice);
+      }
+    }
+
+    // Apply radius only when user has explicitly set one.
+    if (currentFilters.radius !== null && currentFilters.radius !== undefined) {
+      const radius = Number(currentFilters.radius);
+      if (!Number.isNaN(radius)) {
+        results = results.filter((item) => Number(item.distance ?? 0) <= radius);
+      }
+    }
 
     // Filter by property type 
     if (currentFilters.propertyTypes.length > 0) {
@@ -142,25 +153,44 @@ export const RentPage = () => {
     setIsAddPropertyOpen(false);
   };
 
-  const handleSendMessage = (listingId, text) => {
-    const trimmed = text.trim();
-
-    if (!trimmed) {
+  const openRentConversation = useCallback(async (listing) => {
+    if (!listing?.user?.id) {
+      setFeedError('Owner details are not available for this listing.');
       return;
     }
 
-    const message = {
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      sender: 'user',
-      text: trimmed,
-      timestamp: Date.now(),
-    };
+    setFeedError(null);
 
-    setChatMessages((prev) => ({
-      ...prev,
-      [listingId]: [...(prev[listingId] || []), message],
-    }));
-  };
+    try {
+      const conversationResponse = await startConversation(Number(listing.user.id), null);
+      const conversationId = Number(conversationResponse?.conversation?.id);
+
+      if (!Number.isFinite(conversationId)) {
+        throw new Error('Unable to open this conversation right now.');
+      }
+
+      await getMessages(conversationId);
+
+      const details = [
+        `Property: ${listing.title || 'N/A'}`,
+        `Price: BDT ${(Number(listing.price) || 0).toLocaleString()}`,
+        `Location: ${listing.location || 'N/A'}`,
+        `Beds: ${listing.beds ?? 'N/A'}`,
+        `Baths: ${listing.baths ?? 'N/A'}`,
+        `Size: ${listing.sqft ? `${listing.sqft} sq ft` : 'N/A'}`,
+        `Type: ${listing.type || 'N/A'}`,
+        `Furnishing: ${listing.furnishing || 'N/A'}`,
+        `Availability: ${listing.availability || 'N/A'}`,
+      ].join('\n');
+
+      const suggestedMessage = `Hello, I am interested in this rent listing.\n\n${details}\n\nIs this property still available?`;
+      await sendMessage(conversationId, suggestedMessage.slice(0, 4900));
+
+      navigate(`${ROUTES.MESSAGES}?conversation=${conversationId}`);
+    } catch (error) {
+      setFeedError(error instanceof Error ? error.message : 'Failed to open conversation.');
+    }
+  }, [navigate]);
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -256,7 +286,7 @@ export const RentPage = () => {
                 <RentListingCard
                   listing={listing}
                   onViewDetails={setActiveDetails}
-                  onMessage={setActiveChat}
+                  onMessage={openRentConversation}
                 />
               </motion.div>
             ))
@@ -315,15 +345,8 @@ export const RentPage = () => {
         onClose={() => setActiveDetails(null)}
         onContact={(listing) => {
           setActiveDetails(null);
-          setActiveChat(listing);
+          void openRentConversation(listing);
         }}
-      />
-
-      <RentChatDrawer
-        listing={activeChat}
-        messages={activeChat ? chatMessages[activeChat.id] || [] : []}
-        onSend={handleSendMessage}
-        onClose={() => setActiveChat(null)}
       />
     </div>
   );

@@ -130,9 +130,15 @@
 }
 
 .chip.selectedAmber {
-  border-color: #eab308;
-  background: #fefce8;
-  color: #a16207;
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.chip.selectedBlue {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
 /* Row */
@@ -190,6 +196,12 @@
 
 .submitBtnRed:hover {
   box-shadow: 0 8px 24px rgba(239, 68, 68, 0.36);
+}
+
+.submitBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* Slider */

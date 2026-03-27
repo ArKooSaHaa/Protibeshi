@@ -108,9 +108,9 @@
 }
 
 .chip.selectedRed {
-  border-color: #ef4444;
-  background: #fef2f2;
-  color: #b91c1c;
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
 .chip.selectedOrange {
@@ -119,10 +119,16 @@
   color: #c2410c;
 }
 
+.chip.selectedBlue {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
 .chip.selectedAmber {
-  border-color: #eab308;
-  background: #fefce8;
-  color: #a16207;
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
 .sliderRow {

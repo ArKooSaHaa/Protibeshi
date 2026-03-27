@@ -30,7 +30,7 @@ interface ReliefFiltersDrawerProps {
 
 const urgencyColors: Record<ReliefUrgency, string> = {
   Normal: '',
-  Important: styles.selectedAmber,
+  Important: styles.selectedBlue,
   Urgent: styles.selectedOrange,
   Critical: styles.selectedRed,
 };

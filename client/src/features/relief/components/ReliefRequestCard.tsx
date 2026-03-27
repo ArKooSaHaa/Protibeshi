@@ -1,4 +1,5 @@
 // src/features/relief/components/ReliefRequestCard.tsx 
+import { forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Clock, MapPin, Users } from 'lucide-react';
 import type { ReliefRequest } from '../types/relief.types';
@@ -14,13 +15,21 @@ interface ReliefRequestCardProps {
   request: ReliefRequest;
   onViewDetails: (r: ReliefRequest) => void;
   onVolunteer: (r: ReliefRequest) => void;
+  isOffering?: boolean;
+  canDelete?: boolean;
+  isDeleting?: boolean;
+  onDelete?: (r: ReliefRequest) => void;
 }
 
-export const ReliefRequestCard = ({
+export const ReliefRequestCard = forwardRef<HTMLDivElement, ReliefRequestCardProps>(({
   request,
   onViewDetails,
   onVolunteer,
-}: ReliefRequestCardProps) => {
+  isOffering = false,
+  canDelete = false,
+  isDeleting = false,
+  onDelete,
+}, ref) => {
   const urg = urgencyConfig[request.urgency];
   const stat = statusConfig[request.status];
 
@@ -33,6 +42,7 @@ export const ReliefRequestCard = ({
 
   return (
     <motion.div
+      ref={ref}
       className={`${styles.card} ${urgentClass}`}
       layout
       initial={{ opacity: 0, y: 8 }}
@@ -95,15 +105,28 @@ ${styles[stat.colorClass]}`}>
             <Users size={12} />
             {request.volunteerCount} helping
           </span>
-          {request.status === 'Open' || request.status === 'Volunteers Assigned' ? (
+          {request.status === 'Open' || request.status === 'Assigned' ? (
             <motion.button
               className={styles.btnVolunteer}
               onClick={() => onVolunteer(request)}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               type="button"
+              disabled={isOffering}
             >
-              Offer Help
+              {isOffering ? 'Offering...' : 'Offer Help'}
+            </motion.button>
+          ) : null}
+          {canDelete && onDelete ? (
+            <motion.button
+              className={styles.btnDelete}
+              onClick={() => onDelete(request)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              type="button"
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
             </motion.button>
           ) : null}
           <motion.button
@@ -119,5 +142,7 @@ ${styles[stat.colorClass]}`}>
       </div>
     </motion.div>
   );
-};
+});
+
+ReliefRequestCard.displayName = 'ReliefRequestCard';
 
