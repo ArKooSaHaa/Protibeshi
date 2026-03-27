@@ -206,7 +206,7 @@ ${styles.completed}`} />
             {/* Footer */}
             <div className={styles.footer}>
               {(request.status === 'Open' || request.status ===
-                'Volunteers Assigned') && (
+                'Assigned') && (
                   <button className={styles.btnVolunteer} type="button">
                     <Users size={15} />
                     Volunteer to Help

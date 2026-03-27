@@ -13,6 +13,10 @@ interface ReliefListProps {
   offers: HelpOffer[];
   onViewRequest: (r: ReliefRequest) => void;
   onVolunteer: (r: ReliefRequest) => void;
+  offeringRequestId?: string | null;
+  currentUserId?: number | null;
+  deletingRequestId?: string | null;
+  onDeleteRequest?: (r: ReliefRequest) => void;
   onViewOffer: (o: HelpOffer) => void;
   onRequestSupport: (o: HelpOffer) => void;
 }
@@ -23,6 +27,10 @@ export const ReliefList = ({
   offers,
   onViewRequest,
   onVolunteer,
+  offeringRequestId,
+  currentUserId,
+  deletingRequestId,
+  onDeleteRequest,
   onViewOffer,
   onRequestSupport,
 }: ReliefListProps) => {
@@ -50,6 +58,10 @@ export const ReliefList = ({
               request={r}
               onViewDetails={onViewRequest}
               onVolunteer={onVolunteer}
+              isOffering={offeringRequestId === r.id}
+              canDelete={typeof currentUserId === 'number' && r.userId === currentUserId}
+              isDeleting={deletingRequestId === r.id}
+              onDelete={onDeleteRequest}
             />
           ))}
         </AnimatePresence>

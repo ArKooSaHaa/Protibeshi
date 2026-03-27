@@ -20,10 +20,8 @@ export const reliefUrgencyLevels = ['Normal', 'Important', 'Urgent',
 
 export const reliefStatuses = [
     'Open',
-    'Volunteers Assigned',
-    'In Progress',
+    'Assigned',
     'Completed',
-    'Expired',
 ] as const;
 
 export const reliefVisibilityOptions = ['Public', 'Only verified neighbors'] as const;
@@ -87,6 +85,8 @@ export interface ReliefVolunteer {
 
 export interface ReliefRequest {
     id: string;
+    backendId?: number;
+    userId?: number;
     type: 'request';
     helpType: ReliefHelpType;
     title: string;

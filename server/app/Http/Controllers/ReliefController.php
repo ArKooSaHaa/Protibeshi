@@ -6,6 +6,7 @@ use App\Models\Relief;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class ReliefController extends Controller
@@ -30,7 +31,7 @@ class ReliefController extends Controller
             'cover_photo' => 'nullable|string|max:255',
         ]);
 
-        $relief = Relief::create([
+        $payload = [
             'user_id' => Auth::id(),
             'title' => $validated['title'],
             'type' => $validated['type'],
@@ -42,8 +43,13 @@ class ReliefController extends Controller
             'location' => $validated['location'],
             'status' => 'open',
             'helpers_count' => 0,
-            'cover_photo' => $validated['cover_photo'] ?? null,
-        ]);
+        ];
+
+        if (Schema::hasColumn('reliefs', 'cover_photo')) {
+            $payload['cover_photo'] = $validated['cover_photo'] ?? null;
+        }
+
+        $relief = Relief::create($payload);
 
         return response()->json([
             'success' => true,
