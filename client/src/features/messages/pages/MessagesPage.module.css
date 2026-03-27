@@ -111,6 +111,15 @@
   flex-shrink: 0;
 }
 
+.profileAvatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
 .onlineDot {
   width: 11px;
   height: 11px;

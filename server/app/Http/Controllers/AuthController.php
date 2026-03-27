@@ -13,6 +13,25 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 class AuthController extends Controller
 {
 
+    private function resolveProfilePictureUrl(?string $profilePicture): ?string
+    {
+        $profilePicture = $profilePicture !== null ? trim($profilePicture) : null;
+
+        if ($profilePicture === null || $profilePicture === '') {
+            return null;
+        }
+
+        if (filter_var($profilePicture, FILTER_VALIDATE_URL)) {
+            return $profilePicture;
+        }
+
+        if (str_starts_with($profilePicture, '/')) {
+            return url($profilePicture);
+        }
+
+        return url(Storage::url($profilePicture));
+    }
+
     public function signup(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -81,20 +100,21 @@ class AuthController extends Controller
                 'status' => 'success',
                 'message' => 'User registered successfully',
                 'data' => [
-                    'user' => $user->only([
-                        'id',
-                        'first_name',
-                        'last_name',
-                        'username',
-                        'email',
-                        'phone',
-                        'city',
-                        'neighborhood',
-                        'profile_picture',
-                        'bio',
-                        'created_at',
-                        'updated_at',
-                    ]),
+                    'user' => [
+                        'id' => $user->id,
+                        'first_name' => $user->first_name,
+                        'last_name' => $user->last_name,
+                        'username' => $user->username,
+                        'email' => $user->email,
+                        'phone' => $user->phone,
+                        'city' => $user->city,
+                        'neighborhood' => $user->neighborhood,
+                        'profile_picture' => $this->resolveProfilePictureUrl($user->profile_picture),
+                        'profile_picture_url' => $this->resolveProfilePictureUrl($user->profile_picture),
+                        'bio' => $user->bio,
+                        'created_at' => $user->created_at,
+                        'updated_at' => $user->updated_at,
+                    ],
                 ],
             ], 201);
         } catch (QueryException $exception) {
@@ -161,17 +181,18 @@ class AuthController extends Controller
                 'status' => 'success',
                 'message' => 'Login successful',
                 'token' => $token,
-                'user' => $user->only([
-                    'id',
-                    'first_name',
-                    'last_name',
-                    'username',
-                    'email',
-                    'city',
-                    'neighborhood',
-                    'profile_picture',
-                    'bio',
-                ]),
+                'user' => [
+                    'id' => $user->id,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'city' => $user->city,
+                    'neighborhood' => $user->neighborhood,
+                    'profile_picture' => $this->resolveProfilePictureUrl($user->profile_picture),
+                    'profile_picture_url' => $this->resolveProfilePictureUrl($user->profile_picture),
+                    'bio' => $user->bio,
+                ],
             ], 200);
         } catch (\Exception $e) {
 

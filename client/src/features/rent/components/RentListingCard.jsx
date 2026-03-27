@@ -122,6 +122,33 @@ ${styles[`badge${badgeInfo.color}`]}`}>
           )}
         </div>
 
+        {/* Landlord Profile */}
+        {listing.user && (
+          <div className={styles.landlordRow}>
+            {listing.user.profile_picture ? (
+              <img 
+                src={listing.user.profile_picture} 
+                alt={`${listing.user.first_name} ${listing.user.last_name}`}
+                className={styles.landlordAvatar}
+              />
+            ) : (
+              <div className={styles.landlordAvatarPlaceholder}>
+                {listing.user.first_name?.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className={styles.landlordInfo}>
+              <div className={styles.landlordNameRow}>
+                <strong className={styles.landlordName}>
+                  {listing.user.first_name} {listing.user.last_name}
+                </strong>
+                {listing.verified_landlord && (
+                  <span className={styles.verifiedBadge}>✓ Verified</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Trust Signals */}
         <div className={styles.trustSignals}>
           {listing.verified && (

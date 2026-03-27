@@ -137,7 +137,7 @@ class ServiceController extends Controller
                 'id'                  => $service->user->id,
                 'first_name'          => $service->user->first_name,
                 'last_name'           => $service->user->last_name,
-                'profile_picture'     => $service->user->profile_picture,
+                'profile_picture'     => $this->resolveProfilePictureUrl($service->user->profile_picture),
                 'profile_picture_url' => $this->resolveProfilePictureUrl($service->user->profile_picture),
             ] : null,
         ];

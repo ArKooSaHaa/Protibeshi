@@ -6,6 +6,7 @@ use App\Models\RentListing;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class RentListingController extends Controller
@@ -141,7 +142,28 @@ class RentListingController extends Controller
                 'id' => $listing->user->id,
                 'first_name' => $listing->user->first_name,
                 'last_name' => $listing->user->last_name,
+                'profile_picture' => $this->resolveProfilePictureUrl($listing->user->profile_picture),
+                'profile_picture_url' => $this->resolveProfilePictureUrl($listing->user->profile_picture),
             ] : null,
         ];
+    }
+
+    private function resolveProfilePictureUrl(?string $profilePicture): ?string
+    {
+        $profilePicture = $profilePicture !== null ? trim($profilePicture) : null;
+
+        if ($profilePicture === null || $profilePicture === '') {
+            return null;
+        }
+
+        if (filter_var($profilePicture, FILTER_VALIDATE_URL)) {
+            return $profilePicture;
+        }
+
+        if (str_starts_with($profilePicture, '/')) {
+            return url($profilePicture);
+        }
+
+        return url(Storage::url($profilePicture));
     }
 }
