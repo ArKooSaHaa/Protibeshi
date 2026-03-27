@@ -79,10 +79,10 @@
   background: #f1f5f9;
   color: #475569;
 }
-.urgImportant {
-  background: #fefce8;
-  color: #a16207;
-  border: 1px solid #fef08a;
+.urgImportantBlue {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
 }
 .urgUrgent {
   background: #fff7ed;
@@ -105,7 +105,7 @@
   background: #94a3b8;
 }
 .dotImportant {
-  background: #eab308;
+  background: #3b82f6;
 }
 .dotUrgent {
   background: #f97316;
@@ -148,22 +148,14 @@
   background: #dcfce7;
   color: #15803d;
 }
-.statusVolunteers {
+.statusAssigned {
   background: #dbeafe;
   color: #1d4ed8;
-}
-.statusInProgress {
-  background: #fef9c3;
-  color: #a16207;
 }
 .statusCompleted {
   background: #f0fdf4;
   color: #15803d;
   border: 1px solid #bbf7d0;
-}
-.statusExpired {
-  background: #f1f5f9;
-  color: #64748b;
 }
 
 /* Meta */
@@ -237,6 +229,12 @@
   box-shadow: 0 5px 16px rgba(16, 185, 129, 0.33);
 }
 
+.btnVolunteer:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 .btnDetails {
   display: inline-flex;
   align-items: center;
@@ -257,6 +255,31 @@
 .btnDetails:hover {
   border-color: var(--slate-300);
   background: var(--slate-50);
+}
+
+.btnDelete {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 13px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1.5px solid #fecaca;
+  cursor: pointer;
+  background: #fef2f2;
+  color: #b91c1c;
+  transition: all 0.18s;
+}
+
+.btnDelete:hover {
+  border-color: #fca5a5;
+  background: #fee2e2;
+}
+
+.btnDelete:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
 }
 
 /* Verified badge */

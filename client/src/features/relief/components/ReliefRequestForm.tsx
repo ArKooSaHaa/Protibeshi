@@ -15,6 +15,7 @@ import styles from './ReliefForm.module.css';
 interface ReliefRequestFormProps {
   form: ReliefRequestFormState;
   errors: ReliefFormErrors<ReliefRequestFormState>;
+  isSubmitting?: boolean;
   onChange: <K extends keyof ReliefRequestFormState>(key: K, value:
     ReliefRequestFormState[K]) => void;
   onSubmit: () => void;
@@ -22,7 +23,7 @@ interface ReliefRequestFormProps {
 
 const urgencyColors: Record<ReliefUrgency, string> = {
   Normal: '',
-  Important: styles.selectedAmber,
+  Important: styles.selectedBlue,
   Urgent: styles.selectedOrange,
   Critical: styles.selectedRed,
 };
@@ -30,6 +31,7 @@ const urgencyColors: Record<ReliefUrgency, string> = {
 export const ReliefRequestForm = ({
   form,
   errors,
+  isSubmitting = false,
   onChange,
   onSubmit,
 }: ReliefRequestFormProps) => {
@@ -182,8 +184,9 @@ about what you need and why."
         type="button"
         className={`${styles.submitBtn} ${styles.submitBtnRed}`}
         onClick={onSubmit}
+        disabled={isSubmitting}
       >
-        Post Relief Request
+        {isSubmitting ? 'Posting...' : 'Post Relief Request'}
       </button>
     </div>
   );

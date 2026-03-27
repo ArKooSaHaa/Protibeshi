@@ -12,7 +12,7 @@ export const urgencyConfig: Record<
             'dotNormal'
     },
     Important: {
-        label: 'Important', colorClass: 'urgImportant', dotClass:
+        label: 'Important', colorClass: 'urgImportantBlue', dotClass:
             'dotImportant'
     },
     Urgent: {
@@ -30,15 +30,11 @@ export const statusConfig: Record<
     { label: string; colorClass: string }
 > = {
     Open: { label: 'Open', colorClass: 'statusOpen' },
-    'Volunteers Assigned': {
-        label: 'Volunteers Assigned', colorClass:
-            'statusVolunteers'
-    },
-    'In Progress': {
-        label: 'In Progress', colorClass: 'statusInProgress'
+    Assigned: {
+        label: 'Assigned', colorClass:
+            'statusAssigned'
     },
     Completed: { label: 'Completed', colorClass: 'statusCompleted' },
-    Expired: { label: 'Expired', colorClass: 'statusExpired' },
 };
 
 export function formatDistance(metres: number): string {

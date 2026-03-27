@@ -104,7 +104,7 @@ class PostController extends Controller
                 'user' => $comment->user ? [
                     'id' => $comment->user->id,
                     'name' => $this->resolveUserName($comment->user),
-                    'profile_picture' => $comment->user->profile_picture,
+                    'profile_picture' => $this->resolveProfilePictureUrl($comment->user->profile_picture),
                     'profile_picture_url' => $this->resolveProfilePictureUrl($comment->user->profile_picture),
                 ] : null,
             ];
@@ -169,7 +169,7 @@ class PostController extends Controller
             'user' => $post->user ? [
                 'id' => $post->user->id,
                 'name' => $this->resolveUserName($post->user),
-                'profile_picture' => $post->user->profile_picture,
+                'profile_picture' => $this->resolveProfilePictureUrl($post->user->profile_picture),
                 'profile_picture_url' => $this->resolveProfilePictureUrl($post->user->profile_picture),
             ] : null,
         ];

@@ -18,6 +18,33 @@
   padding: 0 2px;
 }
 
+.stateInfo {
+  border: 1px solid var(--slate-200);
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--slate-500);
+}
+
+.errorBanner {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #b91c1c;
+}
+
+.successBanner {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #166534;
+}
+
 /* Modal */
 .modalOverlay {
   position: fixed;

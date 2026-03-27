@@ -11,6 +11,7 @@ use App\Http\Controllers\PostCommentController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PostLikeController;
 use App\Http\Controllers\PostReportController;
+use App\Http\Controllers\ReliefController;
 use App\Http\Controllers\RentListingController;
 use App\Http\Controllers\SavedPostController;
 use App\Http\Controllers\ServiceController;
@@ -34,6 +35,10 @@ Route::get('/complaints', [ComplaintController::class, 'index']);
 Route::get('/complaints/{id}', [ComplaintController::class, 'show']);
 Route::get('/posts', [PostController::class, 'index']);
 Route::get('/posts/{id}', [PostController::class, 'show']);
+Route::get('/reliefs', [ReliefController::class, 'index']);
+Route::get('/reliefs/{id}', [ReliefController::class, 'show']);
+Route::get('/offers', [\App\Http\Controllers\Api\OfferController::class, 'index']);
+Route::get('/offers/{id}', [\App\Http\Controllers\Api\OfferController::class, 'show']);
 
 
 /*
@@ -53,6 +58,11 @@ Route::middleware(['auth:api'])->group(function () {
     Route::delete('/conversations/{id}', [ChatController::class, 'deleteConversation']);
 
     Route::post('/listings', [ListingController::class, 'store']);
+    Route::post('/rent-listings', [RentListingController::class, 'store']);
+    Route::delete('/rent-listings/{id}', [RentListingController::class, 'destroy']);
+
+    Route::post('/services', [ServiceController::class, 'store']);
+    Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
 
     Route::get('/account/profile', [AccountController::class, 'show']);
     Route::put('/account/profile', [AccountController::class, 'update']);
@@ -83,18 +93,16 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('/posts/{id}/save', [SavedPostController::class, 'toggleSave']);
     Route::post('/posts/{id}/report', [PostReportController::class, 'report']);
 
-});
+    // Offer Help API
+    Route::post('/offers', [\App\Http\Controllers\Api\OfferController::class, 'store']);
+    Route::delete('/offers/{id}', [\App\Http\Controllers\Api\OfferController::class, 'destroy']);
 
-Route::middleware(['auth:sanctum,api'])->group(function () {
-    Route::post('/rent-listings', [RentListingController::class, 'store']);
-    Route::delete('/rent-listings/{id}', [RentListingController::class, 'destroy']);
-    Route::post('/services', [ServiceController::class, 'store']);
-    Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
-});
-
-Route::middleware(['auth:api'])->group(function () {
     Route::get('/account/complaints', [ComplaintController::class, 'myComplaints']);
     Route::post('/complaints', [ComplaintController::class, 'store']);
     Route::delete('/complaints/{id}', [ComplaintController::class, 'destroy']);
     Route::patch('/complaints/{id}/status', [ComplaintController::class, 'updateStatus']);
+    Route::post('/reliefs', [ReliefController::class, 'store']);
+    Route::post('/reliefs/{id}/offer-help', [ReliefController::class, 'offerHelp']);
+    Route::patch('/reliefs/{id}/status', [ReliefController::class, 'updateStatus']);
+    Route::delete('/reliefs/{id}', [ReliefController::class, 'destroy']);
 });

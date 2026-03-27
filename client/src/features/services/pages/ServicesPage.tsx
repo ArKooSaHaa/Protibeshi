@@ -1,8 +1,11 @@
 //  src/features/services/pages/ServicesPage.tsx 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useScroll, useTransform } from
   'framer-motion';
 import { TriangleAlert, X } from 'lucide-react';
+import { startConversation, getMessages, sendMessage } from '@/api/chatApi';
+import { ROUTES } from '@/config/routes.config';
 import { OfferServiceModal } from '../components/OfferServiceModal';
 import { ServiceCard } from '../components/ServiceCard';
 import { ServiceChatDrawer } from '../components/ServiceChatDrawer';
@@ -40,6 +43,7 @@ const cardItemVariants = {
 
 export const ServicesPage = () => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   const {
     filters,
@@ -75,6 +79,41 @@ export const ServicesPage = () => {
   const heroY = useTransform(scrollYProgress, [0, 1], [0, 70]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.22], [1,
     0.82]);
+
+  const openServiceConversation = useCallback(async (service: ServiceItem) => {
+    if (!service?.ownerId) {
+      console.error('Service owner information is not available');
+      return;
+    }
+
+    try {
+      const conversationResponse = await startConversation(Number(service.ownerId), null);
+      const conversationId = Number(conversationResponse?.conversation?.id);
+
+      if (!Number.isFinite(conversationId)) {
+        throw new Error('Unable to open this conversation right now.');
+      }
+
+      await getMessages(conversationId);
+
+      const details = [
+        `Service: ${service.title || 'N/A'}`,
+        `Category: ${service.category || 'N/A'}`,
+        `Price: BDT ${(Number(service.price) || 0).toLocaleString()}`,
+        `Price per: ${service.priceUnit || 'N/A'}`,
+        `Experience: ${service.experience || 'N/A'} years`,
+        `Location: ${service.location || 'N/A'}`,
+        `Description: ${service.shortDescription || 'N/A'}`,
+      ].join('\n');
+
+      const suggestedMessage = `Hello, I would like to have the service.\n\n${details}\n\nPlease let me know more details.`;
+      await sendMessage(conversationId, suggestedMessage.slice(0, 4900));
+
+      navigate(`${ROUTES.MESSAGES}?conversation=${conversationId}`);
+    } catch (error) {
+      console.error('Failed to open conversation:', error);
+    }
+  }, [navigate]);
 
   const handleReport = (service: ServiceItem) => {
     window.alert(`Service report submitted for ${service.providerName}. 
@@ -135,7 +174,7 @@ Our team will review this.`);
                 isBookmarked={bookmarkedIds.includes(service.id)}
                 priceLabel={getPriceLabel(service)}
                 onToggleBookmark={onToggleBookmark}
-                onMessage={setActiveChat}
+                onMessage={openServiceConversation}
                 onViewDetails={setActiveDetails}
                 onReport={handleReport}
               />

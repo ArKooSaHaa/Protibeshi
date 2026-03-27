@@ -12,7 +12,7 @@ const RentFilters = ({ filters, onFilterChange }) => {
   };
 
   const handlePriceChange = (key, value) => {
-    const fallback = key === 'minPrice' ? 0 : 100000;
+    const fallback = key === 'minPrice' ? 0 : null;
     const parsed = value === '' ? fallback : parseInt(value, 10);
     onFilterChange({
       ...filters,
@@ -38,10 +38,10 @@ const RentFilters = ({ filters, onFilterChange }) => {
 
   const toggleQuickFilter = (key) => {
     if (key === 'under15k') {
-      const isActive = filters.maxPrice <= 15000;
+      const isActive = filters.maxPrice !== null && filters.maxPrice <= 15000;
       onFilterChange({
         ...filters,
-        maxPrice: isActive ? 100000 : 15000,
+        maxPrice: isActive ? null : 15000,
       });
       return;
     }
@@ -54,10 +54,11 @@ const RentFilters = ({ filters, onFilterChange }) => {
     }
 
     if (key === 'near-metro') {
-      const isActive = filters.radius <= 800;
+      const currentRadius = filters.radius ?? 5000;
+      const isActive = currentRadius <= 800;
       onFilterChange({
         ...filters,
-        radius: isActive ? 5000 : 800,
+        radius: isActive ? null : 800,
       });
       return;
     }
@@ -101,7 +102,7 @@ const RentFilters = ({ filters, onFilterChange }) => {
         <div className={styles.quickFiltersGrid}>
           <motion.button
             type="button"
-            className={`${styles.quickFilterChip} ${filters.maxPrice <= 15000 ? styles.quickFilterChipActive :
+            className={`${styles.quickFilterChip} ${filters.maxPrice !== null && filters.maxPrice <= 15000 ? styles.quickFilterChipActive :
                 ''
               }`}
             onClick={() => toggleQuickFilter('under15k')}
@@ -123,7 +124,7 @@ const RentFilters = ({ filters, onFilterChange }) => {
           </motion.button>
           <motion.button
             type="button"
-            className={`${styles.quickFilterChip} ${filters.radius <= 800 ? styles.quickFilterChipActive : ''
+            className={`${styles.quickFilterChip} ${(filters.radius ?? 5000) <= 800 ? styles.quickFilterChipActive : ''
               }`}
             onClick={() => toggleQuickFilter('near-metro')}
             whileHover={{ y: -2, scale: 1.02 }}
@@ -179,13 +180,13 @@ const RentFilters = ({ filters, onFilterChange }) => {
                 min="100"
                 max="5000"
                 step="100"
-                value={filters.radius}
+                value={filters.radius ?? 5000}
                 onChange={(e) =>
                   handleRadiusChange(parseInt(e.target.value))}
                 className={styles.slider}
               />
               <div className={styles.sliderLabel}>
-                {(filters.radius / 1000).toFixed(1)} km
+                {((filters.radius ?? 5000) / 1000).toFixed(1)} km
               </div>
             </motion.div>
           )}
@@ -235,7 +236,7 @@ const RentFilters = ({ filters, onFilterChange }) => {
                   step="500"
                   inputMode="numeric"
                   placeholder="Max"
-                  value={filters.maxPrice}
+                  value={filters.maxPrice ?? ''}
                   onChange={(e) => handlePriceChange('maxPrice',
                     e.target.value)}
                   className={styles.priceInput}

@@ -58,19 +58,52 @@
 
 .providerRow {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
-.providerRow img {
-  width: 44px;
-  height: 44px;
+.providerAvatar {
+  width: 52px;
+  height: 52px;
   border-radius: 999px;
   object-fit: cover;
+  flex-shrink: 0;
+  background: #f1f5f9;
 }
 
-.providerRow p {
-  margin: 2px 0 0;
+.providerInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.providerNameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.providerNameRow strong {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.verifiedBadge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #16a34a;
+  background: #f0fdf4;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.providerLocation {
+  margin: 0;
   font-size: 12px;
   color: #64748b;
 }

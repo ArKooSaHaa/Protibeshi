@@ -2,6 +2,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { HandHeart, X } from 'lucide-react';
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '@/config/routes.config';
 import { HelpOfferForm } from '../components/HelpOfferForm';
 import { ReliefDetailsDrawer } from
   '../components/ReliefDetailsDrawer';
@@ -16,7 +18,16 @@ import type { HelpOffer, ReliefRequest } from '../types/relief.types';
 import styles from './ReliefPage.module.css';
 
 export const ReliefPage = () => {
+  const navigate = useNavigate();
+
   const {
+    isLoading,
+    isSubmitting,
+    offeringRequestId,
+    deletingRequestId,
+    errorMessage,
+    successMessage,
+    currentUserId,
     filteredRequests,
     filteredOffers,
     filters,
@@ -39,11 +50,18 @@ export const ReliefPage = () => {
     requestFormErrors,
     updateRequestField,
     handleSubmitRequest,
+    onOfferHelp,
+    onDeleteRequest,
+    clearFeedback,
     offerForm,
     offerFormErrors,
     updateOfferField,
     handleSubmitOffer,
-  } = useReliefBoard();
+  } = useReliefBoard({
+    onUnauthorized: () => {
+      navigate(ROUTES.LOGIN, { replace: true });
+    },
+  });
 
   // Lock body scroll when modal is open 
   useEffect(() => {
@@ -51,8 +69,22 @@ export const ReliefPage = () => {
     return () => { document.body.style.overflow = ''; };
   }, [modalMode]);
 
+  useEffect(() => {
+    if (!errorMessage && !successMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      clearFeedback();
+    }, 2800);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [errorMessage, successMessage, clearFeedback]);
+
   const handleViewRequest = (r: ReliefRequest) => setSelectedRequest(r);
-  const handleVolunteer = (_r: ReliefRequest) => void _r;
+  const handleVolunteer = (request: ReliefRequest) => {
+    void onOfferHelp(request);
+  };
   const handleViewOffer = (_o: HelpOffer) => void _o;
   const handleRequestSupport = (_o: HelpOffer) => void _o;
 
@@ -63,10 +95,22 @@ export const ReliefPage = () => {
     <div className={styles.page}>
       {/* Page Header */}
       <ReliefHeader
-        locationLabel="Motijheel • 350m radius"
+        locationLabel="Neighborhood Relief"
         onRequestHelp={() => setModalMode('request')}
         onOfferHelp={() => setModalMode('offer')}
       />
+
+      {isLoading && (
+        <div className={styles.stateInfo}>Loading relief requests...</div>
+      )}
+
+      {errorMessage && (
+        <div className={styles.errorBanner}>{errorMessage}</div>
+      )}
+
+      {successMessage && (
+        <div className={styles.successBanner}>{successMessage}</div>
+      )}
 
       {/* Tabs + Filter toggle */}
       <div className={styles.controls}>
@@ -90,6 +134,10 @@ export const ReliefPage = () => {
         offers={filteredOffers}
         onViewRequest={handleViewRequest}
         onVolunteer={handleVolunteer}
+          offeringRequestId={offeringRequestId}
+          currentUserId={currentUserId}
+          deletingRequestId={deletingRequestId}
+          onDeleteRequest={onDeleteRequest}
         onViewOffer={handleViewOffer}
         onRequestSupport={handleRequestSupport}
       />
@@ -157,8 +205,11 @@ export const ReliefPage = () => {
                 <ReliefRequestForm
                   form={requestForm}
                   errors={requestFormErrors}
+                  isSubmitting={isSubmitting}
                   onChange={updateRequestField}
-                  onSubmit={handleSubmitRequest}
+                  onSubmit={() => {
+                    void handleSubmitRequest();
+                  }}
                 />
               ) : (
                 <HelpOfferForm
