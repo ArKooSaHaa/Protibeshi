@@ -8,7 +8,8 @@ import {
   ReliefApiError,
 } from '@/api/relief';
 import type { ReliefApiItem } from '@/api/relief';
-import { createOffer } from '@/api/offerApi';
+import { createOffer, getOffers } from '@/api/offerApi';
+import type { OfferApiItem } from '@/api/offerApi';
 import type {
   HelpOffer,
   HelpOfferFormState,
@@ -192,6 +193,38 @@ const normalizeRelief = (relief: ReliefApiItem): ReliefRequest => {
   };
 };
 
+const normalizeOffer = (offer: OfferApiItem): HelpOffer => {
+  const postedBy = String(offer.user?.name || 'Neighbor').trim() || 'Neighbor';
+  const helpType = toReliefHelpType(offer.help_types?.[0] || 'other');
+  const availability = String(offer.availability?.[0] || 'today').trim().toLowerCase();
+
+  const availabilityLabelMap: Record<string, HelpOffer['availability']> = {
+    today: 'Today only',
+    this_week: 'This week',
+    weekends: 'Weekends',
+    on_call: 'On-call',
+    recurring: 'Recurring',
+  };
+
+  return {
+    id: String(offer.id),
+    type: 'offer',
+    helpType,
+    title: String(offer.short_summary || 'Untitled offer'),
+    description: String(offer.description || ''),
+    availability: availabilityLabelMap[availability] || 'Today only',
+    serviceRadius: Number(offer.service_radius || 0),
+    contactPreference: offer.contact_preference === 'phone' ? 'Phone' : 'In-app message',
+    isRecurring: Boolean(offer.is_recurring),
+    location: 'Nearby',
+    distance: 0,
+    createdAt: String(offer.created_at || new Date().toISOString()),
+    postedBy,
+    avatarInitials: toAvatarInitials(postedBy),
+    verified: false,
+  };
+};
+
 const validateRequestForm = (
   form: ReliefRequestFormState,
 ): ReliefFormErrors<ReliefRequestFormState> => {
@@ -251,7 +284,7 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
   const { onUnauthorized } = options;
 
   const [requests, setRequests] = useState<ReliefRequest[]>([]);
-  const [offers] = useState<HelpOffer[]>([]);
+  const [offers, setOffers] = useState<HelpOffer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [offeringRequestId, setOfferingRequestId] = useState<string | null>(null);
@@ -280,8 +313,9 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
     setErrorMessage(null);
 
     try {
-      const data = await getReliefs();
-      setRequests(data.map(normalizeRelief));
+      const [reliefData, offerData] = await Promise.all([getReliefs(), getOffers()]);
+      setRequests(reliefData.map(normalizeRelief));
+      setOffers(offerData.map(normalizeOffer));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to load relief requests';
       setErrorMessage(message);
@@ -397,6 +431,7 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
       }
 
       await createOffer(payload, token);
+      await loadReliefs();
       setSuccessMessage('Offer submitted successfully!');
       setOfferForm(initialOfferForm);
       setOfferFormErrors({});
