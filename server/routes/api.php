@@ -11,6 +11,7 @@ use App\Http\Controllers\PostCommentController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PostLikeController;
 use App\Http\Controllers\PostReportController;
+use App\Http\Controllers\ReliefController;
 use App\Http\Controllers\RentListingController;
 use App\Http\Controllers\SavedPostController;
 use App\Http\Controllers\ServiceController;
@@ -34,6 +35,8 @@ Route::get('/complaints', [ComplaintController::class, 'index']);
 Route::get('/complaints/{id}', [ComplaintController::class, 'show']);
 Route::get('/posts', [PostController::class, 'index']);
 Route::get('/posts/{id}', [PostController::class, 'show']);
+Route::get('/reliefs', [ReliefController::class, 'index']);
+Route::get('/reliefs/{id}', [ReliefController::class, 'show']);
 
 
 /*
@@ -97,4 +100,8 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('/complaints', [ComplaintController::class, 'store']);
     Route::delete('/complaints/{id}', [ComplaintController::class, 'destroy']);
     Route::patch('/complaints/{id}/status', [ComplaintController::class, 'updateStatus']);
+    Route::post('/reliefs', [ReliefController::class, 'store']);
+    Route::post('/reliefs/{id}/offer-help', [ReliefController::class, 'offerHelp']);
+    Route::patch('/reliefs/{id}/status', [ReliefController::class, 'updateStatus']);
+    Route::delete('/reliefs/{id}', [ReliefController::class, 'destroy']);
 });
