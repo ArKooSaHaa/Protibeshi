@@ -53,10 +53,19 @@ const RentDetailsDrawer = ({ listing, onClose, onContact }) => {
 
             <div className={styles.scrollContent}>
               <div className={styles.providerRow}>
-                <img src={listing.image} alt={listing.title} />
-                <div>
-                  <strong>{listing.verified ? 'Verified landlord' : 'Property owner'}</strong>
-                  <p>{listing.location}</p>
+                <img 
+                  src={listing.user?.profile_picture || 'https://api.dicebear.com/9.x/avataaars/svg'} 
+                  alt={listing.user?.first_name || 'User'} 
+                  className={styles.providerAvatar}
+                />
+                <div className={styles.providerInfo}>
+                  <div className={styles.providerNameRow}>
+                    <strong>{listing.user ? `${listing.user.first_name} ${listing.user.last_name}`.trim() : 'Property owner'}</strong>
+                    {listing.verified_landlord && (
+                      <span className={styles.verifiedBadge}>✓ Verified</span>
+                    )}
+                  </div>
+                  <p className={styles.providerLocation}>{listing.location}</p>
                 </div>
               </div>
 
@@ -85,7 +94,7 @@ const RentDetailsDrawer = ({ listing, onClose, onContact }) => {
               <section className={styles.section}>
                 <h5>Trust Signals</h5>
                 <ul>
-                  <li>{listing.verified ? 'Verified landlord' : 'Owner listed'}</li>
+                  <li>{listing.verified_landlord ? 'Verified landlord' : 'Owner listed'}</li>
                   <li>{listing.views} views</li>
                   <li>{listing.listedDays === 0 ? 'Listed today' : `${listing.listedDays} days ago`}</li>
                 </ul>

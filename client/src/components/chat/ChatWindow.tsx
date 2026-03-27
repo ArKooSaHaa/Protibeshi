@@ -57,7 +57,15 @@ export const ChatWindow = ({
     <article className={styles.chatPane}>
       <div className={styles.chatHeader}>
         <div className={styles.chatIdentity}>
-          <div className={styles.avatar}>{getInitials(activeConversation.user?.name)}</div>
+          {activeConversation.user?.profile_picture ? (
+            <img 
+              src={activeConversation.user.profile_picture} 
+              alt={activeConversation.user.name || 'User'}
+              className={styles.profileAvatar}
+            />
+          ) : (
+            <div className={styles.avatar}>{getInitials(activeConversation.user?.name)}</div>
+          )}
           <div>
             <h2>{activeConversation.user?.name || 'Unknown user'}</h2>
             <p>

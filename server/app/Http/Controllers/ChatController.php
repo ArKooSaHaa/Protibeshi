@@ -8,6 +8,7 @@ use App\Models\Message;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class ChatController extends Controller
 {
@@ -256,7 +257,7 @@ class ChatController extends Controller
                 'first_name' => $otherUser->first_name,
                 'last_name' => $otherUser->last_name,
                 'username' => $otherUser->username,
-                'profile_picture' => $otherUser->profile_picture,
+                'profile_picture' => $this->resolveProfilePictureUrl($otherUser->profile_picture),
             ] : null,
         ];
     }
@@ -277,7 +278,25 @@ class ChatController extends Controller
                 'first_name' => $message->sender->first_name,
                 'last_name' => $message->sender->last_name,
                 'username' => $message->sender->username,
+                'profile_picture' => $this->resolveProfilePictureUrl($message->sender->profile_picture),
             ] : null,
         ];
+    }
+
+    private function resolveProfilePictureUrl(?string $profilePicture): string
+    {
+        if (!$profilePicture) {
+            return '';
+        }
+
+        if (filter_var($profilePicture, FILTER_VALIDATE_URL)) {
+            return $profilePicture;
+        }
+
+        if (str_starts_with($profilePicture, '/')) {
+            return url($profilePicture);
+        }
+
+        return url(Storage::url($profilePicture));
     }
 }
