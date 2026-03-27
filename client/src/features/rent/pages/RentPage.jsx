@@ -169,12 +169,22 @@ export const RentPage = () => {
         throw new Error('Unable to open this conversation right now.');
       }
 
-      const messageHistory = await getMessages(conversationId);
+      await getMessages(conversationId);
 
-      if (messageHistory.length === 0) {
-        const suggestedMessage = `Hi, I am interested in your rent listing "${listing.title}". Is it still available?`;
-        await sendMessage(conversationId, suggestedMessage.slice(0, 4900));
-      }
+      const details = [
+        `Property: ${listing.title || 'N/A'}`,
+        `Price: BDT ${(Number(listing.price) || 0).toLocaleString()}`,
+        `Location: ${listing.location || 'N/A'}`,
+        `Beds: ${listing.beds ?? 'N/A'}`,
+        `Baths: ${listing.baths ?? 'N/A'}`,
+        `Size: ${listing.sqft ? `${listing.sqft} sq ft` : 'N/A'}`,
+        `Type: ${listing.type || 'N/A'}`,
+        `Furnishing: ${listing.furnishing || 'N/A'}`,
+        `Availability: ${listing.availability || 'N/A'}`,
+      ].join('\n');
+
+      const suggestedMessage = `Hello, I am interested in this rent listing.\n\n${details}\n\nIs this property still available?`;
+      await sendMessage(conversationId, suggestedMessage.slice(0, 4900));
 
       navigate(`${ROUTES.MESSAGES}?conversation=${conversationId}`);
     } catch (error) {
