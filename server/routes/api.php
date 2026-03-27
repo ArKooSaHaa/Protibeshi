@@ -37,6 +37,8 @@ Route::get('/posts', [PostController::class, 'index']);
 Route::get('/posts/{id}', [PostController::class, 'show']);
 Route::get('/reliefs', [ReliefController::class, 'index']);
 Route::get('/reliefs/{id}', [ReliefController::class, 'show']);
+Route::get('/offers', [\App\Http\Controllers\Api\OfferController::class, 'index']);
+Route::get('/offers/{id}', [\App\Http\Controllers\Api\OfferController::class, 'show']);
 
 
 /*
@@ -58,6 +60,9 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('/listings', [ListingController::class, 'store']);
     Route::post('/rent-listings', [RentListingController::class, 'store']);
     Route::delete('/rent-listings/{id}', [RentListingController::class, 'destroy']);
+
+    Route::post('/services', [ServiceController::class, 'store']);
+    Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
 
     Route::get('/account/profile', [AccountController::class, 'show']);
     Route::put('/account/profile', [AccountController::class, 'update']);
@@ -88,19 +93,10 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('/posts/{id}/save', [SavedPostController::class, 'toggleSave']);
     Route::post('/posts/{id}/report', [PostReportController::class, 'report']);
 
-});
-
-
-// Offer Help API
-Route::middleware(['auth:api'])->group(function () {
+    // Offer Help API
     Route::post('/offers', [\App\Http\Controllers\Api\OfferController::class, 'store']);
     Route::delete('/offers/{id}', [\App\Http\Controllers\Api\OfferController::class, 'destroy']);
-});
 
-Route::get('/offers', [\App\Http\Controllers\Api\OfferController::class, 'index']);
-Route::get('/offers/{id}', [\App\Http\Controllers\Api\OfferController::class, 'show']);
-
-Route::middleware(['auth:api'])->group(function () {
     Route::get('/account/complaints', [ComplaintController::class, 'myComplaints']);
     Route::post('/complaints', [ComplaintController::class, 'store']);
     Route::delete('/complaints/{id}', [ComplaintController::class, 'destroy']);
