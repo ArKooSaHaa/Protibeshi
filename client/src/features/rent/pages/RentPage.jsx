@@ -22,9 +22,9 @@ export const RentPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [feedError, setFeedError] = useState(null);
   const [filters, setFilters] = useState({
-    radius: 5000,
+    radius: null,
     minPrice: 0,
-    maxPrice: 100000,
+    maxPrice: null,
     propertyTypes: [],
     bedrooms: [],
     furnishing: [],
@@ -66,15 +66,25 @@ export const RentPage = () => {
   const applyFilters = (currentFilters, sourceListings = allListings) => {
     let results = [...sourceListings];
 
-    // Filter by price 
-    results = results.filter(
-      (item) => item.price >= currentFilters.minPrice && item.price <=
-        currentFilters.maxPrice
-    );
+    // Filter by minimum price.
+    const minPrice = Number(currentFilters.minPrice) || 0;
+    results = results.filter((item) => Number(item.price) >= minPrice);
 
-    // Filter by distance 
-    results = results.filter((item) => item.distance <=
-      currentFilters.radius);
+    // Apply max price only when user has explicitly set one.
+    if (currentFilters.maxPrice !== null && currentFilters.maxPrice !== undefined) {
+      const maxPrice = Number(currentFilters.maxPrice);
+      if (!Number.isNaN(maxPrice)) {
+        results = results.filter((item) => Number(item.price) <= maxPrice);
+      }
+    }
+
+    // Apply radius only when user has explicitly set one.
+    if (currentFilters.radius !== null && currentFilters.radius !== undefined) {
+      const radius = Number(currentFilters.radius);
+      if (!Number.isNaN(radius)) {
+        results = results.filter((item) => Number(item.distance ?? 0) <= radius);
+      }
+    }
 
     // Filter by property type 
     if (currentFilters.propertyTypes.length > 0) {

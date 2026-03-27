@@ -56,6 +56,8 @@ Route::middleware(['auth:api'])->group(function () {
     Route::delete('/conversations/{id}', [ChatController::class, 'deleteConversation']);
 
     Route::post('/listings', [ListingController::class, 'store']);
+    Route::post('/rent-listings', [RentListingController::class, 'store']);
+    Route::delete('/rent-listings/{id}', [RentListingController::class, 'destroy']);
 
     Route::get('/account/profile', [AccountController::class, 'show']);
     Route::put('/account/profile', [AccountController::class, 'update']);
