@@ -88,12 +88,15 @@ Route::middleware(['auth:api'])->group(function () {
 
 });
 
-Route::middleware(['auth:sanctum,api'])->group(function () {
-    Route::post('/rent-listings', [RentListingController::class, 'store']);
-    Route::delete('/rent-listings/{id}', [RentListingController::class, 'destroy']);
-    Route::post('/services', [ServiceController::class, 'store']);
-    Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
+
+// Offer Help API
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('/offers', [\App\Http\Controllers\Api\OfferController::class, 'store']);
+    Route::delete('/offers/{id}', [\App\Http\Controllers\Api\OfferController::class, 'destroy']);
 });
+
+Route::get('/offers', [\App\Http\Controllers\Api\OfferController::class, 'index']);
+Route::get('/offers/{id}', [\App\Http\Controllers\Api\OfferController::class, 'show']);
 
 Route::middleware(['auth:api'])->group(function () {
     Route::get('/account/complaints', [ComplaintController::class, 'myComplaints']);
