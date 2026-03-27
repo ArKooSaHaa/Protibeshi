@@ -3,23 +3,43 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Send, X } from 'lucide-react';
 import styles from './RentChatDrawer.module.css';
 
-const RentChatDrawer = ({ listing, messages, onSend, onClose }) => {
+const RentChatDrawer = ({
+  listing,
+  messages,
+  isLoading,
+  isSending,
+  error,
+  currentUserId,
+  onSend,
+  onOpenInMessages,
+  onClose,
+}) => {
   const [input, setInput] = useState('');
 
-  const sortedMessages = useMemo(
-    () => [...messages].sort((a, b) => a.timestamp - b.timestamp),
-    [messages]
-  );
+  const sortedMessages = useMemo(() => {
+    const toTimestamp = (value) => {
+      if (!value) {
+        return 0;
+      }
 
-  const handleSend = () => {
+      const parsed = Date.parse(value);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    };
+
+    return [...messages].sort((a, b) => toTimestamp(a.created_at) - toTimestamp(b.created_at));
+  }, [messages]);
+
+  const handleSend = async () => {
     const text = input.trim();
 
-    if (!listing || !text) {
+    if (!listing || !text || isSending) {
       return;
     }
 
-    onSend(listing.id, text);
-    setInput('');
+    const sent = await onSend(text);
+    if (sent) {
+      setInput('');
+    }
   };
 
   return (
@@ -45,30 +65,48 @@ const RentChatDrawer = ({ listing, messages, onSend, onClose }) => {
                 <h4>{listing.verified ? 'Verified landlord' : 'Property owner'}</h4>
                 <p>{listing.title}</p>
               </div>
-              <button
-                type="button"
-                className={styles.closeButton}
-                onClick={onClose}
-              >
-                <X size={16} />
-              </button>
+              <div className={styles.headerActions}>
+                <button
+                  type="button"
+                  className={styles.messagesButton}
+                  onClick={onOpenInMessages}
+                  disabled={isLoading}
+                >
+                  Messages
+                </button>
+                <button
+                  type="button"
+                  className={styles.closeButton}
+                  onClick={onClose}
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
 
             <div className={styles.messages}>
-              {sortedMessages.length === 0 ? (
+              {isLoading ? (
+                <div className={styles.emptyState}>Loading conversation...</div>
+              ) : null}
+
+              {!isLoading && error ? (
+                <div className={styles.errorState}>{error}</div>
+              ) : null}
+
+              {!isLoading && sortedMessages.length === 0 ? (
                 <div className={styles.emptyState}>
                   Start a conversation about this property.
                 </div>
               ) : (
                 sortedMessages.map((message) => (
                   <div
-                    key={message.id}
+                    key={String(message.id)}
                     className={
-                      message.sender === 'user' ?
+                      currentUserId !== null && Number(message.sender_id) === Number(currentUserId) ?
                         styles.userBubble : styles.providerBubble
                     }
                   >
-                    {message.text}
+                    {message.message}
                   </div>
                 ))
               )}
@@ -79,15 +117,23 @@ const RentChatDrawer = ({ listing, messages, onSend, onClose }) => {
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 placeholder="Type a message..."
+                disabled={isLoading || isSending}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    void handleSend();
+                  }
+                }}
               />
               <motion.button
                 type="button"
                 className={styles.sendButton}
                 whileHover={{ y: -1 }}
                 whileTap={{ y: 1 }}
-                onClick={handleSend}
+                onClick={() => void handleSend()}
+                disabled={isLoading || isSending || !input.trim()}
               >
-                <Send size={14} />
+                {isSending ? '...' : <Send size={14} />}
               </motion.button>
             </div>
           </motion.aside>

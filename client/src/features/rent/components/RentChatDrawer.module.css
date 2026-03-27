@@ -24,6 +24,12 @@
   gap: 8px;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .header h4 {
   margin: 0;
   color: #0f172a;
@@ -45,6 +51,23 @@
   cursor: pointer;
 }
 
+.messagesButton {
+  height: 34px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f8fafc;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.messagesButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .messages {
   flex: 1;
   padding: 12px;
@@ -58,6 +81,13 @@
   margin-top: 12px;
   font-size: 13px;
   color: #64748b;
+  text-align: center;
+}
+
+.errorState {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #b91c1c;
   text-align: center;
 }
 
@@ -104,4 +134,9 @@
   background: linear-gradient(135deg, var(--emerald-500), var(--emerald-600));
   color: #fff;
   cursor: pointer;
+}
+
+.sendButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
