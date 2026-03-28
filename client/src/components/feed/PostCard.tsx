@@ -203,6 +203,12 @@ const getLocalUserProfilePhotoForPost = (post: FeedPost) => {
   return null;
 };
 
+const resolveInitial = (name: string | null | undefined) => {
+  const trimmed = typeof name === 'string' ? name.trim() : '';
+  const source = trimmed || 'U';
+  return source.slice(0, 1).toUpperCase();
+};
+
 export const PostCard = ({
   post,
   currentUserId = null,
@@ -222,6 +228,7 @@ export const PostCard = ({
   const [reportFeedback, setReportFeedback] = useState<string | null>(null);
   const [inlineComment, setInlineComment] = useState('');
   const [commenting, setCommenting] = useState(false);
+  const [commentAvatarFailed, setCommentAvatarFailed] = useState(false);
   const [commentFeedback, setCommentFeedback] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [profileImageFailed, setProfileImageFailed] = useState(false);
@@ -253,6 +260,16 @@ export const PostCard = ({
   const detailText = (post.content || '').trim();
   const hasDetailText = !!detailText && detailText !== summaryText;
   const hasExpandableContent = hasDetailText || !!imageUrl;
+
+  const commenterPhoto = useMemo(() => {
+    if (!currentUserAvatarUrl) {
+      return null;
+    }
+
+    return resolveUserImageUrl(currentUserAvatarUrl) || currentUserAvatarUrl;
+  }, [currentUserAvatarUrl]);
+
+  const commenterInitial = useMemo(() => resolveInitial(currentUserName), [currentUserName]);
 
   const handleReportSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -417,7 +434,18 @@ export const PostCard = ({
         </div>
 
         <form className={styles.commentComposer} onSubmit={handleInlineCommentSubmit}>
-          <div className={styles.commentAvatar}>Y</div>
+          <div className={styles.commentAvatar}>
+            {commenterPhoto && !commentAvatarFailed ? (
+              <img
+                src={commenterPhoto}
+                alt={currentUserName || 'You'}
+                className={styles.commentAvatarImage}
+                onError={() => setCommentAvatarFailed(true)}
+              />
+            ) : (
+              commenterInitial
+            )}
+          </div>
           <input
             ref={commentInputRef}
             className={styles.commentInput}
