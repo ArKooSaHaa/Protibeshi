@@ -19,7 +19,7 @@ class AuthenticationTest extends TestCase
             'password' => 'password',
         ]);
 
-        $this->assertAuthenticated();
+        $this->assertAuthenticated('web');
         $response->assertNoContent();
     }
 
@@ -32,6 +32,6 @@ class AuthenticationTest extends TestCase
             'password' => 'wrong-password',
         ]);
 
-        $this->assertGuest();
+        $this->assertGuest('web');
     }
 }
