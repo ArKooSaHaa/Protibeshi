@@ -166,7 +166,7 @@ Database:
 
 ### Milestone 2 – Community Modules
 
-* Notices with admin approval
+* Feed page post, like, comment
 * Buy, sell, and rent modules
 * Messaging system
 * Service provider listings
