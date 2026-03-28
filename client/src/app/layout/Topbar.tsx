@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapPin, Bell, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes.config';
 import { fetchAccountProfile } from '@/features/account/services/accountService';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import styles from './Topbar.module.css';
 
 type TopbarUser = {
@@ -20,7 +21,10 @@ const initialUser: TopbarUser = {
 
 export const Topbar = () => {
   const navigate = useNavigate();
+  const logout = useAuthStore((state) => state.logout);
   const [user, setUser] = useState<TopbarUser>(initialUser);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement | null>(null);
 
   const initials = useMemo(() => {
     const source = user.firstName || user.fullName || 'U';
@@ -63,8 +67,50 @@ export const Topbar = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isSettingsOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+
+      if (!target) {
+        return;
+      }
+
+      if (settingsRef.current && !settingsRef.current.contains(target)) {
+        setIsSettingsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsSettingsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isSettingsOpen]);
+
   const goToAccount = () => {
     navigate(ROUTES.ACCOUNT);
+  };
+
+  const toggleSettingsMenu = () => {
+    setIsSettingsOpen((previous) => !previous);
+  };
+
+  const handleSignOut = () => {
+    setIsSettingsOpen(false);
+    logout();
+    navigate(ROUTES.LOGIN, { replace: true });
   };
 
   return (
@@ -92,9 +138,40 @@ export const Topbar = () => {
           <motion.button className={styles.actionButton} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Bell size={20} />
           </motion.button>
-          <motion.button className={styles.actionButton} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Settings size={20} />
-          </motion.button>
+          <div className={styles.settingsMenuWrap} ref={settingsRef}>
+            <motion.button
+              type="button"
+              className={styles.actionButton}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleSettingsMenu}
+              aria-label="Settings"
+              aria-haspopup="menu"
+              aria-expanded={isSettingsOpen}
+            >
+              <Settings size={20} />
+            </motion.button>
+
+            {isSettingsOpen ? (
+              <motion.div
+                className={styles.settingsMenu}
+                role="menu"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+              >
+                <button
+                  type="button"
+                  className={styles.settingsMenuItem}
+                  role="menuitem"
+                  onClick={handleSignOut}
+                >
+                  Sign out
+                </button>
+              </motion.div>
+            ) : null}
+          </div>
         </div>
 
         <motion.button

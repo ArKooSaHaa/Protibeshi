@@ -1,15 +1,23 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Bell, Settings, Menu } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '@/config/routes.config';
 import { fetchAccountProfile } from '@/features/account/services/accountService';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import styles from './Topbar.module.css';
 
 export const Topbar = ({ onMenuClick }) => {
+  const navigate = useNavigate();
+  const logout = useAuthStore((state) => state.logout);
   const [user, setUser] = React.useState({
     firstName: 'User',
     fullName: 'User',
     profilePictureUrl: null,
   });
+
+  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+  const settingsRef = React.useRef(null);
 
   const initials = React.useMemo(() => {
     const source = user.firstName || user.fullName || 'U';
@@ -85,6 +93,44 @@ export const Topbar = ({ onMenuClick }) => {
     };
   }, []);
 
+  React.useEffect(() => {
+    if (!isSettingsOpen) {
+      return undefined;
+    }
+
+    const handlePointerDown = (event) => {
+      const target = event.target;
+
+      if (settingsRef.current && target && !settingsRef.current.contains(target)) {
+        setIsSettingsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setIsSettingsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isSettingsOpen]);
+
+  const toggleSettingsMenu = () => {
+    setIsSettingsOpen((prev) => !prev);
+  };
+
+  const handleSignOut = () => {
+    setIsSettingsOpen(false);
+    logout();
+    navigate(ROUTES.LOGIN, { replace: true });
+  };
+
   return (
     <motion.header
       className={styles.topbar}
@@ -124,13 +170,39 @@ export const Topbar = ({ onMenuClick }) => {
           >
             <Bell size={20} />
           </motion.button>
-          <motion.button
-            className={styles.actionButton}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Settings size={20} />
-          </motion.button>
+          <div className={styles.settingsMenuWrap} ref={settingsRef}>
+            <motion.button
+              type="button"
+              className={styles.actionButton}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleSettingsMenu}
+              aria-label="Settings"
+              aria-haspopup="menu"
+              aria-expanded={isSettingsOpen}
+            >
+              <Settings size={20} />
+            </motion.button>
+
+            {isSettingsOpen ? (
+              <motion.div
+                className={styles.settingsMenu}
+                role="menu"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+              >
+                <button
+                  type="button"
+                  className={styles.settingsMenuItem}
+                  role="menuitem"
+                  onClick={handleSignOut}
+                >
+                  Sign out
+                </button>
+              </motion.div>
+            ) : null}
+          </div>
         </div>
 
         <motion.div
