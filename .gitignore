@@ -86,3 +86,11 @@ yarn-debug.log*
 # others
 .idea/
 .vscode/
+
+# Allow lockfiles (recommended for reproducible CI)
+!composer.lock
+!**/composer.lock
+!package-lock.json
+!**/package-lock.json
+!yarn.lock
+!**/yarn.lock

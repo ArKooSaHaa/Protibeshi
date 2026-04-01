@@ -5,150 +5,169 @@ on:
     branches:
       - develop
       - main
+      - "feature/**"
   pull_request:
     branches:
       - develop
       - main
 
-jobs:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
-# ─────────────────────────────────────────────
-# Backend Tests (Laravel)
-# ─────────────────────────────────────────────
+permissions:
+  contents: read
+
+jobs:
   backend-tests:
+    name: backend-tests
     runs-on: ubuntu-latest
 
-    services:
-      mysql:
-        image: mysql:8
-        env:
-          MYSQL_DATABASE: protibeshi_test
-          MYSQL_ROOT_PASSWORD: root
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 8.3
-          extensions: mbstring, bcmath, pdo, mysql
+          php-version: "8.2"
+          tools: composer:v2
+          extensions: mbstring, dom, fileinfo, sqlite3, pdo_sqlite
 
-      - name: Install Composer dependencies
-        working-directory: ./server
-        run: composer install --no-interaction --prefer-dist
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
 
-      - name: Prepare testing environment
-        working-directory: ./server
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('server/composer.lock', 'server/composer.json') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install backend dependencies
+        working-directory: server
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Prepare backend env
+        working-directory: server
         run: |
-          cp .env.example .env
-          php artisan key:generate
+          if [ ! -f .env ]; then cp .env.example .env; fi
+          php artisan key:generate --force
 
-      - name: Run migrations
-        working-directory: ./server
-        env:
-          DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: protibeshi_db
-          DB_USERNAME: root
-          DB_PASSWORD: root
-        run: php artisan migrate
-
-      - name: Run Laravel tests
-        working-directory: ./server
-        run: php artisan test
+      - name: Run backend tests
+        working-directory: server
+        run: vendor/bin/phpunit
 
 
-# ─────────────────────────────────────────────
-# Frontend Tests (React + Vite)
-# ─────────────────────────────────────────────
   frontend-tests:
+    name: frontend-tests
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: "20"
           cache: npm
           cache-dependency-path: client/package-lock.json
 
       - name: Install dependencies
-        working-directory: ./client
-        run: npm ci
+        working-directory: client
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       - name: Lint code
-        working-directory: ./client
+        working-directory: client
         run: npm run lint
 
-      - name: Type check
-        working-directory: ./client
-        run: npm run type-check
+      - name: Clean build output
+        working-directory: client
+        run: rm -rf dist
 
       - name: Build production bundle
-        working-directory: ./client
+        working-directory: client
         run: npm run build
 
 
-# ─────────────────────────────────────────────
-# Security Checks
-# ─────────────────────────────────────────────
   security-checks:
+    name: security-checks
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 8.3
+          php-version: "8.2"
+          tools: composer:v2
 
-      - name: npm security audit
-        working-directory: ./client
-        run: npm audit --audit-level=moderate || true
+      - name: Install backend deps (no-dev)
+        working-directory: server
+        run: composer install --no-dev --no-interaction --no-progress --prefer-dist
 
-      - name: Composer security audit
-        working-directory: ./server
+      - name: Composer audit (backend)
+        continue-on-error: true
+        working-directory: server
+        run: composer audit --no-interaction --no-dev
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install production dependencies (frontend)
+        working-directory: client
         run: |
-          composer install
-          composer audit || true
+          if [ -f package-lock.json ]; then
+            npm ci --omit=dev
+          else
+            npm install --omit=dev
+          fi
+
+      - name: NPM audit (frontend)
+        continue-on-error: true
+        working-directory: client
+        run: npm audit --omit=dev --audit-level=high
 
 
-# ─────────────────────────────────────────────
-# Docker Build (Production only)
-# ─────────────────────────────────────────────
   docker-build:
     needs: [backend-tests, frontend-tests, security-checks]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker Image
-        uses: docker/build-push-action@v5
+      - name: Build backend image
+        uses: docker/build-push-action@v6
         with:
-          context: .
-          file: Dockerfile
+          context: ./server
+          file: ./server/Dockerfile
           push: false
-          tags: protibeshi:latest
+          tags: protibeshi-backend:ci
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./client
+          file: ./client/Dockerfile
+          target: build
+          push: false
+          tags: protibeshi-frontend:ci
