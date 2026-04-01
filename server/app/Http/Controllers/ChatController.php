@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\MessageSent;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Services\AdminInboxService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +13,13 @@ use Illuminate\Support\Facades\Storage;
 
 class ChatController extends Controller
 {
+    private AdminInboxService $adminInboxService;
+
+    public function __construct(AdminInboxService $adminInboxService)
+    {
+        $this->adminInboxService = $adminInboxService;
+    }
+
     public function startConversation(Request $request)
     {
         $validated = $request->validate([
@@ -27,6 +35,13 @@ class ChatController extends Controller
                 'success' => false,
                 'message' => 'You cannot start a conversation with yourself',
             ], 422);
+        }
+
+        if ($this->adminInboxService->isInboxUserId($receiverId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Direct messaging to admin inbox is not allowed',
+            ], 403);
         }
 
         $existingConversation = Conversation::with(['userOne', 'userTwo'])
@@ -111,6 +126,14 @@ class ChatController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'You are not authorized to send messages in this conversation',
+            ], 403);
+        }
+
+        if ($this->adminInboxService->isAdminInboxConversation($conversation)
+            && !$this->adminInboxService->isInboxUserId($authId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This admin inbox is read-only. Contact on ' . AdminInboxService::ADMIN_CONTACT_EMAIL,
             ], 403);
         }
 
@@ -244,6 +267,9 @@ class ChatController extends Controller
             ? $conversation->userTwo
             : $conversation->userOne;
 
+        $isAdminInboxConversation = $this->adminInboxService->isAdminInboxConversation($conversation);
+        $isReadOnlyForCurrentUser = $isAdminInboxConversation && !$this->adminInboxService->isInboxUserId($authId);
+
         return [
             'id' => $conversation->id,
             'listing_id' => $conversation->listing_id,
@@ -251,6 +277,9 @@ class ChatController extends Controller
             'created_at' => $conversation->created_at,
             'updated_at' => $conversation->updated_at,
             'unread_count' => isset($conversation->unread_count) ? (int) $conversation->unread_count : 0,
+            'is_admin_inbox' => $isAdminInboxConversation,
+            'is_read_only' => $isReadOnlyForCurrentUser,
+            'admin_contact_email' => $isAdminInboxConversation ? AdminInboxService::ADMIN_CONTACT_EMAIL : null,
             'user' => $otherUser ? [
                 'id' => $otherUser->id,
                 'name' => trim(($otherUser->first_name ?? '') . ' ' . ($otherUser->last_name ?? '')) ?: ($otherUser->username ?? null),

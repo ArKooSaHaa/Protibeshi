@@ -4,12 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use App\Models\PostReport;
+use App\Services\AdminInboxService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class AdminPostModerationController extends Controller
 {
+    private AdminInboxService $adminInboxService;
+
+    public function __construct(AdminInboxService $adminInboxService)
+    {
+        $this->adminInboxService = $adminInboxService;
+    }
+
     public function index()
     {
         $posts = Post::with(['user', 'reports.user'])
@@ -82,6 +91,18 @@ class AdminPostModerationController extends Controller
         $post->moderated_at = now();
         $post->save();
 
+        $notificationSent = false;
+        try {
+            $this->adminInboxService->sendPostDeletedNotice($post);
+            $notificationSent = true;
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to deliver post deletion inbox notice', [
+                'post_id' => $post->id,
+                'user_id' => $post->user_id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
         $post->refresh();
         $post->load(['user', 'reports.user']);
         $post->loadCount('reports');
@@ -90,6 +111,7 @@ class AdminPostModerationController extends Controller
             'success' => true,
             'message' => 'Post removed from public feed',
             'post' => $this->formatModerationPost($post),
+            'notification_sent' => $notificationSent,
         ], 200);
     }
 

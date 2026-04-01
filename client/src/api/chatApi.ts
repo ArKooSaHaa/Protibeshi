@@ -15,6 +15,9 @@ export type ChatConversation = {
   listing_id: number | null;
   last_message: string | null;
   unread_count: number;
+  is_admin_inbox?: boolean;
+  is_read_only?: boolean;
+  admin_contact_email?: string | null;
   created_at?: string;
   updated_at?: string;
   user: ChatUser | null;
