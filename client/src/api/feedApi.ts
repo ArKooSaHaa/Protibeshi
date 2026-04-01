@@ -239,6 +239,14 @@ export const getPosts = async (): Promise<FeedPost[]> => {
   return normalizePosts(response);
 };
 
+export const getMyPosts = async (): Promise<FeedPost[]> => {
+  const response = await request<{ posts?: FeedPost[] }>('/account/posts', {
+    protected: true,
+  });
+
+  return normalizePosts(response);
+};
+
 export const getPost = async (id: number | string): Promise<FeedPost> => {
   const response = await request<{ post?: FeedPost; data?: { post?: FeedPost } }>(`/posts/${id}`);
   return response.post || response.data?.post || ({} as FeedPost);

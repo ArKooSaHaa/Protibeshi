@@ -85,6 +85,35 @@ class PostController extends Controller
         ], 200);
     }
 
+    public function myPosts(Request $request)
+    {
+        $authId = (int) Auth::id();
+
+        $posts = Post::with('user')
+            ->where('user_id', $authId)
+            ->where('is_active', true)
+            ->latest()
+            ->paginate(30);
+
+        $formattedPosts = array_map(
+            fn (Post $post) => $this->formatPost($post),
+            $posts->items()
+        );
+
+        return response()->json([
+            'success' => true,
+            'posts' => $formattedPosts,
+            'pagination' => [
+                'current_page' => $posts->currentPage(),
+                'last_page' => $posts->lastPage(),
+                'per_page' => $posts->perPage(),
+                'total' => $posts->total(),
+                'from' => $posts->firstItem(),
+                'to' => $posts->lastItem(),
+            ],
+        ], 200);
+    }
+
     public function show($id)
     {
         $post = Post::with(['user', 'comments.user'])

@@ -645,6 +645,7 @@ export const AccountPage = () => {
               : posts.map((post, index) => {
                   const meta = tabMeta[post.tab];
                   const Icon = meta.icon;
+                  const isPendingModeration = post.isPendingModeration === true;
 
                   return (
                     <motion.article
@@ -656,10 +657,11 @@ export const AccountPage = () => {
                       className={cn(
                         'group relative overflow-hidden rounded-[28px] border border-slate-200/80 bg-linear-to-br p-5 shadow-[0_18px_45px_rgba(15,23,42,0.05)] transition-shadow hover:shadow-[0_24px_60px_rgba(15,23,42,0.08)]',
                         meta.accent,
+                        isPendingModeration && 'ring-1 ring-amber-300/70',
                       )}
                     >
                       <div className="absolute inset-x-0 top-0 h-28 bg-white/35" />
-                      <div className="relative z-10 flex h-full flex-col gap-5">
+                      <div className={cn('relative z-10 flex h-full flex-col gap-5', isPendingModeration && 'blur-[1.4px]')}>
                         <div className="flex items-start justify-between gap-3">
                           <div className="space-y-3">
                             <div className="flex flex-wrap items-center gap-2">
@@ -699,6 +701,14 @@ export const AccountPage = () => {
                           <MiniActionButton icon={Trash2} label="Delete" destructive onClick={() => setDeleteTarget(post)} />
                         </div>
                       </div>
+
+                      {isPendingModeration ? (
+                        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+                          <span className="rounded-full border border-amber-300 bg-amber-100/95 px-5 py-2 text-xs font-semibold uppercase tracking-[0.26em] text-amber-800 shadow-sm">
+                            Pending
+                          </span>
+                        </div>
+                      ) : null}
                     </motion.article>
                   );
                 })}

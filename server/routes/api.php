@@ -75,6 +75,7 @@ Route::middleware(['auth:api'])->group(function () {
     Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
 
     Route::get('/account/profile', [AccountController::class, 'show']);
+    Route::get('/account/posts', [PostController::class, 'myPosts']);
     Route::put('/account/profile', [AccountController::class, 'update']);
     Route::post('/account/change-password', [AccountController::class, 'changePassword']);
     Route::delete('/account', [AccountController::class, 'deleteAccount']);

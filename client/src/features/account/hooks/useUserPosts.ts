@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { getPosts, type FeedPost } from '@/api/feedApi';
+import { getMyPosts, type FeedPost } from '@/api/feedApi';
 import { getListings } from '@/services/listingService';
 import { getRentListings } from '@/services/rentService';
 import { getServices } from '@/services/serviceService';
@@ -55,6 +55,7 @@ export interface UserPost {
   priceRange?: string;
   priority?: 'low' | 'medium' | 'high';
   reliefType?: ReliefType;
+  isPendingModeration?: boolean;
 }
 
 interface FeedSummary {
@@ -211,7 +212,7 @@ export const useUserPosts = (): UserPostsResult => {
     setIsLoadingPosts(true);
 
     const [feedResult, listingsResult, rentResult, servicesResult, complaintsResult] = await Promise.allSettled([
-      getPosts(),
+      getMyPosts(),
       getListings(),
       getRentListings(),
       getServices(),
@@ -225,6 +226,8 @@ export const useUserPosts = (): UserPostsResult => {
 
       ownFeed.forEach((post) => {
         const isRelief = looksLikeReliefPost(post);
+        const moderationStatus = String(post.moderation_status || 'verified').toLowerCase();
+        const isPendingModeration = moderationStatus === 'pending';
 
         mapped.push({
           id: `feed-${post.id}`,
@@ -234,8 +237,9 @@ export const useUserPosts = (): UserPostsResult => {
           description: post.short_description || post.content || '',
           datePosted: formatDatePosted(post.created_at),
           location: post.location || 'Not specified',
-          status: isRelief ? 'open' : 'active',
+          status: isPendingModeration ? 'pending' : (isRelief ? 'open' : 'active'),
           reliefType: isRelief ? 'request' : undefined,
+          isPendingModeration,
         });
       });
     }
