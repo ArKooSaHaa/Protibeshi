@@ -32,7 +32,6 @@ export interface AdminFeedPost {
   report_count: number;
   is_deleted: boolean;
   reports: PostReport[];
-  admin_note: string;
   pinned: boolean;
 }
 

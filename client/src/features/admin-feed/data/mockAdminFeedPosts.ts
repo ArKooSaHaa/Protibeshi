@@ -16,7 +16,6 @@ export const mockAdminFeedPosts: AdminFeedPost[] = [
     report_count: 0,
     is_deleted: false,
     reports: [],
-    admin_note: '',
     pinned: false,
   },
   {
@@ -34,7 +33,6 @@ export const mockAdminFeedPosts: AdminFeedPost[] = [
     report_count: 0,
     is_deleted: false,
     reports: [],
-    admin_note: 'Useful civic update. Keep pinned through this week.',
     pinned: true,
   },
   {
@@ -81,7 +79,6 @@ export const mockAdminFeedPosts: AdminFeedPost[] = [
         details: 'Similar warning already exists in safety channel.',
       },
     ],
-    admin_note: '',
     pinned: false,
   },
   {
@@ -99,7 +96,6 @@ export const mockAdminFeedPosts: AdminFeedPost[] = [
     report_count: 0,
     is_deleted: false,
     reports: [],
-    admin_note: '',
     pinned: false,
   },
   {
@@ -117,7 +113,6 @@ export const mockAdminFeedPosts: AdminFeedPost[] = [
     report_count: 0,
     is_deleted: false,
     reports: [],
-    admin_note: '',
     pinned: false,
   },
   {
@@ -150,7 +145,6 @@ export const mockAdminFeedPosts: AdminFeedPost[] = [
         details: 'Needs source such as photo or local authority notice.',
       },
     ],
-    admin_note: 'Check with traffic desk before publishing widely.',
     pinned: false,
   },
   {
@@ -168,7 +162,6 @@ export const mockAdminFeedPosts: AdminFeedPost[] = [
     report_count: 0,
     is_deleted: false,
     reports: [],
-    admin_note: '',
     pinned: false,
   },
   {
@@ -186,7 +179,6 @@ export const mockAdminFeedPosts: AdminFeedPost[] = [
     report_count: 0,
     is_deleted: false,
     reports: [],
-    admin_note: '',
     pinned: false,
   },
   {
@@ -204,7 +196,6 @@ export const mockAdminFeedPosts: AdminFeedPost[] = [
     report_count: 0,
     is_deleted: false,
     reports: [],
-    admin_note: '',
     pinned: false,
   },
   {
@@ -244,7 +235,6 @@ export const mockAdminFeedPosts: AdminFeedPost[] = [
         details: 'Title framing may be too alarming for uncertain context.',
       },
     ],
-    admin_note: '',
     pinned: true,
   },
   {
@@ -262,7 +252,6 @@ export const mockAdminFeedPosts: AdminFeedPost[] = [
     report_count: 0,
     is_deleted: true,
     reports: [],
-    admin_note: 'Archived by moderator after spam check.',
     pinned: false,
   },
   {
@@ -280,7 +269,6 @@ export const mockAdminFeedPosts: AdminFeedPost[] = [
     report_count: 0,
     is_deleted: false,
     reports: [],
-    admin_note: '',
     pinned: false,
   },
 ];

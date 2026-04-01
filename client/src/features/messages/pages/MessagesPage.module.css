@@ -260,6 +260,17 @@
   gap: 12px;
 }
 
+.readOnlyNotice {
+  margin: 0 18px 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #f9d7a8;
+  background: #fff7eb;
+  color: #8a4b08;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 .messageRow {
   display: flex;
 }

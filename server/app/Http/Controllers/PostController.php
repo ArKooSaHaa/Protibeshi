@@ -42,14 +42,19 @@ class PostController extends Controller
             'distance' => $validated['distance'] ?? null,
             'is_active' => true,
             'is_pinned' => false,
+            'moderation_status' => 'pending',
+            'moderated_by_admin_id' => null,
+            'moderated_at' => null,
+            'moderation_note' => null,
         ]);
 
         $post->load('user');
 
         return response()->json([
             'success' => true,
-            'message' => 'Post created successfully',
+            'message' => 'Post submitted for admin verification',
             'post' => $this->formatPost($post),
+            'requires_verification' => true,
         ], 201);
     }
 
@@ -57,8 +62,38 @@ class PostController extends Controller
     {
         $posts = Post::with('user')
             ->where('is_active', true)
+            ->where('moderation_status', 'verified')
             ->latest()
             ->paginate(10);
+
+        $formattedPosts = array_map(
+            fn (Post $post) => $this->formatPost($post),
+            $posts->items()
+        );
+
+        return response()->json([
+            'success' => true,
+            'posts' => $formattedPosts,
+            'pagination' => [
+                'current_page' => $posts->currentPage(),
+                'last_page' => $posts->lastPage(),
+                'per_page' => $posts->perPage(),
+                'total' => $posts->total(),
+                'from' => $posts->firstItem(),
+                'to' => $posts->lastItem(),
+            ],
+        ], 200);
+    }
+
+    public function myPosts(Request $request)
+    {
+        $authId = (int) Auth::id();
+
+        $posts = Post::with('user')
+            ->where('user_id', $authId)
+            ->where('is_active', true)
+            ->latest()
+            ->paginate(30);
 
         $formattedPosts = array_map(
             fn (Post $post) => $this->formatPost($post),
@@ -85,7 +120,7 @@ class PostController extends Controller
             ->withCount(['likes as likes_relation_count'])
             ->find($id);
 
-        if (!$post || !$post->is_active) {
+        if (!$post || !$post->is_active || $post->moderation_status !== 'verified') {
             return response()->json([
                 'success' => false,
                 'message' => 'Post not found',
@@ -162,6 +197,7 @@ class PostController extends Controller
             'shares_count' => (int) $post->shares_count,
             'is_active' => (bool) $post->is_active,
             'is_pinned' => (bool) $post->is_pinned,
+            'moderation_status' => (string) $post->moderation_status,
             'location' => $post->location,
             'distance' => $post->distance,
             'created_at' => $post->created_at,

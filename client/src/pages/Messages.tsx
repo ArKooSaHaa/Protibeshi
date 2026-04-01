@@ -14,6 +14,8 @@ import { ROUTES } from '@/config/routes.config';
 import { getEcho } from '@/lib/echo';
 import styles from '@/features/messages/pages/MessagesPage.module.css';
 
+const ADMIN_INBOX_FALLBACK_USERNAME = 'admin_inbox_system';
+
 const extractStoredUserId = (): number | null => {
   if (typeof window === 'undefined') {
     return null;
@@ -99,6 +101,27 @@ export const Messages = () => {
     () => conversations.find((conversation) => conversation.id === activeConversationId) || null,
     [conversations, activeConversationId],
   );
+
+  const isAdminInboxConversation = useMemo(() => {
+    if (!activeConversation) {
+      return false;
+    }
+
+    if (activeConversation.is_admin_inbox || activeConversation.is_read_only) {
+      return true;
+    }
+
+    return activeConversation.user?.username === ADMIN_INBOX_FALLBACK_USERNAME;
+  }, [activeConversation]);
+
+  const adminInboxReadOnlyMessage = useMemo(() => {
+    if (!isAdminInboxConversation) {
+      return null;
+    }
+
+    const contactEmail = activeConversation?.admin_contact_email || 'admin@gmail.com';
+    return `This inbox is managed by admin and is read-only. Contact on ${contactEmail}.`;
+  }, [activeConversation?.admin_contact_email, isAdminInboxConversation]);
 
   const loadConversationList = async () => {
     try {
@@ -276,6 +299,11 @@ export const Messages = () => {
       return;
     }
 
+    if (isAdminInboxConversation) {
+      setError(adminInboxReadOnlyMessage || 'This admin inbox is read-only.');
+      return;
+    }
+
     const text = draft.trim();
     if (!text) {
       return;
@@ -347,6 +375,8 @@ export const Messages = () => {
           currentUserId={currentUserId}
           draft={draft}
           isSending={isSending}
+          isReadOnly={isAdminInboxConversation}
+          readOnlyMessage={adminInboxReadOnlyMessage}
           onDraftChange={setDraft}
           onSend={handleSend}
           bottomAnchorRef={bottomAnchorRef}

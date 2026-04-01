@@ -130,7 +130,6 @@ export const AdminFeedDashboardPage = () => {
                       onOpenReports={dashboard.openReportModal}
                       onOpenFullPost={dashboard.openFullPostModal}
                       onTogglePinned={dashboard.togglePinned}
-                      onUpdateNote={dashboard.updateAdminNote}
                     />
                   </motion.div>
                 ))}

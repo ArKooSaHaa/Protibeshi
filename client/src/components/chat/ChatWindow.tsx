@@ -11,6 +11,8 @@ type ChatWindowProps = {
   currentUserId: number | null;
   draft: string;
   isSending: boolean;
+  isReadOnly?: boolean;
+  readOnlyMessage?: string | null;
   emptyLabel?: string;
   onDraftChange: (value: string) => void;
   onSend: () => void;
@@ -40,6 +42,8 @@ export const ChatWindow = ({
   currentUserId,
   draft,
   isSending,
+  isReadOnly = false,
+  readOnlyMessage = null,
   emptyLabel = 'Select a conversation to start chatting',
   onDraftChange,
   onSend,
@@ -101,13 +105,21 @@ export const ChatWindow = ({
         <div ref={bottomAnchorRef} />
       </div>
 
-      <MessageInput
-        value={draft}
-        onChange={onDraftChange}
-        onSend={onSend}
-        isSending={isSending}
-        disabled={!activeConversation}
-      />
+      {isReadOnly ? (
+        <div className={styles.readOnlyNotice}>
+          {readOnlyMessage || 'This conversation is read-only.'}
+        </div>
+      ) : null}
+
+      {!isReadOnly ? (
+        <MessageInput
+          value={draft}
+          onChange={onDraftChange}
+          onSend={onSend}
+          isSending={isSending}
+          disabled={!activeConversation}
+        />
+      ) : null}
     </article>
   );
 };

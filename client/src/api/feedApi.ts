@@ -25,6 +25,7 @@ export type FeedPost = {
   likes_count: number;
   comments_count: number;
   shares_count?: number;
+  moderation_status?: 'pending' | 'verified' | 'reported';
   location: string | null;
   distance: number | null;
   created_at: string;
@@ -235,6 +236,14 @@ export const resolvePostImageUrl = (imagePath: string | null | undefined): strin
 
 export const getPosts = async (): Promise<FeedPost[]> => {
   const response = await request<{ posts?: FeedPost[] }>('/posts');
+  return normalizePosts(response);
+};
+
+export const getMyPosts = async (): Promise<FeedPost[]> => {
+  const response = await request<{ posts?: FeedPost[] }>('/account/posts', {
+    protected: true,
+  });
+
   return normalizePosts(response);
 };
 

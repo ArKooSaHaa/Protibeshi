@@ -14,7 +14,7 @@ class PostLikeController extends Controller
         $userId = (int) Auth::id();
         $post = Post::find($id);
 
-        if (!$post || !$post->is_active) {
+        if (!$post || !$post->is_active || $post->moderation_status !== 'verified') {
             return response()->json([
                 'success' => false,
                 'message' => 'Post not found',

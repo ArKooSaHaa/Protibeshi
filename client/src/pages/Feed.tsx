@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, Plus } from 'lucide-react';
 import {
   FeedApiError,
@@ -93,10 +93,11 @@ export const Feed = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [creatingPost, setCreatingPost] = useState(false);
   const [createPostError, setCreatePostError] = useState<string | null>(null);
+  const [createPostNotice, setCreatePostNotice] = useState<string | null>(null);
   const [composerImageFailed, setComposerImageFailed] = useState(false);
   const [currentProfile, setCurrentProfile] = useState<CurrentAccountProfile | null>(null);
 
-  const getStringAtPath = (source: Record<string, unknown>, path: string) => {
+  const getStringAtPath = useCallback((source: Record<string, unknown>, path: string) => {
     const segments = path.split('.');
     let current: unknown = source;
 
@@ -108,9 +109,9 @@ export const Feed = () => {
     }
 
     return typeof current === 'string' && current.trim() ? current.trim() : null;
-  };
+  }, []);
 
-  const resolveUserImageUrl = (rawPath: string | null | undefined) => {
+  const resolveUserImageUrl = useCallback((rawPath: string | null | undefined) => {
     if (!rawPath) {
       return null;
     }
@@ -136,9 +137,9 @@ export const Feed = () => {
     }
 
     return `${baseUrl}/storage/${normalizedPath}`;
-  };
+  }, []);
 
-  const extractUserPhoto = (source: Record<string, unknown> | null | undefined) => {
+  const extractUserPhoto = useCallback((source: Record<string, unknown> | null | undefined) => {
     if (!source) {
       return null;
     }
@@ -167,7 +168,7 @@ export const Feed = () => {
     }
 
     return null;
-  };
+  }, [getStringAtPath, resolveUserImageUrl]);
 
   const getLocalUser = () => {
     if (typeof window === 'undefined') {
@@ -213,7 +214,7 @@ export const Feed = () => {
 
     const fromFeed = posts.find((post) => post.user?.name)?.user?.name;
     return fromFeed || 'You';
-  }, [currentProfile?.name, localUser, posts]);
+  }, [currentProfile?.name, getStringAtPath, localUser, posts]);
 
   const composerPhoto = useMemo(() => {
     if (currentProfile?.avatarUrl) {
@@ -229,7 +230,7 @@ export const Feed = () => {
     }
 
     return null;
-  }, [currentProfile?.avatarUrl, localUser]);
+  }, [currentProfile?.avatarUrl, extractUserPhoto, localUser, resolveUserImageUrl]);
 
   const loadPosts = async () => {
     setLoading(true);
@@ -446,6 +447,7 @@ export const Feed = () => {
   const handleCreatePost = async (payload: CreatePostPayload): Promise<boolean> => {
     setCreatingPost(true);
     setCreatePostError(null);
+    setCreatePostNotice(null);
 
     const formData = new FormData();
     formData.append('title', payload.title);
@@ -466,10 +468,17 @@ export const Feed = () => {
 
     try {
       const createdPost = await createPost(formData);
-      const safeCreatedPost = sanitizePosts([createdPost]);
-      if (safeCreatedPost.length > 0) {
-        setPosts((previous) => sortByRecent([{ ...safeCreatedPost[0], liked: false, saved: false }, ...previous]));
+      const moderationStatus = createdPost.moderation_status || 'verified';
+
+      if (moderationStatus === 'verified') {
+        const safeCreatedPost = sanitizePosts([createdPost]);
+        if (safeCreatedPost.length > 0) {
+          setPosts((previous) => sortByRecent([{ ...safeCreatedPost[0], liked: false, saved: false }, ...previous]));
+        }
+      } else {
+        setCreatePostNotice('Post submitted for admin verification. It will appear in feed after approval.');
       }
+
       setCreateModalOpen(false);
       return true;
     } catch (requestError) {
@@ -512,6 +521,8 @@ export const Feed = () => {
         ) : null}
 
         {!loading && error ? <p className={styles.errorBanner}>{error}</p> : null}
+
+        {!loading && !error && createPostNotice ? <p className={styles.successBanner}>{createPostNotice}</p> : null}
 
         {!loading && posts.length === 0 ? (
           <div className={styles.emptyState}>No posts yet in your neighborhood</div>
