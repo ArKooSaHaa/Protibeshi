@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { fetchAdminFeedPosts } from '../services/adminFeedService';
+import {
+  deleteAdminFeedPost,
+  fetchAdminFeedPosts,
+  verifyAdminFeedPost,
+} from '../services/adminFeedService';
 import type {
   AdminActivityItem,
   AdminDateFilter,
@@ -129,8 +133,9 @@ export const useAdminFeedDashboard = () => {
         setDeleteTargetIds([]);
         setLastSyncedAt(new Date().toISOString());
         appendActivity(`Loaded ${response.length} posts into moderation queue.`, 'info');
-      } catch {
-        setLoadingError('Could not load feed posts. Please retry.');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Could not load feed posts. Please retry.';
+        setLoadingError(message);
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
@@ -286,27 +291,33 @@ export const useAdminFeedDashboard = () => {
   }, [loadMorePosts, visiblePosts.length]);
 
   const verifyPost = useCallback(
-    (postId: string) => {
-      setPosts((previous) =>
-        previous.map((post) => {
-          if (post.id !== postId) {
-            return post;
-          }
+    async (postId: string) => {
+      const currentPost = posts.find((post) => post.id === postId);
 
-          return {
-            ...post,
-            status: 'verified',
-            report_count: 0,
-            reports: [],
-          };
-        }),
-      );
+      try {
+        const updatedPost = await verifyAdminFeedPost(postId, currentPost?.admin_note);
 
-      pushToast('Post Verified', 'success');
-      appendActivity(`Verified post ${postId}.`, 'success');
-      setLastSyncedAt(new Date().toISOString());
+        setPosts((previous) =>
+          previous.map((post) => {
+            if (post.id !== postId) {
+              return post;
+            }
+
+            return updatedPost;
+          }),
+        );
+
+        pushToast('Post Verified', 'success');
+        appendActivity(`Verified post ${postId}.`, 'success');
+        setLastSyncedAt(new Date().toISOString());
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Could not verify post.';
+        pushToast('Verification failed', 'danger');
+        appendActivity(`Verification failed for post ${postId}.`, 'danger');
+        setLoadingError(message);
+      }
     },
-    [appendActivity, pushToast],
+    [appendActivity, posts, pushToast],
   );
 
   const toggleSelectPost = useCallback((postId: string) => {
@@ -355,47 +366,50 @@ export const useAdminFeedDashboard = () => {
     setDeleteTargetIds([]);
   }, []);
 
-  const confirmDelete = useCallback(() => {
+  const confirmDelete = useCallback(async () => {
     if (deleteTargetIds.length === 0) {
       return;
     }
 
-    setPosts((previous) =>
-      previous.map((post) => {
-        if (!deleteTargetIds.includes(post.id)) {
-          return post;
-        }
+    try {
+      const deletedPosts = await Promise.all(deleteTargetIds.map((postId) => deleteAdminFeedPost(postId)));
+      const deletedMap = new Map(deletedPosts.map((post) => [post.id, post]));
 
-        return {
-          ...post,
-          is_deleted: true,
-          pinned: false,
-        };
-      }),
-    );
+      setPosts((previous) =>
+        previous.map((post) => {
+          const deletedPost = deletedMap.get(post.id);
+          return deletedPost || post;
+        }),
+      );
 
-    setSelectedPostIds((previous) => previous.filter((id) => !deleteTargetIds.includes(id)));
+      setSelectedPostIds((previous) => previous.filter((id) => !deleteTargetIds.includes(id)));
 
-    if (reportModalPostId && deleteTargetIds.includes(reportModalPostId)) {
-      setReportModalPostId(null);
+      if (reportModalPostId && deleteTargetIds.includes(reportModalPostId)) {
+        setReportModalPostId(null);
+      }
+
+      if (fullPostModalPostId && deleteTargetIds.includes(fullPostModalPostId)) {
+        setFullPostModalPostId(null);
+      }
+
+      const deletedCount = deleteTargetIds.length;
+
+      pushToast('Post Deleted', 'danger');
+      appendActivity(
+        deletedCount === 1
+          ? `Deleted post ${deleteTargetIds[0]}.`
+          : `Deleted ${deletedCount} posts via bulk moderation.`,
+        'danger',
+      );
+
+      setDeleteTargetIds([]);
+      setLastSyncedAt(new Date().toISOString());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not delete posts.';
+      pushToast('Delete failed', 'danger');
+      appendActivity('Delete action failed for selected posts.', 'danger');
+      setLoadingError(message);
     }
-
-    if (fullPostModalPostId && deleteTargetIds.includes(fullPostModalPostId)) {
-      setFullPostModalPostId(null);
-    }
-
-    const deletedCount = deleteTargetIds.length;
-
-    pushToast('Post Deleted', 'danger');
-    appendActivity(
-      deletedCount === 1
-        ? `Deleted post ${deleteTargetIds[0]}.`
-        : `Deleted ${deletedCount} posts via bulk moderation.`,
-      'danger',
-    );
-
-    setDeleteTargetIds([]);
-    setLastSyncedAt(new Date().toISOString());
   }, [appendActivity, deleteTargetIds, fullPostModalPostId, pushToast, reportModalPostId]);
 
   const openReportModal = useCallback((postId: string) => {
@@ -433,27 +447,11 @@ export const useAdminFeedDashboard = () => {
 
   const markAsSafe = useCallback(
     (postId: string) => {
-      setPosts((previous) =>
-        previous.map((post) => {
-          if (post.id !== postId) {
-            return post;
-          }
-
-          return {
-            ...post,
-            status: 'verified',
-            report_count: 0,
-            reports: [],
-          };
-        }),
-      );
-
+      void verifyPost(postId);
       setReportModalPostId(null);
-      pushToast('Post Verified', 'success');
-      appendActivity(`Marked post ${postId} as safe.`, 'success');
-      setLastSyncedAt(new Date().toISOString());
+      appendActivity(`Requested verification for post ${postId}.`, 'info');
     },
-    [appendActivity, pushToast],
+    [appendActivity, verifyPost],
   );
 
   const deleteFromReportModal = useCallback((postId: string) => {
@@ -513,61 +511,41 @@ export const useAdminFeedDashboard = () => {
     );
   }, []);
 
-  const bulkVerify = useCallback(() => {
+  const bulkVerify = useCallback(async () => {
     if (selectedPostIds.length === 0) {
       return;
     }
 
-    const selectedIds = new Set(selectedPostIds);
+    try {
+      const noteMap = new Map(posts.map((post) => [post.id, post.admin_note]));
+      const verifiedPosts = await Promise.all(
+        selectedPostIds.map((postId) => verifyAdminFeedPost(postId, noteMap.get(postId))),
+      );
 
-    setPosts((previous) =>
-      previous.map((post) => {
-        if (!selectedIds.has(post.id) || post.is_deleted) {
-          return post;
-        }
+      const verifiedMap = new Map(verifiedPosts.map((post) => [post.id, post]));
 
-        return {
-          ...post,
-          status: 'verified',
-          report_count: 0,
-          reports: [],
-        };
-      }),
-    );
+      setPosts((previous) =>
+        previous.map((post) => {
+          const verifiedPost = verifiedMap.get(post.id);
+          return verifiedPost || post;
+        }),
+      );
 
-    appendActivity(`Bulk verified ${selectedPostIds.length} selected posts.`, 'success');
-    pushToast('Post Verified', 'success');
-    setSelectedPostIds([]);
-    setLastSyncedAt(new Date().toISOString());
-  }, [appendActivity, pushToast, selectedPostIds]);
+      appendActivity(`Bulk verified ${selectedPostIds.length} selected posts.`, 'success');
+      pushToast('Post Verified', 'success');
+      setSelectedPostIds([]);
+      setLastSyncedAt(new Date().toISOString());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not bulk verify posts.';
+      pushToast('Bulk verify failed', 'danger');
+      appendActivity('Bulk verification failed for selected posts.', 'danger');
+      setLoadingError(message);
+    }
+  }, [appendActivity, posts, pushToast, selectedPostIds]);
 
   const bulkMarkSafe = useCallback(() => {
-    if (selectedPostIds.length === 0) {
-      return;
-    }
-
-    const selectedIds = new Set(selectedPostIds);
-
-    setPosts((previous) =>
-      previous.map((post) => {
-        if (!selectedIds.has(post.id) || post.is_deleted) {
-          return post;
-        }
-
-        return {
-          ...post,
-          status: 'verified',
-          report_count: 0,
-          reports: [],
-        };
-      }),
-    );
-
-    appendActivity(`Marked ${selectedPostIds.length} posts as safe in bulk.`, 'success');
-    pushToast('Post Verified', 'success');
-    setSelectedPostIds([]);
-    setLastSyncedAt(new Date().toISOString());
-  }, [appendActivity, pushToast, selectedPostIds]);
+    void bulkVerify();
+  }, [bulkVerify]);
 
   const exportReports = useCallback(() => {
     const reportedCount = posts.filter((post) => !post.is_deleted && post.status === 'reported').length;

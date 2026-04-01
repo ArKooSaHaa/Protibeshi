@@ -24,6 +24,16 @@ class Post extends Model
         'distance',
         'is_active',
         'is_pinned',
+        'moderation_status',
+        'moderated_by_admin_id',
+        'moderated_at',
+        'moderation_note',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+        'is_pinned' => 'boolean',
+        'moderated_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
@@ -39,5 +49,15 @@ class Post extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(PostComment::class);
+    }
+
+    public function reports(): HasMany
+    {
+        return $this->hasMany(PostReport::class);
+    }
+
+    public function moderatedByAdmin(): BelongsTo
+    {
+        return $this->belongsTo(Admin::class, 'moderated_by_admin_id');
     }
 }

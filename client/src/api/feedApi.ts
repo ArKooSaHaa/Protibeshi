@@ -25,6 +25,7 @@ export type FeedPost = {
   likes_count: number;
   comments_count: number;
   shares_count?: number;
+  moderation_status?: 'pending' | 'verified' | 'reported';
   location: string | null;
   distance: number | null;
   created_at: string;

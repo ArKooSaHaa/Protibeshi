@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AdminAuthController;
+use App\Http\Controllers\AdminPostModerationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ComplaintController;
@@ -27,6 +28,12 @@ use App\Http\Controllers\SessionController;
 Route::post('/signup', [AuthController::class, 'signup']);
 Route::post('/signin', [AuthController::class, 'signin']);
 Route::post('/admin/signin', [AdminAuthController::class, 'signin']);
+
+Route::middleware(['auth:admin_api'])->prefix('admin')->group(function () {
+    Route::get('/posts', [AdminPostModerationController::class, 'index']);
+    Route::post('/posts/{id}/verify', [AdminPostModerationController::class, 'verify']);
+    Route::delete('/posts/{id}', [AdminPostModerationController::class, 'destroy']);
+});
 
 Route::get('/listings', [ListingController::class, 'index']);
 Route::get('/rent-listings', [RentListingController::class, 'index']);
