@@ -17,6 +17,16 @@ import { useAuthStore } from '@/features/auth/store/authStore';
 
 const getPostAuthRoute = (isAdmin: boolean) => (isAdmin ? ROUTES.ADMIN_FEED : ROUTES.HOME);
 
+const AdminFeedRoute = ({ children }: { children: ReactElement }) => {
+  const role = useAuthStore((state) => state.role);
+
+  if (role === 'admin') {
+    return <Navigate to={ROUTES.ADMIN_FEED} replace />;
+  }
+
+  return children;
+};
+
 const AdminWorkInProgressRoute = ({ children }: { children: ReactElement }) => {
   const role = useAuthStore((state) => state.role);
 
@@ -64,7 +74,7 @@ const ProtectedRootLayout = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   if (!isAuthenticated) {
-    return <Navigate to={ROUTES.ADMIN_AUTH} replace />;
+    return <Navigate to={ROUTES.LOGIN} replace />;
   }
 
   return <RootLayout />;
@@ -91,8 +101,8 @@ const routes: RouteObject[] = [
     path: ROUTES.HOME,
     element: <ProtectedRootLayout />,
     children: [
-      { index: true, element: <AdminWorkInProgressRoute><FeedPage /></AdminWorkInProgressRoute> },
-      { path: ROUTES.FEED, element: <AdminWorkInProgressRoute><FeedPage /></AdminWorkInProgressRoute> },
+      { index: true, element: <AdminFeedRoute><FeedPage /></AdminFeedRoute> },
+      { path: ROUTES.FEED, element: <AdminFeedRoute><FeedPage /></AdminFeedRoute> },
       { path: ROUTES.ADMIN_FEED, element: <AdminFeedDashboardPage /> },
       { path: ROUTES.MESSAGES, element: <AdminWorkInProgressRoute><MessagesPage /></AdminWorkInProgressRoute> },
       { path: ROUTES.MARKETPLACE, element: <AdminWorkInProgressRoute><MarketplacePage /></AdminWorkInProgressRoute> },

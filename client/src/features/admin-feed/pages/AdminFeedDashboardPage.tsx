@@ -87,19 +87,8 @@ export const AdminFeedDashboardPage = () => {
       <AdminStatsCards stats={dashboard.stats} />
 
       <AdminFilterToolbar
-        searchQuery={dashboard.searchQuery}
         activeTab={dashboard.activeTab}
-        dateFilter={dashboard.dateFilter}
-        locationFilter={dashboard.locationFilter}
-        locationOptions={dashboard.locationOptions}
-        filteredCount={dashboard.filteredPosts.length}
-        allVisibleSelected={dashboard.allVisibleSelected}
-        onSearchChange={dashboard.setSearchQuery}
         onTabChange={dashboard.setActiveTab}
-        onDateFilterChange={dashboard.setDateFilter}
-        onLocationFilterChange={dashboard.setLocationFilter}
-        onToggleSelectVisible={dashboard.toggleSelectVisiblePosts}
-        onExportReports={dashboard.exportReports}
       />
 
       <AnimatePresence>

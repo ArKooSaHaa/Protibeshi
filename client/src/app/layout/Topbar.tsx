@@ -22,7 +22,6 @@ const initialUser: TopbarUser = {
 export const Topbar = () => {
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
-  const isAdmin = useAuthStore((state) => state.role === 'admin');
   const [user, setUser] = useState<TopbarUser>(initialUser);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement | null>(null);
@@ -111,7 +110,7 @@ export const Topbar = () => {
   const handleSignOut = () => {
     setIsSettingsOpen(false);
     logout();
-    navigate(isAdmin ? ROUTES.ADMIN_AUTH : ROUTES.LOGIN, { replace: true });
+    navigate(ROUTES.LOGIN, { replace: true });
   };
 
   return (

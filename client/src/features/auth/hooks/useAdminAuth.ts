@@ -16,8 +16,6 @@ export type UseAdminAuthResult = {
   errors: AdminAuthFieldErrors;
   isPasswordVisible: boolean;
   isValid: boolean;
-  adminEmail: string;
-  adminPassword: string;
   status: ReturnType<typeof useAuthStore.getState>['status'];
   isSubmitting: boolean;
   globalError: string | null;
@@ -25,15 +23,11 @@ export type UseAdminAuthResult = {
   onEmailChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onPasswordChange: (event: ChangeEvent<HTMLInputElement>) => void;
   togglePasswordVisibility: () => void;
-  fillAdminCredentials: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
 };
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PASSWORD_MIN_LENGTH = 8;
-
-const ADMIN_EMAIL = 'admin@gmail.com';
-const ADMIN_PASSWORD = 'Admin@123';
 
 type AdminSigninResponse = {
   status: string;
@@ -131,15 +125,6 @@ export const useAdminAuth = (): UseAdminAuthResult => {
     setIsPasswordVisible((previous) => !previous);
   }, []);
 
-  const fillAdminCredentials = useCallback(() => {
-    setValues({
-      email: ADMIN_EMAIL,
-      password: ADMIN_PASSWORD,
-    });
-    setErrors({});
-    startTyping();
-  }, [startTyping]);
-
   const isValid = Object.keys(validate(values)).length === 0;
 
   const onSubmit = useCallback(
@@ -226,8 +211,6 @@ export const useAdminAuth = (): UseAdminAuthResult => {
     errors,
     isPasswordVisible,
     isValid,
-    adminEmail: ADMIN_EMAIL,
-    adminPassword: ADMIN_PASSWORD,
     status,
     isSubmitting,
     globalError,
@@ -235,7 +218,6 @@ export const useAdminAuth = (): UseAdminAuthResult => {
     onEmailChange,
     onPasswordChange,
     togglePasswordVisibility,
-    fillAdminCredentials,
     onSubmit,
   };
 };

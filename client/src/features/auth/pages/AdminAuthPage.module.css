@@ -72,61 +72,6 @@
   color: #b7cadf;
 }
 
-.credentialsBox {
-  border: 1px solid rgba(73, 191, 255, 0.3);
-  background:
-    linear-gradient(135deg, rgba(73, 191, 255, 0.14), rgba(26, 188, 156, 0.08)),
-    rgba(10, 22, 40, 0.7);
-  border-radius: 0.85rem;
-  padding: 0.75rem;
-  margin-bottom: 0.95rem;
-}
-
-.credentialsTitle {
-  margin: 0;
-  color: #8ddcff;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.credentialRow {
-  margin: 0.46rem 0 0;
-  display: flex;
-  justify-content: space-between;
-  gap: 0.55rem;
-  color: #d6f1ff;
-  font-size: 0.86rem;
-}
-
-.credentialRow span {
-  color: #9eb8d0;
-}
-
-.credentialButton {
-  margin-top: 0.65rem;
-  width: 100%;
-  border: 1px solid rgba(26, 188, 156, 0.45);
-  border-radius: 0.62rem;
-  background: rgba(26, 188, 156, 0.16);
-  color: #d3fff3;
-  font-size: 0.83rem;
-  font-weight: 600;
-  padding: 0.5rem 0.62rem;
-  transition: background-color 170ms ease, border-color 170ms ease;
-}
-
-.credentialButton:hover:enabled {
-  background: rgba(26, 188, 156, 0.26);
-  border-color: rgba(26, 188, 156, 0.7);
-}
-
-.credentialButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 .form {
   display: grid;
   gap: 0.5rem;
@@ -274,18 +219,12 @@
     width: min(95vw, 520px);
     padding: 1rem;
   }
-
-  .credentialRow {
-    flex-direction: column;
-    align-items: flex-start;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .backgroundGlow,
   .submitButton,
-  .input,
-  .credentialButton {
+  .input {
     animation: none;
     transition: none;
   }

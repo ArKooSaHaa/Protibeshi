@@ -28,26 +28,6 @@ export const AdminAuthPage = () => {
           <p className={styles.subtitle}>Sign in with administrator credentials to continue to moderation controls.</p>
         </header>
 
-        <div className={styles.credentialsBox}>
-          <p className={styles.credentialsTitle}>Authorized Admin Credentials</p>
-          <p className={styles.credentialRow}>
-            <span>Email</span>
-            <strong>{adminAuth.adminEmail}</strong>
-          </p>
-          <p className={styles.credentialRow}>
-            <span>Password</span>
-            <strong>{adminAuth.adminPassword}</strong>
-          </p>
-          <button
-            type="button"
-            className={styles.credentialButton}
-            onClick={adminAuth.fillAdminCredentials}
-            disabled={adminAuth.isSubmitting}
-          >
-            Use Admin Credentials
-          </button>
-        </div>
-
         <form className={styles.form} onSubmit={adminAuth.onSubmit} noValidate>
           <label className={styles.label} htmlFor="admin-auth-email">
             Admin Email
