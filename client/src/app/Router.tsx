@@ -11,7 +11,7 @@ import { ComplaintsPage } from '@/features/complaints/pages/ComplaintsPage';
 import { ReliefPage } from '@/features/relief/pages/ReliefPage';
 import { AccountPage } from '@/features/account';
 import { AdminFeedDashboardPage } from '@/features/admin-feed';
-import { SignInPage, SignUpPage } from '@/features/auth';
+import { AdminAuthPage, SignInPage, SignUpPage } from '@/features/auth';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
 const PublicLoginRoute = () => {
@@ -34,11 +34,21 @@ const PublicSignUpRoute = () => {
   return <SignUpPage />;
 };
 
+const PublicAdminAuthRoute = () => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  if (isAuthenticated) {
+    return <Navigate to={ROUTES.ADMIN_FEED} replace />;
+  }
+
+  return <AdminAuthPage />;
+};
+
 const ProtectedRootLayout = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   if (!isAuthenticated) {
-    return <Navigate to={ROUTES.LOGIN} replace />;
+    return <Navigate to={ROUTES.ADMIN_AUTH} replace />;
   }
 
   return <RootLayout />;
@@ -56,6 +66,10 @@ const routes: RouteObject[] = [
   {
     path: ROUTES.SIGNUP,
     element: <PublicSignUpRoute />,
+  },
+  {
+    path: ROUTES.ADMIN_AUTH,
+    element: <PublicAdminAuthRoute />,
   },
   {
     path: ROUTES.HOME,
