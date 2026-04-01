@@ -5,7 +5,9 @@
 
 export const ROUTES = {
   HOME: '/',
+  ADMIN_AUTH: '/admin/auth',
   FEED: '/feed',
+  ADMIN_FEED: '/admin/feed',
   MESSAGES: '/messages',
   MARKETPLACE: '/marketplace',
   RENT: '/rent',

@@ -12,7 +12,7 @@ export const SignInPage = () => {
 
   useEffect(() => {
     if (signIn.status === 'redirect') {
-      navigate(ROUTES.ACCOUNT, { replace: true });
+      navigate(ROUTES.FEED, { replace: true });
     }
   }, [navigate, signIn.status]);
 

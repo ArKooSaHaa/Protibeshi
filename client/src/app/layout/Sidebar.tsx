@@ -6,6 +6,7 @@ import {
   Building,
   Wrench,
   AlertCircle,
+  ShieldCheck,
   Heart,
   MessageSquare,
   MapPin,
@@ -24,6 +25,7 @@ interface NavigationItem {
 
 const navigation: NavigationItem[] = [
   { id: 'feed', label: 'Feed', icon: Home, path: ROUTES.HOME },
+  { id: 'admin-feed', label: 'Admin Feed', icon: ShieldCheck, path: ROUTES.ADMIN_FEED },
   { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag, path: ROUTES.MARKETPLACE },
   { id: 'rent', label: 'Rent', icon: Building, path: ROUTES.RENT },
   { id: 'services', label: 'Services', icon: Wrench, path: ROUTES.SERVICES },

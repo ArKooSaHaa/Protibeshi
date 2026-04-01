@@ -1,60 +1,65 @@
-// src/features/auth/hooks/useSignIn.ts
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import axios from 'axios';
 import { ENV } from '@/config/env';
 import { useAuthStore } from '../store/authStore';
 
-type SignInResponse = {
-  status: string;
-  message: string;
-  token?: string;
-  user?: {
-    id: number;
-    email: string;
-  };
-};
-
-type SignInFormValues = {
+type AdminAuthValues = {
   email: string;
   password: string;
-  rememberMe: boolean;
 };
 
-type SignInFieldErrors = Partial<Record<'email' | 'password', string>>;
+type AdminAuthFieldErrors = Partial<Record<'email' | 'password', string>>;
 
-export type UseSignInResult = {
-  values: SignInFormValues;
-  errors: SignInFieldErrors;
+export type UseAdminAuthResult = {
+  values: AdminAuthValues;
+  errors: AdminAuthFieldErrors;
   isPasswordVisible: boolean;
   isValid: boolean;
   status: ReturnType<typeof useAuthStore.getState>['status'];
   isSubmitting: boolean;
-  submittedEmail: string | null;
   globalError: string | null;
+  submittedEmail: string | null;
   onEmailChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onPasswordChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  onRememberMeChange: (event: ChangeEvent<HTMLInputElement>) => void;
   togglePasswordVisibility: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
 };
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const PASSWORD_MIN_LENGTH = 6;
+const PASSWORD_MIN_LENGTH = 8;
 
-const sanitizeEmailInput = (value: string): string => {
-  return value.trim().toLowerCase();
+type AdminSigninResponse = {
+  status: string;
+  message: string;
+  token?: string;
+  admin?: {
+    id: number;
+    name: string;
+    email: string;
+  };
 };
 
-const sanitizePasswordInput = (value: string): string => {
-  return value.trim();
+const delay = (ms: number) => new Promise<void>((resolve) => {
+  window.setTimeout(resolve, ms);
+});
+
+const getAdminSigninUrl = () => {
+  if (window.location.port === '8000') {
+    return `${window.location.origin}/api/admin/signin`;
+  }
+
+  return `${ENV.API_BASE_URL}/api/admin/signin`;
 };
 
-const validate = (values: SignInFormValues): SignInFieldErrors => {
-  const nextErrors: SignInFieldErrors = {};
+const sanitizeEmailInput = (value: string): string => value.trim().toLowerCase();
+const sanitizePasswordInput = (value: string): string => value.trim();
+
+const validate = (values: AdminAuthValues): AdminAuthFieldErrors => {
+  const nextErrors: AdminAuthFieldErrors = {};
 
   if (!EMAIL_REGEX.test(values.email)) {
-    nextErrors.email = 'Enter a valid email address.';
+    nextErrors.email = 'Enter a valid admin email.';
   }
 
   if (values.password.length < PASSWORD_MIN_LENGTH) {
@@ -64,27 +69,18 @@ const validate = (values: SignInFormValues): SignInFieldErrors => {
   return nextErrors;
 };
 
-const getSigninUrl = () => {
-  if (window.location.port === '8000') {
-    return `${window.location.origin}/api/signin`;
-  }
-
-  return `${ENV.API_BASE_URL}/api/signin`;
-};
-
-export const useSignIn = (): UseSignInResult => {
-  const [values, setValues] = useState<SignInFormValues>({
+export const useAdminAuth = (): UseAdminAuthResult => {
+  const [values, setValues] = useState<AdminAuthValues>({
     email: '',
     password: '',
-    rememberMe: false,
   });
-  const [errors, setErrors] = useState<SignInFieldErrors>({});
+  const [errors, setErrors] = useState<AdminAuthFieldErrors>({});
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   const status = useAuthStore((state) => state.status);
   const isSubmitting = useAuthStore((state) => state.isSubmitting);
-  const submittedEmail = useAuthStore((state) => state.submittedEmail);
   const globalError = useAuthStore((state) => state.errorMessage);
+  const submittedEmail = useAuthStore((state) => state.submittedEmail);
   const startTyping = useAuthStore((state) => state.startTyping);
   const startSubmit = useAuthStore((state) => state.startSubmit);
   const submitFailure = useAuthStore((state) => state.submitFailure);
@@ -125,14 +121,6 @@ export const useSignIn = (): UseSignInResult => {
     [startTyping],
   );
 
-  const onRememberMeChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      setValues((previous) => ({ ...previous, rememberMe: event.target.checked }));
-      startTyping();
-    },
-    [startTyping],
-  );
-
   const togglePasswordVisibility = useCallback(() => {
     setIsPasswordVisible((previous) => !previous);
   }, []);
@@ -150,19 +138,18 @@ export const useSignIn = (): UseSignInResult => {
       const nextErrors = validate(values);
       if (Object.keys(nextErrors).length > 0) {
         setErrors(nextErrors);
-        submitFailure('Please fix the highlighted fields.');
+        submitFailure('Please check your admin credentials.');
         return;
       }
 
       setErrors({});
       startSubmit();
 
+      await delay(200);
+
       try {
-        const signinUrl = getSigninUrl();
-
-        console.info('[Auth] Sending signin request', { url: signinUrl, email: values.email });
-
-        const response = await axios.post<SignInResponse>(signinUrl, {
+        const endpoint = getAdminSigninUrl();
+        const response = await axios.post<AdminSigninResponse>(endpoint, {
           email: values.email,
           password: values.password,
         });
@@ -170,27 +157,16 @@ export const useSignIn = (): UseSignInResult => {
         const token = response.data?.token;
 
         if (!token) {
-          submitFailure('Login succeeded but no token was returned by the server.');
+          submitFailure('Admin login succeeded but no token was returned.');
           return;
         }
 
-        axios.defaults.headers.common.Authorization = `Bearer ${token}`;
-        console.info('[Auth] Authorization header prepared from login token');
-
-        console.info('[Auth] Signin response received', {
-          status: response.status,
-          apiStatus: response.data?.status,
-          hasToken: Boolean(token),
-        });
-
-        submitSuccess(values.email, token, 'user');
+        submitSuccess(values.email, token, 'admin');
 
         redirectTimerRef.current = window.setTimeout(() => {
           startRedirect();
-        }, 650);
+        }, 380);
       } catch (error: unknown) {
-        console.error('[Auth] Signin request failed', error);
-
         if (axios.isAxiosError(error)) {
           const responseData = error.response?.data as {
             message?: string;
@@ -206,12 +182,12 @@ export const useSignIn = (): UseSignInResult => {
             : firstValidationError;
 
           if (error.response?.status === 401) {
-            submitFailure(responseData?.message || 'Invalid email or password');
+            submitFailure(responseData?.message || 'Invalid admin email or password.');
             return;
           }
 
           if (error.response?.status === 422) {
-            submitFailure(validationMessage || responseData?.message || 'Validation failed');
+            submitFailure(validationMessage || responseData?.message || 'Validation failed.');
             return;
           }
 
@@ -220,11 +196,11 @@ export const useSignIn = (): UseSignInResult => {
             return;
           }
 
-          submitFailure(responseData?.message || validationMessage || 'Unable to sign in right now. Please try again.');
+          submitFailure(responseData?.message || validationMessage || 'Unable to sign in right now.');
           return;
         }
 
-        submitFailure('Unable to sign in right now. Please try again.');
+        submitFailure('Unable to sign in right now.');
       }
     },
     [isSubmitting, startRedirect, startSubmit, submitFailure, submitSuccess, values],
@@ -237,11 +213,10 @@ export const useSignIn = (): UseSignInResult => {
     isValid,
     status,
     isSubmitting,
-    submittedEmail,
     globalError,
+    submittedEmail,
     onEmailChange,
     onPasswordChange,
-    onRememberMeChange,
     togglePasswordVisibility,
     onSubmit,
   };

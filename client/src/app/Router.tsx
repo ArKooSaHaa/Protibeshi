@@ -1,4 +1,5 @@
 //client/src/app/Router.tsx
+import type { ReactElement } from 'react';
 import { Navigate, createBrowserRouter, RouteObject } from 'react-router-dom';
 import { RootLayout } from './layout/RootLayout';
 import { ROUTES } from '@/config/routes.config';
@@ -10,14 +11,38 @@ import { ServicesPage } from '@/features/services/pages/ServicesPage';
 import { ComplaintsPage } from '@/features/complaints/pages/ComplaintsPage';
 import { ReliefPage } from '@/features/relief/pages/ReliefPage';
 import { AccountPage } from '@/features/account';
-import { SignInPage, SignUpPage } from '@/features/auth';
+import { AdminFeedDashboardPage, AdminUnderConstructionPage } from '@/features/admin-feed';
+import { AdminAuthPage, SignInPage, SignUpPage } from '@/features/auth';
 import { useAuthStore } from '@/features/auth/store/authStore';
+
+const getPostAuthRoute = (isAdmin: boolean) => (isAdmin ? ROUTES.ADMIN_FEED : ROUTES.HOME);
+
+const AdminFeedRoute = ({ children }: { children: ReactElement }) => {
+  const role = useAuthStore((state) => state.role);
+
+  if (role === 'admin') {
+    return <Navigate to={ROUTES.ADMIN_FEED} replace />;
+  }
+
+  return children;
+};
+
+const AdminWorkInProgressRoute = ({ children }: { children: ReactElement }) => {
+  const role = useAuthStore((state) => state.role);
+
+  if (role === 'admin') {
+    return <AdminUnderConstructionPage />;
+  }
+
+  return children;
+};
 
 const PublicLoginRoute = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isAdmin = useAuthStore((state) => state.role === 'admin');
 
   if (isAuthenticated) {
-    return <Navigate to={ROUTES.HOME} replace />;
+    return <Navigate to={getPostAuthRoute(isAdmin)} replace />;
   }
 
   return <SignInPage />;
@@ -25,12 +50,24 @@ const PublicLoginRoute = () => {
 
 const PublicSignUpRoute = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isAdmin = useAuthStore((state) => state.role === 'admin');
 
   if (isAuthenticated) {
-    return <Navigate to={ROUTES.FEED} replace />;
+    return <Navigate to={getPostAuthRoute(isAdmin)} replace />;
   }
 
   return <SignUpPage />;
+};
+
+const PublicAdminAuthRoute = () => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isAdmin = useAuthStore((state) => state.role === 'admin');
+
+  if (isAuthenticated) {
+    return <Navigate to={getPostAuthRoute(isAdmin)} replace />;
+  }
+
+  return <AdminAuthPage />;
 };
 
 const ProtectedRootLayout = () => {
@@ -57,18 +94,23 @@ const routes: RouteObject[] = [
     element: <PublicSignUpRoute />,
   },
   {
+    path: ROUTES.ADMIN_AUTH,
+    element: <PublicAdminAuthRoute />,
+  },
+  {
     path: ROUTES.HOME,
     element: <ProtectedRootLayout />,
     children: [
-      { index: true, element: <FeedPage /> },
-      { path: ROUTES.FEED, element: <FeedPage /> },
-      { path: ROUTES.MESSAGES, element: <MessagesPage /> },
-      { path: ROUTES.MARKETPLACE, element: <MarketplacePage /> },
-      { path: ROUTES.RENT, element: <RentPage /> },
-      { path: ROUTES.SERVICES, element: <ServicesPage /> },
-      { path: ROUTES.COMPLAINTS, element: <ComplaintsPage /> },
-      { path: ROUTES.RELIEF, element: <ReliefPage /> },
-      { path: ROUTES.ACCOUNT, element: <AccountPage /> },
+      { index: true, element: <AdminFeedRoute><FeedPage /></AdminFeedRoute> },
+      { path: ROUTES.FEED, element: <AdminFeedRoute><FeedPage /></AdminFeedRoute> },
+      { path: ROUTES.ADMIN_FEED, element: <AdminFeedDashboardPage /> },
+      { path: ROUTES.MESSAGES, element: <AdminWorkInProgressRoute><MessagesPage /></AdminWorkInProgressRoute> },
+      { path: ROUTES.MARKETPLACE, element: <AdminWorkInProgressRoute><MarketplacePage /></AdminWorkInProgressRoute> },
+      { path: ROUTES.RENT, element: <AdminWorkInProgressRoute><RentPage /></AdminWorkInProgressRoute> },
+      { path: ROUTES.SERVICES, element: <AdminWorkInProgressRoute><ServicesPage /></AdminWorkInProgressRoute> },
+      { path: ROUTES.COMPLAINTS, element: <AdminWorkInProgressRoute><ComplaintsPage /></AdminWorkInProgressRoute> },
+      { path: ROUTES.RELIEF, element: <AdminWorkInProgressRoute><ReliefPage /></AdminWorkInProgressRoute> },
+      { path: ROUTES.ACCOUNT, element: <AdminWorkInProgressRoute><AccountPage /></AdminWorkInProgressRoute> },
     ],
   },
 ];
