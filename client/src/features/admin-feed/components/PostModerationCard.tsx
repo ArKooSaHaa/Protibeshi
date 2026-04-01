@@ -22,7 +22,6 @@ interface PostModerationCardProps {
   onOpenReports: (postId: string) => void;
   onOpenFullPost: (postId: string) => void;
   onTogglePinned: (postId: string) => void;
-  onUpdateNote: (postId: string, note: string) => void;
 }
 
 const statusLabels: Record<AdminPostStatus, string> = {
@@ -69,7 +68,6 @@ export const PostModerationCard = ({
   onOpenReports,
   onOpenFullPost,
   onTogglePinned,
-  onUpdateNote,
 }: PostModerationCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -167,20 +165,6 @@ export const PostModerationCard = ({
             {isExpanded ? 'Show less' : 'View more'}
           </button>
         ) : null}
-      </div>
-
-      <div className="afd-note-wrap">
-        <label htmlFor={`note-${post.id}`} className="afd-note-label">
-          Admin Notes
-        </label>
-        <textarea
-          id={`note-${post.id}`}
-          value={post.admin_note}
-          onChange={(event) => onUpdateNote(post.id, event.target.value)}
-          placeholder="Add notes for other moderators"
-          className="afd-note-input"
-          rows={2}
-        />
       </div>
 
       <div className="afd-card-actions">

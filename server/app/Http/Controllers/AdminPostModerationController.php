@@ -36,10 +36,6 @@ class AdminPostModerationController extends Controller
 
     public function verify(Request $request, $id)
     {
-        $validated = $request->validate([
-            'admin_note' => 'nullable|string|max:1500',
-        ]);
-
         $post = Post::with(['user', 'reports.user'])
             ->withCount('reports')
             ->find($id);
@@ -54,10 +50,6 @@ class AdminPostModerationController extends Controller
         $post->moderation_status = 'verified';
         $post->moderated_by_admin_id = Auth::guard('admin_api')->id();
         $post->moderated_at = now();
-
-        if (array_key_exists('admin_note', $validated)) {
-            $post->moderation_note = $validated['admin_note'];
-        }
 
         $post->save();
         $post->reports()->delete();
@@ -103,10 +95,6 @@ class AdminPostModerationController extends Controller
 
     public function ignoreReports(Request $request, $id)
     {
-        $validated = $request->validate([
-            'admin_note' => 'nullable|string|max:1500',
-        ]);
-
         $post = Post::with(['user', 'reports.user'])
             ->withCount('reports')
             ->find($id);
@@ -116,10 +104,6 @@ class AdminPostModerationController extends Controller
                 'success' => false,
                 'message' => 'Post not found',
             ], 404);
-        }
-
-        if (array_key_exists('admin_note', $validated)) {
-            $post->moderation_note = $validated['admin_note'];
         }
 
         $post->moderated_by_admin_id = Auth::guard('admin_api')->id();
@@ -178,7 +162,6 @@ class AdminPostModerationController extends Controller
             'report_count' => $reportCount,
             'is_deleted' => !(bool) $post->is_active,
             'reports' => $reports,
-            'admin_note' => (string) ($post->moderation_note ?? ''),
             'pinned' => (bool) $post->is_pinned,
         ];
     }

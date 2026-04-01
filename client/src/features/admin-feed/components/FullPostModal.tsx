@@ -65,13 +65,6 @@ export const FullPostModal = ({ post, isOpen, onClose }: FullPostModalProps) => 
             </div>
 
             <article className="afd-full-post-content">{post.content}</article>
-
-            {post.admin_note ? (
-              <div className="afd-full-post-note">
-                <h4>Admin note</h4>
-                <p>{post.admin_note}</p>
-              </div>
-            ) : null}
           </motion.section>
         </motion.div>
       ) : null}

@@ -45,11 +45,9 @@ export const fetchAdminFeedPosts = async (): Promise<AdminFeedPost[]> => {
   }
 };
 
-export const verifyAdminFeedPost = async (postId: string, adminNote?: string): Promise<AdminFeedPost> => {
+export const verifyAdminFeedPost = async (postId: string): Promise<AdminFeedPost> => {
   try {
-    const response = await apiClient.post<AdminFeedApiPayload>(`/admin/posts/${postId}/verify`, {
-      admin_note: adminNote || null,
-    });
+    const response = await apiClient.post<AdminFeedApiPayload>(`/admin/posts/${postId}/verify`);
 
     if (!response.data.post) {
       throw new Error('Updated post payload was not returned.');
@@ -61,11 +59,9 @@ export const verifyAdminFeedPost = async (postId: string, adminNote?: string): P
   }
 };
 
-export const ignoreAdminFeedReports = async (postId: string, adminNote?: string): Promise<AdminFeedPost> => {
+export const ignoreAdminFeedReports = async (postId: string): Promise<AdminFeedPost> => {
   try {
-    const response = await apiClient.post<AdminFeedApiPayload>(`/admin/posts/${postId}/ignore-reports`, {
-      admin_note: adminNote || null,
-    });
+    const response = await apiClient.post<AdminFeedApiPayload>(`/admin/posts/${postId}/ignore-reports`);
 
     if (!response.data.post) {
       throw new Error('Updated post payload was not returned.');

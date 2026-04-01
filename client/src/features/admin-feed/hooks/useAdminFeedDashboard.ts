@@ -293,10 +293,8 @@ export const useAdminFeedDashboard = () => {
 
   const verifyPost = useCallback(
     async (postId: string) => {
-      const currentPost = posts.find((post) => post.id === postId);
-
       try {
-        const updatedPost = await verifyAdminFeedPost(postId, currentPost?.admin_note);
+        const updatedPost = await verifyAdminFeedPost(postId);
 
         setPosts((previous) =>
           previous.map((post) => {
@@ -318,7 +316,7 @@ export const useAdminFeedDashboard = () => {
         setLoadingError(message);
       }
     },
-    [appendActivity, posts, pushToast],
+    [appendActivity, pushToast],
   );
 
   const toggleSelectPost = useCallback((postId: string) => {
@@ -423,10 +421,8 @@ export const useAdminFeedDashboard = () => {
 
   const ignoreReports = useCallback(
     async (postId: string) => {
-      const currentPost = posts.find((post) => post.id === postId);
-
       try {
-        const updatedPost = await ignoreAdminFeedReports(postId, currentPost?.admin_note);
+        const updatedPost = await ignoreAdminFeedReports(postId);
 
         setPosts((previous) =>
           previous.map((post) => {
@@ -449,7 +445,7 @@ export const useAdminFeedDashboard = () => {
         setLoadingError(message);
       }
     },
-    [appendActivity, posts, pushToast],
+    [appendActivity, pushToast],
   );
 
   const markAsSafe = useCallback(
@@ -503,31 +499,13 @@ export const useAdminFeedDashboard = () => {
     [appendActivity, posts],
   );
 
-  const updateAdminNote = useCallback((postId: string, note: string) => {
-    setPosts((previous) =>
-      previous.map((post) => {
-        if (post.id !== postId) {
-          return post;
-        }
-
-        return {
-          ...post,
-          admin_note: note,
-        };
-      }),
-    );
-  }, []);
-
   const bulkVerify = useCallback(async () => {
     if (selectedPostIds.length === 0) {
       return;
     }
 
     try {
-      const noteMap = new Map(posts.map((post) => [post.id, post.admin_note]));
-      const verifiedPosts = await Promise.all(
-        selectedPostIds.map((postId) => verifyAdminFeedPost(postId, noteMap.get(postId))),
-      );
+      const verifiedPosts = await Promise.all(selectedPostIds.map((postId) => verifyAdminFeedPost(postId)));
 
       const verifiedMap = new Map(verifiedPosts.map((post) => [post.id, post]));
 
@@ -548,7 +526,7 @@ export const useAdminFeedDashboard = () => {
       appendActivity('Bulk verification failed for selected posts.', 'danger');
       setLoadingError(message);
     }
-  }, [appendActivity, posts, pushToast, selectedPostIds]);
+  }, [appendActivity, pushToast, selectedPostIds]);
 
   const bulkMarkSafe = useCallback(() => {
     void bulkVerify();
@@ -610,7 +588,6 @@ export const useAdminFeedDashboard = () => {
     openFullPostModal,
     closeFullPostModal,
     togglePinned,
-    updateAdminNote,
     toggleSelectPost,
     toggleSelectVisiblePosts,
     clearSelection,
