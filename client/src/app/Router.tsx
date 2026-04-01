@@ -10,6 +10,7 @@ import { ServicesPage } from '@/features/services/pages/ServicesPage';
 import { ComplaintsPage } from '@/features/complaints/pages/ComplaintsPage';
 import { ReliefPage } from '@/features/relief/pages/ReliefPage';
 import { AccountPage } from '@/features/account';
+import { AdminFeedDashboardPage } from '@/features/admin-feed';
 import { SignInPage, SignUpPage } from '@/features/auth';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
@@ -62,6 +63,7 @@ const routes: RouteObject[] = [
     children: [
       { index: true, element: <FeedPage /> },
       { path: ROUTES.FEED, element: <FeedPage /> },
+      { path: ROUTES.ADMIN_FEED, element: <AdminFeedDashboardPage /> },
       { path: ROUTES.MESSAGES, element: <MessagesPage /> },
       { path: ROUTES.MARKETPLACE, element: <MarketplacePage /> },
       { path: ROUTES.RENT, element: <RentPage /> },
