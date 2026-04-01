@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
+import axios from 'axios';
+import { ENV } from '@/config/env';
 import { useAuthStore } from '../store/authStore';
 
 type AdminAuthValues = {
@@ -32,11 +34,29 @@ const PASSWORD_MIN_LENGTH = 8;
 
 const ADMIN_EMAIL = 'admin@gmail.com';
 const ADMIN_PASSWORD = 'Admin@123';
-const ADMIN_AUTH_TOKEN = 'protibeshi-admin-auth-token';
+
+type AdminSigninResponse = {
+  status: string;
+  message: string;
+  token?: string;
+  admin?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+};
 
 const delay = (ms: number) => new Promise<void>((resolve) => {
   window.setTimeout(resolve, ms);
 });
+
+const getAdminSigninUrl = () => {
+  if (window.location.port === '8000') {
+    return `${window.location.origin}/api/admin/signin`;
+  }
+
+  return `${ENV.API_BASE_URL}/api/admin/signin`;
+};
 
 const sanitizeEmailInput = (value: string): string => value.trim().toLowerCase();
 const sanitizePasswordInput = (value: string): string => value.trim();
@@ -140,20 +160,63 @@ export const useAdminAuth = (): UseAdminAuthResult => {
       setErrors({});
       startSubmit();
 
-      await delay(450);
+      await delay(200);
 
-      const isAdmin = values.email === ADMIN_EMAIL && values.password === ADMIN_PASSWORD;
+      try {
+        const endpoint = getAdminSigninUrl();
+        const response = await axios.post<AdminSigninResponse>(endpoint, {
+          email: values.email,
+          password: values.password,
+        });
 
-      if (!isAdmin) {
-        submitFailure('Invalid admin email or password.');
-        return;
+        const token = response.data?.token;
+
+        if (!token) {
+          submitFailure('Admin login succeeded but no token was returned.');
+          return;
+        }
+
+        submitSuccess(values.email, token, 'admin');
+
+        redirectTimerRef.current = window.setTimeout(() => {
+          startRedirect();
+        }, 380);
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          const responseData = error.response?.data as {
+            message?: string;
+            errors?: Record<string, string[] | string>;
+          } | undefined;
+
+          const firstValidationError = responseData?.errors
+            ? Object.values(responseData.errors)[0]
+            : undefined;
+
+          const validationMessage = Array.isArray(firstValidationError)
+            ? firstValidationError[0]
+            : firstValidationError;
+
+          if (error.response?.status === 401) {
+            submitFailure(responseData?.message || 'Invalid admin email or password.');
+            return;
+          }
+
+          if (error.response?.status === 422) {
+            submitFailure(validationMessage || responseData?.message || 'Validation failed.');
+            return;
+          }
+
+          if ((error.response?.status ?? 500) >= 500) {
+            submitFailure('Server error. Please try again in a moment.');
+            return;
+          }
+
+          submitFailure(responseData?.message || validationMessage || 'Unable to sign in right now.');
+          return;
+        }
+
+        submitFailure('Unable to sign in right now.');
       }
-
-      submitSuccess(ADMIN_EMAIL, ADMIN_AUTH_TOKEN);
-
-      redirectTimerRef.current = window.setTimeout(() => {
-        startRedirect();
-      }, 350);
     },
     [isSubmitting, startRedirect, startSubmit, submitFailure, submitSuccess, values],
   );

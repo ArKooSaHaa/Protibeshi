@@ -1,4 +1,7 @@
 const TOKEN_STORAGE_KEY = 'token';
+const AUTH_ROLE_STORAGE_KEY = 'auth_role';
+
+export type StoredAuthRole = 'user' | 'admin';
 
 const canUseStorage = () => typeof window !== 'undefined' && Boolean(window.localStorage);
 
@@ -24,6 +27,35 @@ export const clearStoredToken = () => {
   }
 
   window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+};
+
+export const getStoredAuthRole = (): StoredAuthRole | null => {
+  if (!canUseStorage()) {
+    return null;
+  }
+
+  const value = window.localStorage.getItem(AUTH_ROLE_STORAGE_KEY);
+  if (value === 'admin' || value === 'user') {
+    return value;
+  }
+
+  return null;
+};
+
+export const setStoredAuthRole = (role: StoredAuthRole) => {
+  if (!canUseStorage()) {
+    return;
+  }
+
+  window.localStorage.setItem(AUTH_ROLE_STORAGE_KEY, role);
+};
+
+export const clearStoredAuthRole = () => {
+  if (!canUseStorage()) {
+    return;
+  }
+
+  window.localStorage.removeItem(AUTH_ROLE_STORAGE_KEY);
 };
 
 export const getBearerTokenHeader = (): string | null => {

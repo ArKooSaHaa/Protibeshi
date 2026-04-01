@@ -183,7 +183,7 @@ export const useSignIn = (): UseSignInResult => {
           hasToken: Boolean(token),
         });
 
-        submitSuccess(values.email, token);
+        submitSuccess(values.email, token, 'user');
 
         redirectTimerRef.current = window.setTimeout(() => {
           startRedirect();

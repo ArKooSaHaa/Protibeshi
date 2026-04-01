@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ComplaintController;
@@ -25,6 +26,7 @@ use App\Http\Controllers\SessionController;
 
 Route::post('/signup', [AuthController::class, 'signup']);
 Route::post('/signin', [AuthController::class, 'signin']);
+Route::post('/admin/signin', [AdminAuthController::class, 'signin']);
 
 Route::get('/listings', [ListingController::class, 'index']);
 Route::get('/rent-listings', [RentListingController::class, 'index']);

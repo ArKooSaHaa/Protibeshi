@@ -1,0 +1,110 @@
+.page {
+  min-height: calc(100vh - 7.5rem);
+  display: grid;
+  place-items: center;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  background:
+    radial-gradient(circle at 8% 14%, rgba(24, 188, 156, 0.14), transparent 38%),
+    radial-gradient(circle at 85% 88%, rgba(52, 152, 219, 0.18), transparent 45%),
+    linear-gradient(160deg, #091321, #122033 52%, #192a3d 100%);
+  border-radius: 1rem;
+}
+
+.panel {
+  width: min(100%, 640px);
+  border-radius: 1rem;
+  border: 1px solid rgba(146, 196, 255, 0.28);
+  background:
+    linear-gradient(145deg, rgba(10, 18, 33, 0.92), rgba(16, 31, 49, 0.82)),
+    rgba(10, 18, 33, 0.85);
+  box-shadow:
+    0 24px 48px rgba(5, 12, 26, 0.56),
+    0 0 0 1px rgba(24, 188, 156, 0.08) inset;
+  padding: clamp(1.1rem, 2.4vw, 1.7rem);
+}
+
+.kicker {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #88f3d6;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border: 1px solid rgba(24, 188, 156, 0.35);
+  border-radius: 999px;
+  padding: 0.25rem 0.62rem;
+}
+
+.title {
+  margin: 0.8rem 0 0;
+  color: #f2f8ff;
+  font-size: clamp(1.35rem, 3.4vw, 2.1rem);
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin: 0.6rem 0 0;
+  color: #b1c4da;
+  font-size: 0.95rem;
+}
+
+.statusCard {
+  margin-top: 0.95rem;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(52, 152, 219, 0.35);
+  background: rgba(8, 20, 34, 0.7);
+  padding: 0.75rem 0.8rem;
+}
+
+.statusTitle {
+  margin: 0;
+  color: #87d6ff;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.statusLine {
+  margin: 0.35rem 0 0;
+  color: #deecff;
+  font-size: 0.88rem;
+}
+
+.cta {
+  margin-top: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 0.72rem;
+  border: 1px solid rgba(24, 188, 156, 0.45);
+  background: rgba(24, 188, 156, 0.16);
+  color: #d9fff4;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.87rem;
+  padding: 0.58rem 0.8rem;
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+
+.cta:hover {
+  transform: translateY(-1px);
+  background: rgba(24, 188, 156, 0.25);
+}
+
+.footerNote {
+  margin: 0.9rem 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #8ea8c4;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 640px) {
+  .page {
+    min-height: calc(100vh - 6.5rem);
+    padding: 1rem;
+  }
+}
