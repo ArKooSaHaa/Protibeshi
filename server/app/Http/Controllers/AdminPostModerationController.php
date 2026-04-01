@@ -101,6 +101,44 @@ class AdminPostModerationController extends Controller
         ], 200);
     }
 
+    public function ignoreReports(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'admin_note' => 'nullable|string|max:1500',
+        ]);
+
+        $post = Post::with(['user', 'reports.user'])
+            ->withCount('reports')
+            ->find($id);
+
+        if (!$post || !$post->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Post not found',
+            ], 404);
+        }
+
+        if (array_key_exists('admin_note', $validated)) {
+            $post->moderation_note = $validated['admin_note'];
+        }
+
+        $post->moderated_by_admin_id = Auth::guard('admin_api')->id();
+        $post->moderated_at = now();
+        $post->save();
+
+        $post->reports()->delete();
+
+        $post->refresh();
+        $post->load(['user', 'reports.user']);
+        $post->loadCount('reports');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Reports ignored and cleared successfully',
+            'post' => $this->formatModerationPost($post),
+        ], 200);
+    }
+
     private function formatModerationPost(Post $post): array
     {
         $reportCount = (int) ($post->reports_count ?? 0);

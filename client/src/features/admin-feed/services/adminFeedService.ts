@@ -61,6 +61,22 @@ export const verifyAdminFeedPost = async (postId: string, adminNote?: string): P
   }
 };
 
+export const ignoreAdminFeedReports = async (postId: string, adminNote?: string): Promise<AdminFeedPost> => {
+  try {
+    const response = await apiClient.post<AdminFeedApiPayload>(`/admin/posts/${postId}/ignore-reports`, {
+      admin_note: adminNote || null,
+    });
+
+    if (!response.data.post) {
+      throw new Error('Updated post payload was not returned.');
+    }
+
+    return response.data.post;
+  } catch (error) {
+    throw new Error(extractErrorMessage(error, 'Could not ignore reports.'));
+  }
+};
+
 export const deleteAdminFeedPost = async (postId: string): Promise<AdminFeedPost> => {
   try {
     const response = await apiClient.delete<AdminFeedApiPayload>(`/admin/posts/${postId}`);

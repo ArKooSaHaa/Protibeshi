@@ -24,6 +24,13 @@ class PostReportController extends Controller
             ], 404);
         }
 
+        if ((int) $post->user_id === (int) Auth::id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot report your own post',
+            ], 403);
+        }
+
         $report = PostReport::firstOrCreate([
             'post_id' => $post->id,
             'user_id' => Auth::id(),

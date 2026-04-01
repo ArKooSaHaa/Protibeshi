@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   deleteAdminFeedPost,
   fetchAdminFeedPosts,
+  ignoreAdminFeedReports,
   verifyAdminFeedPost,
 } from '../services/adminFeedService';
 import type {
@@ -421,28 +422,34 @@ export const useAdminFeedDashboard = () => {
   }, []);
 
   const ignoreReports = useCallback(
-    (postId: string) => {
-      setPosts((previous) =>
-        previous.map((post) => {
-          if (post.id !== postId) {
-            return post;
-          }
+    async (postId: string) => {
+      const currentPost = posts.find((post) => post.id === postId);
 
-          return {
-            ...post,
-            status: 'pending',
-            report_count: 0,
-            reports: [],
-          };
-        }),
-      );
+      try {
+        const updatedPost = await ignoreAdminFeedReports(postId, currentPost?.admin_note);
 
-      setReportModalPostId(null);
-      pushToast('Reports Ignored', 'info');
-      appendActivity(`Ignored reports for post ${postId}.`, 'warning');
-      setLastSyncedAt(new Date().toISOString());
+        setPosts((previous) =>
+          previous.map((post) => {
+            if (post.id !== postId) {
+              return post;
+            }
+
+            return updatedPost;
+          }),
+        );
+
+        setReportModalPostId(null);
+        pushToast('Reports Ignored', 'info');
+        appendActivity(`Ignored reports for post ${postId}.`, 'warning');
+        setLastSyncedAt(new Date().toISOString());
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Could not ignore reports.';
+        pushToast('Ignore failed', 'danger');
+        appendActivity(`Ignoring reports failed for post ${postId}.`, 'danger');
+        setLoadingError(message);
+      }
     },
-    [appendActivity, pushToast],
+    [appendActivity, posts, pushToast],
   );
 
   const markAsSafe = useCallback(
