@@ -9,6 +9,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\ListingController;
+use App\Http\Controllers\ListingReportController;
 use App\Http\Controllers\PostCommentController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PostLikeController;
@@ -68,6 +69,7 @@ Route::middleware(['auth:api'])->group(function () {
     Route::delete('/conversations/{id}', [ChatController::class, 'deleteConversation']);
 
     Route::post('/listings', [ListingController::class, 'store']);
+    Route::post('/listings/{id}/report', [ListingReportController::class, 'report']);
     Route::post('/rent-listings', [RentListingController::class, 'store']);
     Route::delete('/rent-listings/{id}', [RentListingController::class, 'destroy']);
 

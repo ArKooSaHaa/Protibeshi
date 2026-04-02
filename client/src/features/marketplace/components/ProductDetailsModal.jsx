@@ -1,15 +1,20 @@
 /// src/features/marketplace/components/ProductDetailsModal.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { Flag, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { sendMessage as sendChatMessage, startConversation } from '@/api/chatApi';
 import { ROUTES } from '@/config/routes.config';
+import { reportListing } from '@/services/listingService';
 import styles from './ProductDetailsModal.module.css';
 
 const ProductDetailsModal = ({ isOpen, onClose, product }) => {
     const [message, setMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [isReportFormOpen, setIsReportFormOpen] = useState(false);
+    const [reportReason, setReportReason] = useState('');
+    const [isReporting, setIsReporting] = useState(false);
+    const [reportFeedback, setReportFeedback] = useState(null);
     const messageInputRef = useRef(null);
     const navigate = useNavigate();
 
@@ -26,6 +31,17 @@ const ProductDetailsModal = ({ isOpen, onClose, product }) => {
         return () => window.removeEventListener('keydown', handleEsc);
     }, [isOpen, onClose]);
 
+    useEffect(() => {
+        if (!isOpen) {
+            return;
+        }
+
+        setIsReportFormOpen(false);
+        setReportReason('');
+        setIsReporting(false);
+        setReportFeedback(null);
+    }, [isOpen, product?.id]);
+
     if (!product) return null;
 
     const detailsText = product.details?.trim() || '';
@@ -37,10 +53,6 @@ const ProductDetailsModal = ({ isOpen, onClose, product }) => {
         : [detailsText, ''];
 
     /* ================= Actions ================= */
-    const handleMessageClick = () => {
-        messageInputRef.current?.focus();
-    };
-
     const handleSendMessage = async (e) => {
         e.preventDefault();
         if (!message.trim() || !product?.sellerId || !product?.id) return;
@@ -76,6 +88,50 @@ const ProductDetailsModal = ({ isOpen, onClose, product }) => {
         } finally {
             setIsSending(false);
         }
+    };
+
+    const handleSubmitReport = async (e) => {
+        e.preventDefault();
+
+        const listingId = product?.listingId || product?.id;
+        if (!listingId) {
+            setReportFeedback({
+                type: 'error',
+                text: 'Unable to report this listing right now.',
+            });
+            return;
+        }
+
+        setIsReporting(true);
+        setReportFeedback(null);
+
+        try {
+            const response = await reportListing(listingId, reportReason);
+
+            setReportFeedback({
+                type: 'success',
+                text: response?.message || 'Listing reported successfully.',
+            });
+            setReportReason('');
+            setIsReportFormOpen(false);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to report listing';
+            setReportFeedback({
+                type: 'error',
+                text: errorMessage,
+            });
+        } finally {
+            setIsReporting(false);
+        }
+    };
+
+    const handleCancelReport = () => {
+        if (isReporting) {
+            return;
+        }
+
+        setIsReportFormOpen(false);
+        setReportReason('');
     };
 
     return (
@@ -186,6 +242,68 @@ const ProductDetailsModal = ({ isOpen, onClose, product }) => {
                                                 {isSending ? 'Opening chat...' : 'Send Message'}
                                             </button>
                                         </form>
+                                    </div>
+
+                                    <div className={styles.reportSection}>
+                                        <h3 className={styles.reportTitle}>Report listing</h3>
+                                        <p className={styles.reportHint}>
+                                            Flag this post if it looks fraudulent, unsafe, or misleading.
+                                        </p>
+
+                                        {reportFeedback && (
+                                            <p
+                                                className={`${styles.reportFeedback} ${
+                                                    reportFeedback.type === 'success'
+                                                        ? styles.reportFeedbackSuccess
+                                                        : styles.reportFeedbackError
+                                                }`}
+                                                role="status"
+                                            >
+                                                {reportFeedback.text}
+                                            </p>
+                                        )}
+
+                                        {isReportFormOpen ? (
+                                            <form className={styles.reportForm} onSubmit={handleSubmitReport}>
+                                                <textarea
+                                                    className={styles.reportInput}
+                                                    value={reportReason}
+                                                    onChange={(e) => setReportReason(e.target.value)}
+                                                    placeholder="Share why this listing should be reviewed (optional)."
+                                                    maxLength={500}
+                                                />
+
+                                                <div className={styles.reportActions}>
+                                                    <button
+                                                        type="button"
+                                                        className={styles.reportCancelButton}
+                                                        onClick={handleCancelReport}
+                                                        disabled={isReporting}
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        type="submit"
+                                                        className={styles.reportSubmitButton}
+                                                        disabled={isReporting}
+                                                    >
+                                                        {isReporting ? 'Submitting...' : 'Submit report'}
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                className={styles.reportToggleButton}
+                                                onClick={() => {
+                                                    setReportFeedback(null);
+                                                    setIsReportFormOpen(true);
+                                                }}
+                                            >
+                                                <Flag size={14} />
+                                                Report this listing
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>

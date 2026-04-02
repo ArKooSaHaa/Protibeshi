@@ -373,6 +373,132 @@
   cursor: not-allowed;
 }
 
+.reportSection {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e4e6eb;
+}
+
+.reportTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.reportHint {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #6b7280;
+}
+
+.reportFeedback {
+  margin: 12px 0 0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.reportFeedbackSuccess {
+  background: #ecfdf3;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.reportFeedbackError {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.reportToggleButton {
+  margin-top: 14px;
+  width: 100%;
+  padding: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px;
+  border: 1px solid #f8d7a7;
+  background: #fff8ee;
+  color: #b45309;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reportToggleButton:hover {
+  background: #ffefd6;
+}
+
+.reportForm {
+  margin-top: 14px;
+}
+
+.reportInput {
+  width: 100%;
+  min-height: 96px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #f1d4a4;
+  background: #fffdfa;
+  resize: vertical;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.reportInput:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
+
+.reportActions {
+  display: flex;
+  gap: 10px;
+}
+
+.reportCancelButton,
+.reportSubmitButton {
+  flex: 1;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 11px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reportCancelButton {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.reportCancelButton:hover {
+  background: #e5e7eb;
+}
+
+.reportSubmitButton {
+  background: #b45309;
+  color: #ffffff;
+}
+
+.reportSubmitButton:hover {
+  background: #92400e;
+}
+
+.reportCancelButton:disabled,
+.reportSubmitButton:disabled,
+.reportToggleButton:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 /* =========================
    SCROLLBAR
 ========================= */
@@ -414,5 +540,9 @@
     right: 12px;
     width: 40px;
     height: 40px;
+  }
+
+  .reportActions {
+    flex-direction: column;
   }
 }
