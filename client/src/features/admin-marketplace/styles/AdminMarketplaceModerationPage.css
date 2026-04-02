@@ -467,7 +467,7 @@
 
 .amp-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.72rem;
 }
 
@@ -478,6 +478,7 @@
   background: #ffffff;
   box-shadow: 0 16px 26px -20px rgba(15, 23, 42, 0.5);
   overflow: hidden;
+  width: 100%;
 }
 
 .amp-card-reported {
@@ -487,7 +488,7 @@
 
 .amp-card-image-wrap {
   position: relative;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
 }
 
@@ -886,7 +887,7 @@
 
 .amp-skeleton-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.72rem;
 }
 
@@ -1289,6 +1290,11 @@
   .amp-filter-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .amp-card-grid,
+  .amp-skeleton-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 768px) {
@@ -1312,5 +1318,10 @@
   .amp-grid-topline {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .amp-card-grid,
+  .amp-skeleton-grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
   }
 }

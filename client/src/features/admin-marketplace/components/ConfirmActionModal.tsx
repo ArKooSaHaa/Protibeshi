@@ -21,6 +21,12 @@ const actionMeta: Record<
     confirmLabel: 'Delete',
     confirmClass: 'amp-btn-danger',
   },
+  ban: {
+    title: 'Ban user?',
+    description: 'The user will be banned and all of their listings will be removed from moderation view.',
+    confirmLabel: 'Ban user',
+    confirmClass: 'amp-btn-danger-outline',
+  },
   'bulk-delete': {
     title: 'Delete selected listings?',
     description: 'All selected listings will be removed from active moderation queues.',

@@ -10,7 +10,7 @@ export type AdminMarketplaceSort = 'latest' | 'most_reported' | 'oldest';
 
 export type ActivityTone = 'info' | 'success' | 'warning' | 'danger';
 
-export type ConfirmActionType = 'delete' | 'bulk-delete';
+export type ConfirmActionType = 'delete' | 'bulk-delete' | 'ban';
 
 export interface AdminListingReport {
   id: string;
@@ -68,4 +68,5 @@ export interface AdminMarketplaceActivity {
 export interface ConfirmActionState {
   type: ConfirmActionType;
   listingIds: string[];
+  sellerId?: string;
 }

@@ -3,16 +3,13 @@ import { AlertTriangle, Flag, ShoppingBag, UserRound } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BulkActionBar } from '../components/BulkActionBar';
-import { FilterBar } from '../components/FilterBar';
 import { AdminListingCard } from '../components/AdminListingCard';
 import { AdminListingModal } from '../components/AdminListingModal';
 import { ConfirmActionModal } from '../components/ConfirmActionModal';
 import { ListingSkeletonGrid } from '../components/ListingSkeletonGrid';
 import { NotificationBell } from '../components/NotificationBell';
 import type {
-  ActivityTone,
   AdminListingReport,
-  AdminMarketplaceActivity,
   AdminMarketplaceListing,
   AdminMarketplaceSort,
   AdminMarketplaceStats,
@@ -258,22 +255,6 @@ const sortListings = (listings: AdminMarketplaceListing[], sortBy: AdminMarketpl
   });
 };
 
-const buildActivityEntry = (message: string, tone: ActivityTone): AdminMarketplaceActivity => {
-  return {
-    id: createId('activity'),
-    message,
-    tone,
-    createdAt: new Date().toISOString(),
-  };
-};
-
-const formatActivityTime = (isoDate: string): string => {
-  return new Date(isoDate).toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-};
-
 export const AdminMarketplaceModerationPage = () => {
   const navigate = useNavigate();
   const role = useAuthStore((state) => state.role);
@@ -284,22 +265,16 @@ export const AdminMarketplaceModerationPage = () => {
   const [loadingError, setLoadingError] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<AdminMarketplaceTab>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [locationFilter, setLocationFilter] = useState('all');
+  const searchQuery = '';
+  const categoryFilter = 'all';
+  const locationFilter = 'all';
   const [sortBy, setSortBy] = useState<AdminMarketplaceSort>('latest');
-  const [severityFilter, setSeverityFilter] = useState<'all' | AdminReportSeverity>('all');
+  const severityFilter: 'all' | AdminReportSeverity = 'all';
 
   const [selectedListingIds, setSelectedListingIds] = useState<string[]>([]);
   const [activeListingId, setActiveListingId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmActionState | null>(null);
   const [isConfirmSubmitting, setIsConfirmSubmitting] = useState(false);
-
-  const [activityLog, setActivityLog] = useState<AdminMarketplaceActivity[]>([]);
-
-  const appendActivity = useCallback((message: string, tone: ActivityTone) => {
-    setActivityLog((previous) => [buildActivityEntry(message, tone), ...previous].slice(0, 18));
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -319,7 +294,6 @@ export const AdminMarketplaceModerationPage = () => {
         );
 
         setListings(mapped);
-        appendActivity(`Loaded ${mapped.length} marketplace listings for moderation.`, 'info');
       } catch (error) {
         if (!active) {
           return;
@@ -340,7 +314,7 @@ export const AdminMarketplaceModerationPage = () => {
     return () => {
       active = false;
     };
-  }, [appendActivity]);
+  }, []);
 
   const activeListings = useMemo(() => {
     return listings.filter((listing) => !listing.isDeleted);
@@ -367,18 +341,6 @@ export const AdminMarketplaceModerationPage = () => {
       reported: stats.reportedListings,
     } as const;
   }, [stats]);
-
-  const categoryOptions = useMemo(() => {
-    return Array.from(new Set(activeListings.map((listing) => listing.category))).sort((left, right) =>
-      left.localeCompare(right),
-    );
-  }, [activeListings]);
-
-  const locationOptions = useMemo(() => {
-    return Array.from(new Set(activeListings.map((listing) => listing.location))).sort((left, right) =>
-      left.localeCompare(right),
-    );
-  }, [activeListings]);
 
   const filteredListings = useMemo(() => {
     const normalizedSearch = searchQuery.trim().toLowerCase();
@@ -506,6 +468,25 @@ export const AdminMarketplaceModerationPage = () => {
     });
   }, [selectedListingIds]);
 
+  const requestBanUser = useCallback(
+    (sellerId: string) => {
+      const sellerListingIds = listings
+        .filter((listing) => listing.seller.id === sellerId && !listing.isDeleted)
+        .map((listing) => listing.id);
+
+      if (sellerListingIds.length === 0) {
+        return;
+      }
+
+      setConfirmAction({
+        type: 'ban',
+        listingIds: sellerListingIds,
+        sellerId,
+      });
+    },
+    [listings],
+  );
+
   const confirmModerationAction = useCallback(() => {
     if (!confirmAction) {
       return;
@@ -513,7 +494,7 @@ export const AdminMarketplaceModerationPage = () => {
 
     setIsConfirmSubmitting(true);
 
-    const { type, listingIds } = confirmAction;
+    const { type, listingIds, sellerId } = confirmAction;
 
     if (type === 'delete' || type === 'bulk-delete') {
       updateListings((previous) =>
@@ -529,12 +510,26 @@ export const AdminMarketplaceModerationPage = () => {
         }),
       );
 
-      appendActivity(
-        listingIds.length === 1
-          ? `Deleted listing ${listingIds[0]}.`
-          : `Deleted ${listingIds.length} selected listings.`,
-        'danger',
+    }
+
+    if (type === 'ban' && sellerId) {
+      updateListings((previous) =>
+        previous.map((listing) => {
+          if (listing.seller.id !== sellerId) {
+            return listing;
+          }
+
+          return {
+            ...listing,
+            isDeleted: true,
+            seller: {
+              ...listing.seller,
+              isBanned: true,
+            },
+          };
+        }),
       );
+
     }
 
     setSelectedListingIds((previous) => previous.filter((id) => !listingIds.includes(id)));
@@ -545,7 +540,7 @@ export const AdminMarketplaceModerationPage = () => {
 
     setConfirmAction(null);
     setIsConfirmSubmitting(false);
-  }, [activeListingId, appendActivity, confirmAction, updateListings]);
+  }, [activeListingId, confirmAction, updateListings]);
 
   const closeConfirmModal = useCallback(() => {
     if (isConfirmSubmitting) {
@@ -568,13 +563,6 @@ export const AdminMarketplaceModerationPage = () => {
     setActiveTab('reported');
     setSortBy('most_reported');
   }, []);
-
-  const toneClass: Record<ActivityTone, string> = {
-    info: 'amp-log-dot-info',
-    success: 'amp-log-dot-success',
-    warning: 'amp-log-dot-warning',
-    danger: 'amp-log-dot-danger',
-  };
 
   if (!isAdmin) {
     return (
@@ -638,22 +626,6 @@ export const AdminMarketplaceModerationPage = () => {
         </article>
       </section>
 
-      <FilterBar
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
-        categoryFilter={categoryFilter}
-        onCategoryFilterChange={setCategoryFilter}
-        locationFilter={locationFilter}
-        onLocationFilterChange={setLocationFilter}
-        sortBy={sortBy}
-        onSortByChange={setSortBy}
-        categoryOptions={categoryOptions}
-        locationOptions={locationOptions}
-        showSeverityFilter={activeTab === 'reported'}
-        severityFilter={severityFilter}
-        onSeverityFilterChange={setSeverityFilter}
-      />
-
       <section className="amp-tabs" aria-label="Listing status tabs">
         {(Object.keys(tabLabels) as AdminMarketplaceTab[]).map((tab) => (
           <button
@@ -688,65 +660,38 @@ export const AdminMarketplaceModerationPage = () => {
         </section>
       ) : null}
 
-      <div className="amp-main-grid">
-        <div className="amp-grid-column">
-          <div className="amp-grid-topline">
-            <label className="amp-select-all">
-              <input type="checkbox" checked={allFilteredSelected} onChange={toggleSelectAllFiltered} />
-              <span>Select visible</span>
-            </label>
-            <p>{filteredListings.length} listing(s) shown</p>
-          </div>
-
-          {isLoading ? (
-            <ListingSkeletonGrid />
-          ) : filteredListings.length === 0 ? (
-            <div className="amp-empty-state">
-              <h3>{emptyStateMessage}</h3>
-              <p>Adjust search or filters to review more listings.</p>
-            </div>
-          ) : (
-            <div className="amp-card-grid">
-              {filteredListings.map((listing) => (
-                <AdminListingCard
-                  key={listing.id}
-                  listing={listing}
-                  isSelected={selectedListingIds.includes(listing.id)}
-                  isAdmin={isAdmin}
-                  onToggleSelect={toggleSelectListing}
-                  onViewDetails={openListingDetails}
-                  onDelete={requestDelete}
-                  onOpenReports={openReports}
-                />
-              ))}
-            </div>
-          )}
+      <div className="amp-grid-column">
+        <div className="amp-grid-topline">
+          <label className="amp-select-all">
+            <input type="checkbox" checked={allFilteredSelected} onChange={toggleSelectAllFiltered} />
+            <span>Select visible</span>
+          </label>
+          <p>{filteredListings.length} listing(s) shown</p>
         </div>
 
-        <aside className="amp-activity-panel" aria-label="Admin activity log">
-          <div className="amp-activity-head">
-            <h3>Activity Log</h3>
-            <p>Admin moderation actions</p>
+        {isLoading ? (
+          <ListingSkeletonGrid />
+        ) : filteredListings.length === 0 ? (
+          <div className="amp-empty-state">
+            <h3>{emptyStateMessage}</h3>
+            <p>Adjust search or filters to review more listings.</p>
           </div>
-
-          <div className="amp-activity-body">
-            {activityLog.length === 0 ? (
-              <p className="amp-activity-empty">No actions recorded yet.</p>
-            ) : (
-              <ul className="amp-activity-list">
-                {activityLog.map((item) => (
-                  <li key={item.id} className="amp-activity-item">
-                    <span className={`amp-log-dot ${toneClass[item.tone]}`} />
-                    <div>
-                      <p>{item.message}</p>
-                      <span>{formatActivityTime(item.createdAt)}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+        ) : (
+          <div className="amp-card-grid">
+            {filteredListings.map((listing) => (
+              <AdminListingCard
+                key={listing.id}
+                listing={listing}
+                isSelected={selectedListingIds.includes(listing.id)}
+                isAdmin={isAdmin}
+                onToggleSelect={toggleSelectListing}
+                onViewDetails={openListingDetails}
+                onDelete={requestDelete}
+                onOpenReports={openReports}
+              />
+            ))}
           </div>
-        </aside>
+        )}
       </div>
 
       <AdminListingModal
@@ -755,6 +700,7 @@ export const AdminMarketplaceModerationPage = () => {
         isAdmin={isAdmin}
         onClose={closeListingDetails}
         onDelete={requestDelete}
+        onBanUser={requestBanUser}
       />
 
       <ConfirmActionModal

@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  Ban,
   CalendarClock,
   Flag,
   MapPin,
@@ -17,6 +18,7 @@ interface AdminListingModalProps {
   isAdmin: boolean;
   onClose: () => void;
   onDelete: (listingId: string) => void;
+  onBanUser: (sellerId: string) => void;
 }
 
 const formatDateTime = (isoDate: string): string => {
@@ -47,6 +49,7 @@ export const AdminListingModal = ({
   isAdmin,
   onClose,
   onDelete,
+  onBanUser,
 }: AdminListingModalProps) => {
   return (
     <AnimatePresence>
@@ -184,6 +187,14 @@ export const AdminListingModal = ({
                     >
                       <Trash2 size={14} />
                       Delete Listing
+                    </button>
+                    <button
+                      type="button"
+                      className="amp-btn amp-btn-danger-outline"
+                      onClick={() => onBanUser(listing.seller.id)}
+                    >
+                      <Ban size={14} />
+                      Ban User
                     </button>
                   </div>
                 </section>

@@ -137,7 +137,7 @@ export const AdminListingCard = ({
             </button>
           ) : null}
 
-          {isAdmin && listing.reportCount > 0 ? (
+          {isAdmin ? (
             <button
               type="button"
               className="amp-action-btn amp-action-warning"
