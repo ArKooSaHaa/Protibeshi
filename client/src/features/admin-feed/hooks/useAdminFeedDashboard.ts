@@ -175,8 +175,13 @@ export const useAdminFeedDashboard = () => {
     const normalizedSearch = searchQuery.trim().toLowerCase();
 
     const filtered = activePosts.filter((post) => {
+      const normalizedTitle = post.title?.toLowerCase() ?? '';
+      const normalizedShortDescription = post.short_description?.toLowerCase() ?? '';
+
       const matchesSearch =
         normalizedSearch.length === 0
+        || normalizedTitle.includes(normalizedSearch)
+        || normalizedShortDescription.includes(normalizedSearch)
         || post.content.toLowerCase().includes(normalizedSearch)
         || post.user.name.toLowerCase().includes(normalizedSearch)
         || post.location.toLowerCase().includes(normalizedSearch);

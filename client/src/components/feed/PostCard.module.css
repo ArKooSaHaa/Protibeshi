@@ -34,9 +34,32 @@
   padding-bottom: 10px;
 }
 
+.headerTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .userSection {
   display: flex;
   gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.verifiedBadge {
+  border-radius: 999px;
+  border: 1px solid #86efac;
+  background: #dcfce7;
+  color: #047857;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .avatar {
