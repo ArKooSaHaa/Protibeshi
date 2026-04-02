@@ -1,4 +1,4 @@
-import { ShieldAlert, ShieldCheck, ShieldX, Timer } from 'lucide-react';
+import { ShieldAlert, ShieldCheck } from 'lucide-react';
 import type { AdminListingStatus } from '../types/adminMarketplace.types';
 
 interface StatusBadgeProps {
@@ -6,24 +6,18 @@ interface StatusBadgeProps {
 }
 
 const statusLabel: Record<AdminListingStatus, string> = {
-  pending: 'Pending',
-  approved: 'Approved',
+  active: 'Live',
   reported: 'Reported',
-  rejected: 'Rejected',
 };
 
 const statusIcon = {
-  pending: Timer,
-  approved: ShieldCheck,
+  active: ShieldCheck,
   reported: ShieldAlert,
-  rejected: ShieldX,
 } as const;
 
 const statusClass: Record<AdminListingStatus, string> = {
-  pending: 'amp-status-pending',
-  approved: 'amp-status-approved',
+  active: 'amp-status-approved',
   reported: 'amp-status-reported',
-  rejected: 'amp-status-rejected',
 };
 
 export const StatusBadge = ({ status }: StatusBadgeProps) => {

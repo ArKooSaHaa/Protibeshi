@@ -1,17 +1,16 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, Flag, Timer } from 'lucide-react';
+import { Bell, Flag } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 interface NotificationBellProps {
-  pendingCount: number;
   reportedCount: number;
 }
 
-export const NotificationBell = ({ pendingCount, reportedCount }: NotificationBellProps) => {
+export const NotificationBell = ({ reportedCount }: NotificationBellProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
-  const totalNotifications = pendingCount + reportedCount;
+  const totalNotifications = reportedCount;
 
   useEffect(() => {
     if (!isOpen) {
@@ -69,10 +68,6 @@ export const NotificationBell = ({ pendingCount, reportedCount }: NotificationBe
           >
             <p className="amp-notification-title">Moderation alerts</p>
             <ul>
-              <li>
-                <Timer size={13} />
-                {pendingCount} new listing{pendingCount === 1 ? '' : 's'} pending approval
-              </li>
               <li>
                 <Flag size={13} />
                 {reportedCount} new report{reportedCount === 1 ? '' : 's'} need attention

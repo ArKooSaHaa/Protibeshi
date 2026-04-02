@@ -21,29 +21,11 @@ const actionMeta: Record<
     confirmLabel: 'Delete',
     confirmClass: 'amp-btn-danger',
   },
-  reject: {
-    title: 'Reject listing?',
-    description: 'The listing status will be set to rejected and hidden from approved results.',
-    confirmLabel: 'Reject',
-    confirmClass: 'amp-btn-warning',
-  },
-  ban: {
-    title: 'Ban user?',
-    description: 'The seller will be marked as banned and all related listings will be restricted.',
-    confirmLabel: 'Ban user',
-    confirmClass: 'amp-btn-danger',
-  },
   'bulk-delete': {
     title: 'Delete selected listings?',
     description: 'All selected listings will be removed from active moderation queues.',
     confirmLabel: 'Delete selected',
     confirmClass: 'amp-btn-danger',
-  },
-  'bulk-reject': {
-    title: 'Reject selected listings?',
-    description: 'All selected listings will be marked as rejected.',
-    confirmLabel: 'Reject selected',
-    confirmClass: 'amp-btn-warning',
   },
 };
 

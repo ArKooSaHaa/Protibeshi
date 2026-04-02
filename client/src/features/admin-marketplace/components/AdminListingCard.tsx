@@ -1,15 +1,11 @@
 import { motion } from 'framer-motion';
 import {
-  AlertTriangle,
-  CheckCircle2,
   Eye,
   Flag,
   MapPin,
-  ShieldX,
   Trash2,
   UserRound,
 } from 'lucide-react';
-import { AdminActionDropdown } from './AdminActionDropdown';
 import { StatusBadge } from './StatusBadge';
 import type { AdminMarketplaceListing, AdminReportSeverity } from '../types/adminMarketplace.types';
 
@@ -21,10 +17,6 @@ interface AdminListingCardProps {
   onViewDetails: (listingId: string) => void;
   onDelete: (listingId: string) => void;
   onOpenReports: (listingId: string) => void;
-  onApprove: (listingId: string) => void;
-  onReject: (listingId: string) => void;
-  onWarnUser: (sellerId: string) => void;
-  onBanUser: (sellerId: string) => void;
 }
 
 const resolveHighestSeverity = (listing: AdminMarketplaceListing): AdminReportSeverity | null => {
@@ -61,10 +53,6 @@ export const AdminListingCard = ({
   onViewDetails,
   onDelete,
   onOpenReports,
-  onApprove,
-  onReject,
-  onWarnUser,
-  onBanUser,
 }: AdminListingCardProps) => {
   const severity = resolveHighestSeverity(listing);
 
@@ -79,12 +67,6 @@ export const AdminListingCard = ({
 
         {isAdmin ? (
           <div className="amp-card-quick-actions">
-            {listing.status === 'pending' ? (
-              <button type="button" onClick={() => onApprove(listing.id)}>
-                <CheckCircle2 size={14} />
-                Approve
-              </button>
-            ) : null}
             <button type="button" onClick={() => onDelete(listing.id)}>
               <Trash2 size={14} />
               Delete
@@ -165,43 +147,7 @@ export const AdminListingCard = ({
               Reports
             </button>
           ) : null}
-
-          {isAdmin && listing.status === 'pending' ? (
-            <>
-              <button
-                type="button"
-                className="amp-action-btn amp-action-success"
-                onClick={() => onApprove(listing.id)}
-              >
-                <CheckCircle2 size={14} />
-                Approve
-              </button>
-
-              <button
-                type="button"
-                className="amp-action-btn amp-action-warning"
-                onClick={() => onReject(listing.id)}
-              >
-                <ShieldX size={14} />
-                Reject
-              </button>
-            </>
-          ) : null}
-
-          {isAdmin ? (
-            <AdminActionDropdown
-              onWarn={() => onWarnUser(listing.seller.id)}
-              onBan={() => onBanUser(listing.seller.id)}
-            />
-          ) : null}
         </footer>
-
-        {listing.seller.warningCount > 0 ? (
-          <p className="amp-warning-note">
-            <AlertTriangle size={13} />
-            {listing.seller.warningCount} warning{listing.seller.warningCount > 1 ? 's' : ''} issued
-          </p>
-        ) : null}
       </div>
     </motion.article>
   );

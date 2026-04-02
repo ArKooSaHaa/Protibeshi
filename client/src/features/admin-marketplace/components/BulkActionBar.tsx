@@ -1,18 +1,14 @@
 import { motion } from 'framer-motion';
-import { CheckCheck, ShieldX, Trash2, X } from 'lucide-react';
+import { Trash2, X } from 'lucide-react';
 
 interface BulkActionBarProps {
   selectedCount: number;
-  onApproveSelected: () => void;
-  onRejectSelected: () => void;
   onDeleteSelected: () => void;
   onClear: () => void;
 }
 
 export const BulkActionBar = ({
   selectedCount,
-  onApproveSelected,
-  onRejectSelected,
   onDeleteSelected,
   onClear,
 }: BulkActionBarProps) => {
@@ -26,16 +22,6 @@ export const BulkActionBar = ({
     >
       <p>{selectedCount} listings selected</p>
       <div className="amp-bulk-actions">
-        <button type="button" className="amp-btn amp-btn-primary" onClick={onApproveSelected}>
-          <CheckCheck size={14} />
-          Approve selected
-        </button>
-
-        <button type="button" className="amp-btn amp-btn-warning" onClick={onRejectSelected}>
-          <ShieldX size={14} />
-          Reject selected
-        </button>
-
         <button type="button" className="amp-btn amp-btn-danger" onClick={onDeleteSelected}>
           <Trash2 size={14} />
           Delete selected

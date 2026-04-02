@@ -1,16 +1,16 @@
-export type AdminListingStatus = 'pending' | 'approved' | 'reported' | 'rejected';
+export type AdminListingStatus = 'active' | 'reported';
 
 export type AdminReportReason = 'Spam' | 'Fraud' | 'Misleading' | 'Inappropriate';
 
 export type AdminReportSeverity = 'low' | 'medium' | 'high';
 
-export type AdminMarketplaceTab = 'all' | 'pending' | 'reported' | 'approved' | 'rejected';
+export type AdminMarketplaceTab = 'all' | 'reported';
 
 export type AdminMarketplaceSort = 'latest' | 'most_reported' | 'oldest';
 
 export type ActivityTone = 'info' | 'success' | 'warning' | 'danger';
 
-export type ConfirmActionType = 'delete' | 'reject' | 'ban' | 'bulk-delete' | 'bulk-reject';
+export type ConfirmActionType = 'delete' | 'bulk-delete';
 
 export interface AdminListingReport {
   id: string;
@@ -53,10 +53,8 @@ export interface AdminMarketplaceListing {
 
 export interface AdminMarketplaceStats {
   totalListings: number;
-  pendingListings: number;
   reportedListings: number;
-  approvedListings: number;
-  rejectedListings: number;
+  totalReports: number;
   activeUsers: number;
 }
 
@@ -70,5 +68,4 @@ export interface AdminMarketplaceActivity {
 export interface ConfirmActionState {
   type: ConfirmActionType;
   listingIds: string[];
-  sellerId?: string;
 }

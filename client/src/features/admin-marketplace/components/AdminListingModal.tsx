@@ -1,12 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Ban,
   CalendarClock,
-  CheckCircle2,
   Flag,
   MapPin,
-  ShieldX,
-  TriangleAlert,
   Trash2,
   UserRound,
   X,
@@ -20,11 +16,7 @@ interface AdminListingModalProps {
   isOpen: boolean;
   isAdmin: boolean;
   onClose: () => void;
-  onApprove: (listingId: string) => void;
-  onReject: (listingId: string) => void;
   onDelete: (listingId: string) => void;
-  onWarnUser: (sellerId: string) => void;
-  onBanUser: (sellerId: string) => void;
 }
 
 const formatDateTime = (isoDate: string): string => {
@@ -54,11 +46,7 @@ export const AdminListingModal = ({
   isOpen,
   isAdmin,
   onClose,
-  onApprove,
-  onReject,
   onDelete,
-  onWarnUser,
-  onBanUser,
 }: AdminListingModalProps) => {
   return (
     <AnimatePresence>
@@ -191,44 +179,11 @@ export const AdminListingModal = ({
                   <div className="amp-admin-actions">
                     <button
                       type="button"
-                      className="amp-btn amp-btn-primary"
-                      onClick={() => onApprove(listing.id)}
-                      disabled={listing.status === 'approved'}
-                    >
-                      <CheckCircle2 size={14} />
-                      Approve Listing
-                    </button>
-                    <button
-                      type="button"
-                      className="amp-btn amp-btn-warning"
-                      onClick={() => onReject(listing.id)}
-                    >
-                      <ShieldX size={14} />
-                      Reject Listing
-                    </button>
-                    <button
-                      type="button"
                       className="amp-btn amp-btn-danger"
                       onClick={() => onDelete(listing.id)}
                     >
                       <Trash2 size={14} />
                       Delete Listing
-                    </button>
-                    <button
-                      type="button"
-                      className="amp-btn amp-btn-neutral"
-                      onClick={() => onWarnUser(listing.seller.id)}
-                    >
-                      <TriangleAlert size={14} />
-                      Send Warning
-                    </button>
-                    <button
-                      type="button"
-                      className="amp-btn amp-btn-danger-outline"
-                      onClick={() => onBanUser(listing.seller.id)}
-                    >
-                      <Ban size={14} />
-                      Ban User
                     </button>
                   </div>
                 </section>

@@ -12,7 +12,6 @@ import { NotificationBell } from '../components/NotificationBell';
 import type {
   ActivityTone,
   AdminListingReport,
-  AdminListingStatus,
   AdminMarketplaceActivity,
   AdminMarketplaceListing,
   AdminMarketplaceSort,
@@ -74,23 +73,9 @@ const REPORTER_NAMES = [
   'Tanisha Noor',
 ];
 
-const statusRotation: AdminListingStatus[] = [
-  'approved',
-  'pending',
-  'reported',
-  'approved',
-  'pending',
-  'rejected',
-  'approved',
-  'reported',
-];
-
 const tabLabels: Record<AdminMarketplaceTab, string> = {
   all: 'All Listings',
-  pending: 'Pending Approval',
   reported: 'Reported Listings',
-  approved: 'Approved',
-  rejected: 'Rejected',
 };
 
 const createId = (prefix: string): string => {
@@ -181,19 +166,11 @@ const buildMockReports = (seed: number, reportCount: number): AdminListingReport
   return reports;
 };
 
-const resolveListingStatus = (listing: ApiListing, seed: number): AdminListingStatus => {
-  if (listing.is_active === false) {
-    return 'rejected';
-  }
-
-  return statusRotation[seed % statusRotation.length];
-};
-
 const mapListingToAdminRecord = (listing: ApiListing, index: number): AdminMarketplaceListing => {
   const seed = toSafeNumber(listing.id) || index + 1;
-  const status = resolveListingStatus(listing, seed);
-  const reportCountSeed = status === 'reported' ? (seed % 4) + 1 : 0;
+  const reportCountSeed = seed % 4 === 0 || seed % 7 === 0 ? (seed % 3) + 1 : 0;
   const reports = buildMockReports(seed, reportCountSeed);
+  const status: AdminMarketplaceListing['status'] = reportCountSeed > 0 ? 'reported' : 'active';
   const sellerName = resolveSellerName(listing.user);
   const title = normalizeText(listing.title ?? null) || `Listing #${seed}`;
   const description =
@@ -308,7 +285,6 @@ export const AdminMarketplaceModerationPage = () => {
 
   const [activeTab, setActiveTab] = useState<AdminMarketplaceTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | AdminListingStatus>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [locationFilter, setLocationFilter] = useState('all');
   const [sortBy, setSortBy] = useState<AdminMarketplaceSort>('latest');
@@ -371,20 +347,16 @@ export const AdminMarketplaceModerationPage = () => {
   }, [listings]);
 
   const stats = useMemo<AdminMarketplaceStats>(() => {
-    const pendingListings = activeListings.filter((listing) => listing.status === 'pending').length;
     const reportedListings = activeListings.filter((listing) => listing.status === 'reported').length;
-    const approvedListings = activeListings.filter((listing) => listing.status === 'approved').length;
-    const rejectedListings = activeListings.filter((listing) => listing.status === 'rejected').length;
+    const totalReports = activeListings.reduce((count, listing) => count + listing.reportCount, 0);
     const activeUsers = new Set(
       activeListings.filter((listing) => !listing.seller.isBanned).map((listing) => listing.seller.id),
     ).size;
 
     return {
       totalListings: activeListings.length,
-      pendingListings,
       reportedListings,
-      approvedListings,
-      rejectedListings,
+      totalReports,
       activeUsers,
     };
   }, [activeListings]);
@@ -392,10 +364,7 @@ export const AdminMarketplaceModerationPage = () => {
   const tabCounts = useMemo(() => {
     return {
       all: stats.totalListings,
-      pending: stats.pendingListings,
       reported: stats.reportedListings,
-      approved: stats.approvedListings,
-      rejected: stats.rejectedListings,
     } as const;
   }, [stats]);
 
@@ -430,10 +399,6 @@ export const AdminMarketplaceModerationPage = () => {
         return false;
       }
 
-      if (statusFilter !== 'all' && listing.status !== statusFilter) {
-        return false;
-      }
-
       if (categoryFilter !== 'all' && listing.category !== categoryFilter) {
         return false;
       }
@@ -460,7 +425,6 @@ export const AdminMarketplaceModerationPage = () => {
     searchQuery,
     severityFilter,
     sortBy,
-    statusFilter,
   ]);
 
   const allFilteredSelected = useMemo(() => {
@@ -482,10 +446,6 @@ export const AdminMarketplaceModerationPage = () => {
   const emptyStateMessage = useMemo(() => {
     if (activeTab === 'reported') {
       return 'No reported listings. Great news.';
-    }
-
-    if (activeTab === 'pending') {
-      return 'All listings reviewed. No pending approvals left.';
     }
 
     return 'No listings match this filter right now.';
@@ -528,88 +488,12 @@ export const AdminMarketplaceModerationPage = () => {
     [],
   );
 
-  const approveListings = useCallback(
-    (listingIds: string[]) => {
-      updateListings((previous) =>
-        previous.map((listing) => {
-          if (!listingIds.includes(listing.id)) {
-            return listing;
-          }
-
-          return {
-            ...listing,
-            status: 'approved',
-            reports: [],
-            reportCount: 0,
-          };
-        }),
-      );
-
-      const count = listingIds.length;
-      appendActivity(
-        count === 1
-          ? `Approved listing ${listingIds[0]}.`
-          : `Approved ${count} selected listings.`,
-        'success',
-      );
-
-      setSelectedListingIds((previous) => previous.filter((id) => !listingIds.includes(id)));
-    },
-    [appendActivity, updateListings],
-  );
-
-  const warnSeller = useCallback(
-    (sellerId: string) => {
-      updateListings((previous) =>
-        previous.map((listing) => {
-          if (listing.seller.id !== sellerId) {
-            return listing;
-          }
-
-          return {
-            ...listing,
-            seller: {
-              ...listing.seller,
-              warningCount: listing.seller.warningCount + 1,
-            },
-          };
-        }),
-      );
-
-      const sellerName = listings.find((listing) => listing.seller.id === sellerId)?.seller.name || 'Seller';
-      appendActivity(`Warning sent to ${sellerName}.`, 'warning');
-    },
-    [appendActivity, listings, updateListings],
-  );
-
   const requestDelete = useCallback((listingId: string) => {
     setConfirmAction({
       type: 'delete',
       listingIds: [listingId],
     });
   }, []);
-
-  const requestReject = useCallback((listingId: string) => {
-    setConfirmAction({
-      type: 'reject',
-      listingIds: [listingId],
-    });
-  }, []);
-
-  const requestBanUser = useCallback(
-    (sellerId: string) => {
-      const sellerListingIds = listings
-        .filter((listing) => listing.seller.id === sellerId)
-        .map((listing) => listing.id);
-
-      setConfirmAction({
-        type: 'ban',
-        listingIds: sellerListingIds,
-        sellerId,
-      });
-    },
-    [listings],
-  );
 
   const requestBulkDelete = useCallback(() => {
     if (selectedListingIds.length === 0) {
@@ -622,17 +506,6 @@ export const AdminMarketplaceModerationPage = () => {
     });
   }, [selectedListingIds]);
 
-  const requestBulkReject = useCallback(() => {
-    if (selectedListingIds.length === 0) {
-      return;
-    }
-
-    setConfirmAction({
-      type: 'bulk-reject',
-      listingIds: selectedListingIds,
-    });
-  }, [selectedListingIds]);
-
   const confirmModerationAction = useCallback(() => {
     if (!confirmAction) {
       return;
@@ -640,7 +513,7 @@ export const AdminMarketplaceModerationPage = () => {
 
     setIsConfirmSubmitting(true);
 
-    const { type, listingIds, sellerId } = confirmAction;
+    const { type, listingIds } = confirmAction;
 
     if (type === 'delete' || type === 'bulk-delete') {
       updateListings((previous) =>
@@ -664,51 +537,6 @@ export const AdminMarketplaceModerationPage = () => {
       );
     }
 
-    if (type === 'reject' || type === 'bulk-reject') {
-      updateListings((previous) =>
-        previous.map((listing) => {
-          if (!listingIds.includes(listing.id)) {
-            return listing;
-          }
-
-          return {
-            ...listing,
-            status: 'rejected',
-          };
-        }),
-      );
-
-      appendActivity(
-        listingIds.length === 1
-          ? `Rejected listing ${listingIds[0]}.`
-          : `Rejected ${listingIds.length} selected listings.`,
-        'warning',
-      );
-    }
-
-    if (type === 'ban' && sellerId) {
-      const sellerName = listings.find((listing) => listing.seller.id === sellerId)?.seller.name || 'Seller';
-
-      updateListings((previous) =>
-        previous.map((listing) => {
-          if (listing.seller.id !== sellerId) {
-            return listing;
-          }
-
-          return {
-            ...listing,
-            status: 'rejected',
-            seller: {
-              ...listing.seller,
-              isBanned: true,
-            },
-          };
-        }),
-      );
-
-      appendActivity(`Banned ${sellerName} and restricted related listings.`, 'danger');
-    }
-
     setSelectedListingIds((previous) => previous.filter((id) => !listingIds.includes(id)));
 
     if (activeListingId && listingIds.includes(activeListingId)) {
@@ -717,7 +545,7 @@ export const AdminMarketplaceModerationPage = () => {
 
     setConfirmAction(null);
     setIsConfirmSubmitting(false);
-  }, [activeListingId, appendActivity, confirmAction, listings, updateListings]);
+  }, [activeListingId, appendActivity, confirmAction, updateListings]);
 
   const closeConfirmModal = useCallback(() => {
     if (isConfirmSubmitting) {
@@ -771,14 +599,11 @@ export const AdminMarketplaceModerationPage = () => {
         <div>
           <p className="amp-kicker">Admin Workspace</p>
           <h1>Marketplace Moderation</h1>
-          <p>Manage listings, reports, and approvals</p>
+          <p>Manage listings, reports, and removals</p>
         </div>
 
         <div className="amp-header-right">
-          <NotificationBell
-            pendingCount={stats.pendingListings}
-            reportedCount={stats.reportedListings}
-          />
+          <NotificationBell reportedCount={stats.reportedListings} />
         </div>
       </header>
 
@@ -792,17 +617,17 @@ export const AdminMarketplaceModerationPage = () => {
         </article>
         <article className="amp-analytics-card">
           <p>
-            <AlertTriangle size={15} />
-            Pending approvals
+            <Flag size={15} />
+            Reported listings
           </p>
-          <h3>{stats.pendingListings}</h3>
+          <h3>{stats.reportedListings}</h3>
         </article>
         <article className="amp-analytics-card">
           <p>
-            <Flag size={15} />
-            Reported posts
+            <AlertTriangle size={15} />
+            Total reports
           </p>
-          <h3>{stats.reportedListings}</h3>
+          <h3>{stats.totalReports}</h3>
         </article>
         <article className="amp-analytics-card">
           <p>
@@ -816,8 +641,6 @@ export const AdminMarketplaceModerationPage = () => {
       <FilterBar
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
         categoryFilter={categoryFilter}
         onCategoryFilterChange={setCategoryFilter}
         locationFilter={locationFilter}
@@ -848,8 +671,6 @@ export const AdminMarketplaceModerationPage = () => {
       {selectedListingIds.length > 0 ? (
         <BulkActionBar
           selectedCount={selectedListingIds.length}
-          onApproveSelected={() => approveListings(selectedListingIds)}
-          onRejectSelected={requestBulkReject}
           onDeleteSelected={requestBulkDelete}
           onClear={clearSelection}
         />
@@ -861,7 +682,7 @@ export const AdminMarketplaceModerationPage = () => {
         <section className="amp-reported-banner" aria-label="Reported listing panel">
           <p>
             <Flag size={15} />
-            Report management panel: prioritize high severity listings and review reports before approval.
+            Report management panel: prioritize high severity listings and review reports before removal.
           </p>
           <span>Sorted by: {sortBy === 'most_reported' ? 'Most reported first' : 'Custom order'}</span>
         </section>
@@ -896,10 +717,6 @@ export const AdminMarketplaceModerationPage = () => {
                   onViewDetails={openListingDetails}
                   onDelete={requestDelete}
                   onOpenReports={openReports}
-                  onApprove={(listingId) => approveListings([listingId])}
-                  onReject={requestReject}
-                  onWarnUser={warnSeller}
-                  onBanUser={requestBanUser}
                 />
               ))}
             </div>
@@ -937,11 +754,7 @@ export const AdminMarketplaceModerationPage = () => {
         isOpen={Boolean(selectedListing)}
         isAdmin={isAdmin}
         onClose={closeListingDetails}
-        onApprove={(listingId) => approveListings([listingId])}
-        onReject={requestReject}
         onDelete={requestDelete}
-        onWarnUser={warnSeller}
-        onBanUser={requestBanUser}
       />
 
       <ConfirmActionModal

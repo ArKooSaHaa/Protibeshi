@@ -1,15 +1,9 @@
-import { Search, SlidersHorizontal } from 'lucide-react';
-import type {
-  AdminListingStatus,
-  AdminMarketplaceSort,
-  AdminReportSeverity,
-} from '../types/adminMarketplace.types';
+import { Search } from 'lucide-react';
+import type { AdminMarketplaceSort, AdminReportSeverity } from '../types/adminMarketplace.types';
 
 interface FilterBarProps {
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
-  statusFilter: 'all' | AdminListingStatus;
-  onStatusFilterChange: (value: 'all' | AdminListingStatus) => void;
   categoryFilter: string;
   onCategoryFilterChange: (value: string) => void;
   locationFilter: string;
@@ -26,8 +20,6 @@ interface FilterBarProps {
 export const FilterBar = ({
   searchQuery,
   onSearchQueryChange,
-  statusFilter,
-  onStatusFilterChange,
   categoryFilter,
   onCategoryFilterChange,
   locationFilter,
@@ -53,23 +45,6 @@ export const FilterBar = ({
       </div>
 
       <div className="amp-filter-row">
-        <label>
-          <span>
-            <SlidersHorizontal size={13} />
-            Status
-          </span>
-          <select
-            value={statusFilter}
-            onChange={(event) => onStatusFilterChange(event.target.value as 'all' | AdminListingStatus)}
-          >
-            <option value="all">All status</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="reported">Reported</option>
-            <option value="rejected">Rejected</option>
-          </select>
-        </label>
-
         <label>
           <span>Category</span>
           <select value={categoryFilter} onChange={(event) => onCategoryFilterChange(event.target.value)}>
