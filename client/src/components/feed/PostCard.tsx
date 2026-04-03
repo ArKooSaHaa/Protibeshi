@@ -254,6 +254,7 @@ export const PostCard = ({
     return getLocalUserProfilePhotoForPost(post);
   }, [post, currentUserAvatarUrl, currentUserId, currentUserName]);
   const isEmergency = (post.post_type || '').toLowerCase() === 'emergency';
+  const isVerified = String(post.moderation_status || '').toLowerCase() === 'verified';
   const shortDescription = (post.short_description || '').trim();
   const fallbackSummary = (post.content || '').trim();
   const summaryText = shortDescription || fallbackSummary;
@@ -314,41 +315,45 @@ export const PostCard = ({
   return (
     <article className={`${styles.card} ${isEmergency ? styles.emergencyCard : ''}`}>
       <header className={styles.header}>
-        <div className={styles.userSection}>
-          <div className={styles.avatar}>
-            {profilePhoto && !profileImageFailed ? (
-              <img
-                src={profilePhoto}
-                alt={post.user?.name || 'User profile'}
-                className={styles.profileImage}
-                onError={() => setProfileImageFailed(true)}
-              />
-            ) : (
-              (post.user?.name || 'N').charAt(0).toUpperCase()
-            )}
-          </div>
-          <div className={styles.userMeta}>
-            <div className={styles.nameRow}>
-              <span className={styles.userName}>{post.user?.name || 'Neighbor'}</span>
-              {isEmergency ? (
-                <span className={styles.emergencyBadge}>
-                  <ShieldAlert size={12} /> Emergency
-                </span>
-              ) : null}
-              {post.label ? <span className={styles.labelBadge}>{post.label}</span> : null}
+        <div className={styles.headerTop}>
+          <div className={styles.userSection}>
+            <div className={styles.avatar}>
+              {profilePhoto && !profileImageFailed ? (
+                <img
+                  src={profilePhoto}
+                  alt={post.user?.name || 'User profile'}
+                  className={styles.profileImage}
+                  onError={() => setProfileImageFailed(true)}
+                />
+              ) : (
+                (post.user?.name || 'N').charAt(0).toUpperCase()
+              )}
             </div>
-            <div className={styles.subMeta}>
-              <span>{formatTime(post.created_at)}</span>
-              {post.location ? (
-                <>
-                  <span>•</span>
-                  <span className={styles.locationText}>
-                    <MapPin size={12} /> {post.location}
+            <div className={styles.userMeta}>
+              <div className={styles.nameRow}>
+                <span className={styles.userName}>{post.user?.name || 'Neighbor'}</span>
+                {isEmergency ? (
+                  <span className={styles.emergencyBadge}>
+                    <ShieldAlert size={12} /> Emergency
                   </span>
-                </>
-              ) : null}
+                ) : null}
+                {post.label ? <span className={styles.labelBadge}>{post.label}</span> : null}
+              </div>
+              <div className={styles.subMeta}>
+                <span>{formatTime(post.created_at)}</span>
+                {post.location ? (
+                  <>
+                    <span>•</span>
+                    <span className={styles.locationText}>
+                      <MapPin size={12} /> {post.location}
+                    </span>
+                  </>
+                ) : null}
+              </div>
             </div>
           </div>
+
+          {isVerified ? <span className={styles.verifiedBadge}>Verified</span> : null}
         </div>
       </header>
 

@@ -34,6 +34,7 @@ type AuthStoreState = {
   submitSuccess: (email: string, token: string, role?: AuthRole) => void;
   submitSignupSuccess: (email: string) => void;
   startRedirect: () => void;
+  switchRole: (role: AuthRole) => void;
   logout: () => void;
   resetStatus: () => void;
 };
@@ -110,6 +111,14 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
       status: 'redirect',
       isSubmitting: false,
     });
+  },
+  switchRole: (role) => {
+    setStoredAuthRole(role);
+
+    set((state) => ({
+      ...state,
+      role,
+    }));
   },
   logout: () => {
     clearStoredToken();

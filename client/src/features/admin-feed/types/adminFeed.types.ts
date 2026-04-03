@@ -25,6 +25,8 @@ export interface PostReport {
 export interface AdminFeedPost {
   id: string;
   user: AdminPostUser;
+  title?: string | null;
+  short_description?: string | null;
   content: string;
   created_at: string;
   location: string;

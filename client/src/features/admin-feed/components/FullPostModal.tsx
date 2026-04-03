@@ -19,6 +19,9 @@ const formatPostDate = (isoDate: string): string => {
 };
 
 export const FullPostModal = ({ post, isOpen, onClose }: FullPostModalProps) => {
+  const postTitle = post?.title?.trim() || (post ? `Post #${post.id}` : 'Post');
+  const postSummary = post?.short_description?.trim() || '';
+
   return (
     <AnimatePresence>
       {isOpen && post ? (
@@ -44,7 +47,7 @@ export const FullPostModal = ({ post, isOpen, onClose }: FullPostModalProps) => 
             <header className="afd-modal-header">
               <div>
                 <p className="afd-modal-kicker">Full Post View</p>
-                <h3 className="afd-modal-title">{post.id}</h3>
+                <h3 className="afd-modal-title">{postTitle}</h3>
                 <p className="afd-modal-meta">Complete resident submission for moderation.</p>
               </div>
               <button type="button" className="afd-modal-close" onClick={onClose} aria-label="Close post view">
@@ -63,6 +66,8 @@ export const FullPostModal = ({ post, isOpen, onClose }: FullPostModalProps) => 
                 <CalendarDays size={14} /> {formatPostDate(post.created_at)}
               </p>
             </div>
+
+            {postSummary ? <p className="afd-full-post-summary">{postSummary}</p> : null}
 
             <article className="afd-full-post-content">{post.content}</article>
           </motion.section>

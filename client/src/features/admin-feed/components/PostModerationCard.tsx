@@ -71,15 +71,46 @@ export const PostModerationCard = ({
 }: PostModerationCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const hasLongContent = post.content.length > 200;
+  const cardTitle = useMemo(() => {
+    const trimmedTitle = post.title?.trim();
+    if (trimmedTitle) {
+      return trimmedTitle;
+    }
 
-  const previewText = useMemo(() => {
-    if (isExpanded || !hasLongContent) {
+    const fallbackTitle = post.content.trim().slice(0, 80);
+    return fallbackTitle || 'Untitled post';
+  }, [post.content, post.title]);
+
+  const collapsedText = useMemo(() => {
+    const trimmedShortDescription = post.short_description?.trim();
+    if (trimmedShortDescription) {
+      return trimmedShortDescription;
+    }
+
+    if (post.content.length <= 200) {
       return post.content;
     }
 
     return `${post.content.slice(0, 200)}...`;
-  }, [hasLongContent, isExpanded, post.content]);
+  }, [post.content, post.short_description]);
+
+  const hasLongContent = useMemo(() => {
+    return post.content.trim().length > 0 && collapsedText !== post.content;
+  }, [collapsedText, post.content]);
+
+  const previewText = useMemo(() => {
+    const hasContent = post.content.trim().length > 0;
+
+    if (isExpanded) {
+      return hasContent ? post.content : collapsedText;
+    }
+
+    if (hasLongContent) {
+      return collapsedText;
+    }
+
+    return hasContent ? post.content : collapsedText;
+  }, [collapsedText, hasLongContent, isExpanded, post.content]);
 
   return (
     <motion.article
@@ -155,12 +186,14 @@ export const PostModerationCard = ({
       </div>
 
       <div className="afd-content-wrap">
+        <h3 className="afd-post-title">{cardTitle}</h3>
         <p className="afd-content-text">{previewText}</p>
         {hasLongContent ? (
           <button
             type="button"
             className="afd-inline-link"
             onClick={() => setIsExpanded((previous) => !previous)}
+            aria-expanded={isExpanded}
           >
             {isExpanded ? 'Show less' : 'View more'}
           </button>

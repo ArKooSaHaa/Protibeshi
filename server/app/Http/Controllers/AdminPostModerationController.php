@@ -177,6 +177,8 @@ class AdminPostModerationController extends Controller
                 'name' => 'Unknown User',
                 'avatar_url' => null,
             ],
+            'title' => (string) ($post->title ?? ''),
+            'short_description' => $post->short_description !== null ? (string) $post->short_description : null,
             'content' => (string) $post->content,
             'created_at' => optional($post->created_at)->toISOString(),
             'location' => $post->location ?: 'Unknown',

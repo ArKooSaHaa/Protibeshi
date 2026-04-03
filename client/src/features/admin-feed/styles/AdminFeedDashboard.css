@@ -705,6 +705,14 @@
   margin-top: 0.75rem;
 }
 
+.afd-post-title {
+  margin: 0 0 0.3rem;
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .afd-content-text {
   margin: 0;
   color: #334155;
@@ -1146,6 +1154,14 @@
   line-height: 1.8;
   padding: 0.9rem;
   white-space: pre-wrap;
+}
+
+.afd-full-post-summary {
+  margin: 0.9rem 0 0;
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  font-weight: 500;
 }
 
 .afd-full-post-note {

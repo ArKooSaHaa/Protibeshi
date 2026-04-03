@@ -4,11 +4,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AdminAuthController;
+use App\Http\Controllers\AdminListingModerationController;
 use App\Http\Controllers\AdminPostModerationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\ListingController;
+use App\Http\Controllers\ListingReportController;
 use App\Http\Controllers\PostCommentController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PostLikeController;
@@ -34,6 +36,10 @@ Route::middleware(['auth:admin_api'])->prefix('admin')->group(function () {
     Route::post('/posts/{id}/verify', [AdminPostModerationController::class, 'verify']);
     Route::post('/posts/{id}/ignore-reports', [AdminPostModerationController::class, 'ignoreReports']);
     Route::delete('/posts/{id}', [AdminPostModerationController::class, 'destroy']);
+
+    Route::get('/listings', [AdminListingModerationController::class, 'index']);
+    Route::delete('/listings/{id}', [AdminListingModerationController::class, 'destroy']);
+    Route::post('/listings/{id}/ban-user', [AdminListingModerationController::class, 'banSeller']);
 });
 
 Route::get('/listings', [ListingController::class, 'index']);
@@ -67,11 +73,15 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('/messages/read', [ChatController::class, 'markAsRead']);
     Route::delete('/conversations/{id}', [ChatController::class, 'deleteConversation']);
 
-    Route::post('/listings', [ListingController::class, 'store']);
-    Route::post('/rent-listings', [RentListingController::class, 'store']);
+    Route::post('/listings', [ListingController::class, 'store'])
+        ->middleware('not_banned');
+    Route::post('/listings/{id}/report', [ListingReportController::class, 'report']);
+    Route::post('/rent-listings', [RentListingController::class, 'store'])
+        ->middleware('not_banned');
     Route::delete('/rent-listings/{id}', [RentListingController::class, 'destroy']);
 
-    Route::post('/services', [ServiceController::class, 'store']);
+    Route::post('/services', [ServiceController::class, 'store'])
+        ->middleware('not_banned');
     Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
 
     Route::get('/account/profile', [AccountController::class, 'show']);

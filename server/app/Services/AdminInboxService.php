@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Models\Conversation;
+use App\Models\Listing;
 use App\Models\Message;
 use App\Models\Post;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -88,6 +90,45 @@ class AdminInboxService
         return $message;
     }
 
+    public function sendListingBanNotice(User $recipient, Carbon $banEndsAt, ?string $reason, int $durationDays): Message
+    {
+        $conversation = $this->getOrCreateConversationForRecipient((int) $recipient->id);
+
+        $messageBody = $this->buildListingBanMessage($recipient, $banEndsAt, $reason, $durationDays);
+
+        $message = Message::create([
+            'conversation_id' => (int) $conversation->id,
+            'sender_id' => $this->getInboxUserId(),
+            'message' => $messageBody,
+            'is_read' => false,
+        ]);
+
+        $conversation->last_message = $messageBody;
+        $conversation->save();
+
+        return $message;
+    }
+
+    public function sendListingDeletedNotice(Listing $listing, ?string $reason = null): Message
+    {
+        $recipientId = (int) $listing->user_id;
+        $conversation = $this->getOrCreateConversationForRecipient($recipientId);
+
+        $messageBody = $this->buildListingDeletionMessage($listing, $reason);
+
+        $message = Message::create([
+            'conversation_id' => (int) $conversation->id,
+            'sender_id' => $this->getInboxUserId(),
+            'message' => $messageBody,
+            'is_read' => false,
+        ]);
+
+        $conversation->last_message = $messageBody;
+        $conversation->save();
+
+        return $message;
+    }
+
     private function getOrCreateConversationForRecipient(int $recipientId): Conversation
     {
         $inboxUserId = $this->getInboxUserId();
@@ -132,5 +173,99 @@ class AdminInboxService
         $parts[] = 'If you think this action is a mistake, contact on ' . self::ADMIN_CONTACT_EMAIL . '.';
 
         return implode("\n", $parts);
+    }
+
+    private function buildListingBanMessage(User $recipient, Carbon $banEndsAt, ?string $reason, int $durationDays): string
+    {
+        $recipientName = trim((string) ($recipient->first_name ?? ''));
+        if ($recipientName === '') {
+            $recipientName = 'Neighbor';
+        }
+
+        $normalizedReason = trim((string) ($reason ?? ''));
+
+        $parts = [
+            'Hello ' . $recipientName . ',',
+            '',
+            'Your account is temporarily banned from posting listings for the next ' . $durationDays . ' days.',
+            'Ban ends on: ' . $banEndsAt->toDayDateTimeString(),
+            'Your active listings were removed by the moderation team during this period.',
+            'After the ban period ends, you can post listings again.',
+        ];
+
+        if ($normalizedReason !== '') {
+            $parts[] = 'Reason: ' . $normalizedReason;
+        }
+
+        $parts[] = '';
+        $parts[] = 'If you think this action is a mistake, contact on ' . self::ADMIN_CONTACT_EMAIL . '.';
+
+        return implode("\n", $parts);
+    }
+
+    private function buildListingDeletionMessage(Listing $listing, ?string $reason): string
+    {
+        $title = trim((string) $listing->title);
+        $category = trim((string) ($listing->category ?? ''));
+        $location = trim((string) ($listing->location ?? ''));
+        $details = trim((string) ($listing->details ?? ''));
+        $detailsSnippet = Str::limit($details, 260, '...');
+        $price = is_numeric($listing->price) ? number_format((float) $listing->price, 2) : 'N/A';
+
+        $parts = [
+            'Your marketplace listing has been deleted by the admin moderation team.',
+            '',
+            'Listing details:',
+            '- Listing ID: ' . (string) $listing->id,
+            '- Title: ' . ($title !== '' ? $title : 'N/A'),
+            '- Category: ' . ($category !== '' ? $category : 'N/A'),
+            '- Price: BDT ' . $price,
+            '- Location: ' . ($location !== '' ? $location : 'N/A'),
+        ];
+
+        if ($detailsSnippet !== '') {
+            $parts[] = '- Details: ' . $detailsSnippet;
+        }
+
+        $parts[] = 'Reason: ' . $this->resolveListingDeletionReason($listing, $reason);
+        $parts[] = '';
+        $parts[] = 'If you think this action is a mistake, contact on ' . self::ADMIN_CONTACT_EMAIL . '.';
+
+        return implode("\n", $parts);
+    }
+
+    private function resolveListingDeletionReason(Listing $listing, ?string $reason): string
+    {
+        $normalizedReason = trim((string) ($reason ?? ''));
+        if ($normalizedReason !== '') {
+            return $normalizedReason;
+        }
+
+        $reports = $listing->relationLoaded('reports') ? $listing->reports : $listing->reports()->get();
+
+        $reportReasons = $reports
+            ->pluck('reason')
+            ->filter(fn ($value) => is_string($value) && trim($value) !== '')
+            ->map(fn ($value) => trim((string) $value))
+            ->unique()
+            ->values();
+
+        if ($reportReasons->count() > 0) {
+            $reportCount = (int) $reports->count();
+            $reasonPreview = $reportReasons->take(3)->implode('; ');
+
+            if ($reasonPreview !== '') {
+                return 'Reported by community members ('
+                    .$reportCount
+                    .' report'
+                    .($reportCount === 1 ? '' : 's')
+                    .'): '
+                    .$reasonPreview;
+            }
+
+            return 'Deleted after receiving community reports.';
+        }
+
+        return 'Violating marketplace community rules.';
     }
 }

@@ -22,6 +22,8 @@ const initialUser: TopbarUser = {
 export const Topbar = () => {
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
+  const role = useAuthStore((state) => state.role);
+  const switchRole = useAuthStore((state) => state.switchRole);
   const [user, setUser] = useState<TopbarUser>(initialUser);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement | null>(null);
@@ -113,6 +115,13 @@ export const Topbar = () => {
     navigate(ROUTES.LOGIN, { replace: true });
   };
 
+  const handleRoleSwitch = (nextRole: 'admin' | 'user') => {
+    switchRole(nextRole);
+    setIsSettingsOpen(false);
+
+    navigate(ROUTES.MARKETPLACE);
+  };
+
   return (
     <motion.header
       className={styles.topbar}
@@ -161,6 +170,26 @@ export const Topbar = () => {
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
               >
+                <p className={styles.settingsSectionLabel}>Role simulation</p>
+
+                <button
+                  type="button"
+                  className={`${styles.settingsMenuItem} ${role === 'admin' ? styles.settingsMenuItemActive : ''}`}
+                  role="menuitem"
+                  onClick={() => handleRoleSwitch('admin')}
+                >
+                  Switch to Admin
+                </button>
+
+                <button
+                  type="button"
+                  className={`${styles.settingsMenuItem} ${role === 'user' ? styles.settingsMenuItemActive : ''}`}
+                  role="menuitem"
+                  onClick={() => handleRoleSwitch('user')}
+                >
+                  Switch to User
+                </button>
+
                 <button
                   type="button"
                   className={styles.settingsMenuItem}
