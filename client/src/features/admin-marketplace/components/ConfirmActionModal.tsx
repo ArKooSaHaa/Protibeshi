@@ -23,7 +23,7 @@ const actionMeta: Record<
   },
   ban: {
     title: 'Ban user?',
-    description: 'The user will be banned and all of their listings will be removed from moderation view.',
+    description: 'The user will be banned from posting listings for 7 days and all of their current listings will be removed.',
     confirmLabel: 'Ban user',
     confirmClass: 'amp-btn-danger-outline',
   },

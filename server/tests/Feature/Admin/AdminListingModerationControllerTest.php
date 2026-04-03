@@ -72,6 +72,15 @@ class AdminListingModerationControllerTest extends TestCase
         ];
     }
 
+    private function userHeaders(User $user): array
+    {
+        $token = JWTAuth::fromUser($user);
+
+        return [
+            'Authorization' => 'Bearer '.$token,
+        ];
+    }
+
     public function test_admin_can_fetch_marketplace_moderation_listings(): void
     {
         $seller = $this->createUser([
@@ -142,6 +151,7 @@ class AdminListingModerationControllerTest extends TestCase
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('affected_listings', 2)
+            ->assertJsonPath('ban_duration_days', 7)
             ->assertJsonPath('seller.id', $seller->id)
             ->assertJsonPath('seller.is_banned', true);
 
@@ -150,6 +160,8 @@ class AdminListingModerationControllerTest extends TestCase
             'is_banned' => true,
             'banned_reason' => 'Repeated fraud reports',
         ]);
+
+        $this->assertNotNull($seller->fresh()->banned_until);
 
         $this->assertDatabaseHas('listings', [
             'id' => $primaryListing->id,
@@ -162,21 +174,51 @@ class AdminListingModerationControllerTest extends TestCase
         ]);
     }
 
-    public function test_banned_user_cannot_access_protected_api_routes(): void
+    public function test_banned_user_cannot_create_listing_while_ban_is_active(): void
     {
         $user = $this->createUser([
             'is_banned' => true,
             'banned_at' => now(),
+            'banned_until' => now()->addDays(7),
             'banned_reason' => 'Fraud reports',
         ]);
 
-        $token = JWTAuth::fromUser($user);
-
         $this
-            ->withHeader('Authorization', 'Bearer '.$token)
-            ->getJson('/api/user')
+            ->withHeaders($this->userHeaders($user))
+            ->postJson('/api/listings', [
+                'title' => 'Blocked listing',
+                'price' => 100,
+                'category' => 'Electronics',
+                'location' => 'Dhaka',
+            ])
             ->assertForbidden()
             ->assertJsonPath('success', false)
-            ->assertJsonPath('message', 'Your account is banned. Please contact support.');
+            ->assertJsonStructure(['success', 'message', 'banned_until']);
+    }
+
+    public function test_user_can_create_listing_after_ban_period_expires(): void
+    {
+        $user = $this->createUser([
+            'is_banned' => true,
+            'banned_at' => now()->subDays(10),
+            'banned_until' => now()->subDay(),
+            'banned_reason' => 'Temporary ban',
+        ]);
+
+        $this
+            ->withHeaders($this->userHeaders($user))
+            ->postJson('/api/listings', [
+                'title' => 'Allowed listing',
+                'price' => 200,
+                'category' => 'Electronics',
+                'location' => 'Dhaka',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('message', 'Listing created successfully');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'is_banned' => false,
+        ]);
     }
 }

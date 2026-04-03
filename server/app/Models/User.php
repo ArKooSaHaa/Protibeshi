@@ -27,6 +27,7 @@ class User extends Authenticatable implements JWTSubject
         'profile_picture',
         'is_banned',
         'banned_at',
+        'banned_until',
         'banned_reason',
         'banned_by_admin_id',
         'bio',
@@ -36,6 +37,7 @@ class User extends Authenticatable implements JWTSubject
     protected $casts = [
         'is_banned' => 'boolean',
         'banned_at' => 'datetime',
+        'banned_until' => 'datetime',
     ];
 
     protected $hidden = [

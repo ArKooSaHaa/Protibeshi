@@ -63,7 +63,7 @@ Route::get('/offers/{id}', [\App\Http\Controllers\Api\OfferController::class, 's
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth:api', 'not_banned'])->group(function () {
+Route::middleware(['auth:api'])->group(function () {
 
     Route::post('/conversations', [ChatController::class, 'startConversation']);
     Route::get('/conversations', [ChatController::class, 'getUserConversations']);
@@ -73,12 +73,15 @@ Route::middleware(['auth:api', 'not_banned'])->group(function () {
     Route::post('/messages/read', [ChatController::class, 'markAsRead']);
     Route::delete('/conversations/{id}', [ChatController::class, 'deleteConversation']);
 
-    Route::post('/listings', [ListingController::class, 'store']);
+    Route::post('/listings', [ListingController::class, 'store'])
+        ->middleware('not_banned');
     Route::post('/listings/{id}/report', [ListingReportController::class, 'report']);
-    Route::post('/rent-listings', [RentListingController::class, 'store']);
+    Route::post('/rent-listings', [RentListingController::class, 'store'])
+        ->middleware('not_banned');
     Route::delete('/rent-listings/{id}', [RentListingController::class, 'destroy']);
 
-    Route::post('/services', [ServiceController::class, 'store']);
+    Route::post('/services', [ServiceController::class, 'store'])
+        ->middleware('not_banned');
     Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
 
     Route::get('/account/profile', [AccountController::class, 'show']);

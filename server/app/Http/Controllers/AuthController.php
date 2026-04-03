@@ -178,13 +178,6 @@ class AuthController extends Controller
                 ], 401);
             }
 
-            if ((bool) $user->is_banned) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Your account is banned. Please contact support.',
-                ], 403);
-            }
-
             $token = JWTAuth::fromUser($user);
 
             return response()->json([

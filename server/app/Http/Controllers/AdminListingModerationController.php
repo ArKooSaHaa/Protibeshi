@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Storage;
 
 class AdminListingModerationController extends Controller
 {
+    private const LISTING_BAN_DAYS = 7;
+
     public function index()
     {
         $listings = Listing::query()
@@ -85,8 +87,12 @@ class AdminListingModerationController extends Controller
         }
 
         $seller = $listing->user;
+        $banStartedAt = now();
+        $banEndsAt = $banStartedAt->copy()->addDays(self::LISTING_BAN_DAYS);
+
         $seller->is_banned = true;
-        $seller->banned_at = now();
+        $seller->banned_at = $banStartedAt;
+        $seller->banned_until = $banEndsAt;
         $seller->banned_reason = $validated['reason'] ?? $seller->banned_reason;
         $seller->banned_by_admin_id = Auth::guard('admin_api')->id();
         $seller->save();
@@ -112,8 +118,10 @@ class AdminListingModerationController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'User banned and marketplace listings removed',
+            'message' => 'User is banned from posting listings for 7 days and active listings were removed',
             'affected_listings' => $affectedListingCount,
+            'ban_duration_days' => self::LISTING_BAN_DAYS,
+            'banned_until' => $banEndsAt->toISOString(),
             'seller' => $this->formatSeller($seller),
         ], 200);
     }
@@ -170,11 +178,25 @@ class AdminListingModerationController extends Controller
             'profile_picture' => $this->resolveProfilePictureUrl($seller->profile_picture),
             'profile_picture_url' => $this->resolveProfilePictureUrl($seller->profile_picture),
             'created_at' => optional($seller->created_at)->toISOString(),
-            'is_banned' => (bool) $seller->is_banned,
+            'is_banned' => $this->isSellerCurrentlyBanned($seller),
             'banned_at' => optional($seller->banned_at)->toISOString(),
+            'banned_until' => optional($seller->banned_until)->toISOString(),
             'banned_reason' => $seller->banned_reason,
             'total_active_listings' => (int) ($seller->active_listings_count ?? 0),
         ];
+    }
+
+    private function isSellerCurrentlyBanned(User $seller): bool
+    {
+        if (!(bool) $seller->is_banned) {
+            return false;
+        }
+
+        if ($seller->banned_until === null) {
+            return true;
+        }
+
+        return now()->lessThan($seller->banned_until);
     }
 
     private function formatReport(ListingReport $report, int $totalReports): array
