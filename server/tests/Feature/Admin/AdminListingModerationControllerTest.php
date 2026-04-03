@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Models\Admin;
 use App\Models\Listing;
 use App\Models\ListingReport;
+use App\Models\Message;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -114,9 +115,20 @@ class AdminListingModerationControllerTest extends TestCase
     public function test_admin_can_delete_listing_from_marketplace(): void
     {
         $seller = $this->createUser();
+        $reporter = $this->createUser();
         $admin = $this->createAdmin();
         $listing = $this->createListing($seller, [
             'title' => 'Listing to remove',
+            'category' => 'Electronics',
+            'location' => 'Dhaka',
+            'price' => 4200,
+            'details' => 'Original details from listing creator',
+        ]);
+
+        ListingReport::query()->create([
+            'listing_id' => $listing->id,
+            'user_id' => $reporter->id,
+            'reason' => 'Misleading product details',
         ]);
 
         $this
@@ -124,12 +136,30 @@ class AdminListingModerationControllerTest extends TestCase
             ->deleteJson('/api/admin/listings/'.$listing->id)
             ->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonPath('message', 'Listing removed from marketplace');
+            ->assertJsonPath('message', 'Listing removed from marketplace')
+            ->assertJsonPath('notification_sent', true);
 
         $this->assertDatabaseHas('listings', [
             'id' => $listing->id,
             'is_active' => false,
         ]);
+
+        $adminInboxUser = User::query()->where('username', 'admin_inbox_system')->first();
+        $this->assertNotNull($adminInboxUser);
+
+        $deletionMessage = Message::query()
+            ->where('sender_id', $adminInboxUser->id)
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($deletionMessage);
+        $this->assertStringContainsString('Your marketplace listing has been deleted by the admin moderation team.', $deletionMessage->message);
+        $this->assertStringContainsString('- Title: Listing to remove', $deletionMessage->message);
+        $this->assertStringContainsString('- Category: Electronics', $deletionMessage->message);
+        $this->assertStringContainsString('- Price: BDT 4,200.00', $deletionMessage->message);
+        $this->assertStringContainsString('- Location: Dhaka', $deletionMessage->message);
+        $this->assertStringContainsString('Reason: Reported by community members', $deletionMessage->message);
+        $this->assertStringContainsString('Misleading product details', $deletionMessage->message);
     }
 
     public function test_admin_can_ban_listing_owner_and_remove_active_listings(): void
@@ -152,6 +182,7 @@ class AdminListingModerationControllerTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('affected_listings', 2)
             ->assertJsonPath('ban_duration_days', 7)
+            ->assertJsonPath('notification_sent', true)
             ->assertJsonPath('seller.id', $seller->id)
             ->assertJsonPath('seller.is_banned', true);
 
@@ -172,6 +203,18 @@ class AdminListingModerationControllerTest extends TestCase
             'id' => $secondaryListing->id,
             'is_active' => false,
         ]);
+
+        $adminInboxUser = User::query()->where('username', 'admin_inbox_system')->first();
+        $this->assertNotNull($adminInboxUser);
+
+        $banMessage = Message::query()
+            ->where('sender_id', $adminInboxUser->id)
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($banMessage);
+        $this->assertStringContainsString('temporarily banned from posting listings for the next 7 days', $banMessage->message);
+        $this->assertStringContainsString('Repeated fraud reports', $banMessage->message);
     }
 
     public function test_banned_user_cannot_create_listing_while_ban_is_active(): void

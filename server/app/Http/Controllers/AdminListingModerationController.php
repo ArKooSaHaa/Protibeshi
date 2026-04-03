@@ -5,13 +5,22 @@ namespace App\Http\Controllers;
 use App\Models\Listing;
 use App\Models\ListingReport;
 use App\Models\User;
+use App\Services\AdminInboxService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class AdminListingModerationController extends Controller
 {
     private const LISTING_BAN_DAYS = 7;
+
+    private AdminInboxService $adminInboxService;
+
+    public function __construct(AdminInboxService $adminInboxService)
+    {
+        $this->adminInboxService = $adminInboxService;
+    }
 
     public function index()
     {
@@ -39,9 +48,15 @@ class AdminListingModerationController extends Controller
         ], 200);
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
-        $listing = Listing::query()->find($id);
+        $validated = $request->validate([
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        $listing = Listing::query()
+            ->with(['user', 'reports'])
+            ->find($id);
 
         if (!$listing) {
             return response()->json([
@@ -55,11 +70,24 @@ class AdminListingModerationController extends Controller
             $listing->save();
         }
 
+        $notificationSent = false;
+        try {
+            $this->adminInboxService->sendListingDeletedNotice($listing, $validated['reason'] ?? null);
+            $notificationSent = true;
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to deliver listing deletion inbox notice', [
+                'listing_id' => $listing->id,
+                'user_id' => $listing->user_id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
         $this->loadModerationRelations($listing);
 
         return response()->json([
             'success' => true,
             'message' => 'Listing removed from marketplace',
+            'notification_sent' => $notificationSent,
             'listing' => $this->formatListing($listing),
         ], 200);
     }
@@ -110,6 +138,23 @@ class AdminListingModerationController extends Controller
                 'updated_at' => now(),
             ]);
 
+        $notificationSent = false;
+        try {
+            $this->adminInboxService->sendListingBanNotice(
+                $seller,
+                $banEndsAt,
+                $validated['reason'] ?? null,
+                self::LISTING_BAN_DAYS,
+            );
+            $notificationSent = true;
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to deliver listing ban inbox notice', [
+                'seller_id' => $seller->id,
+                'listing_id' => $listing->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
         $seller->loadCount([
             'listings as active_listings_count' => function ($query) {
                 $query->where('is_active', true);
@@ -122,6 +167,7 @@ class AdminListingModerationController extends Controller
             'affected_listings' => $affectedListingCount,
             'ban_duration_days' => self::LISTING_BAN_DAYS,
             'banned_until' => $banEndsAt->toISOString(),
+            'notification_sent' => $notificationSent,
             'seller' => $this->formatSeller($seller),
         ], 200);
     }
