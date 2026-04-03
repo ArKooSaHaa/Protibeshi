@@ -180,6 +180,126 @@ export const getListings = async () => {
   return data?.listings ?? [];
 };
 
+export const getAdminListings = async (token) => {
+  const authToken = resolveAuthToken(token);
+  if (!authToken) {
+    throw new Error('Please sign in as admin to continue.');
+  }
+
+  const response = await fetch(`${getApiBaseUrl()}/admin/listings`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      Accept: 'application/json',
+    },
+  });
+
+  const data = await parseJsonSafely(response);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Your admin session has expired. Please sign in again.');
+    }
+
+    if (response.status === 403) {
+      throw new Error('You are not authorized to access admin moderation tools.');
+    }
+
+    throw new Error(extractApiErrorMessage(data, 'Failed to fetch admin listings'));
+  }
+
+  if (Array.isArray(data?.listings)) {
+    return data.listings;
+  }
+
+  return [];
+};
+
+export const deleteAdminListing = async (listingId, token) => {
+  const resolvedListingId = Number(listingId);
+  if (!Number.isFinite(resolvedListingId) || resolvedListingId <= 0) {
+    throw new Error('Invalid listing selected for deletion.');
+  }
+
+  const authToken = resolveAuthToken(token);
+  if (!authToken) {
+    throw new Error('Please sign in as admin to continue.');
+  }
+
+  const response = await fetch(`${getApiBaseUrl()}/admin/listings/${resolvedListingId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      Accept: 'application/json',
+    },
+  });
+
+  const data = await parseJsonSafely(response);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Your admin session has expired. Please sign in again.');
+    }
+
+    if (response.status === 403) {
+      throw new Error('You are not authorized to remove listings.');
+    }
+
+    throw new Error(extractApiErrorMessage(data, 'Failed to delete listing'));
+  }
+
+  return {
+    message: data?.message || 'Listing removed from marketplace',
+    listing: data?.listing || null,
+  };
+};
+
+export const banListingSeller = async (listingId, reason = '', token) => {
+  const resolvedListingId = Number(listingId);
+  if (!Number.isFinite(resolvedListingId) || resolvedListingId <= 0) {
+    throw new Error('Invalid listing selected for user ban.');
+  }
+
+  const authToken = resolveAuthToken(token);
+  if (!authToken) {
+    throw new Error('Please sign in as admin to continue.');
+  }
+
+  const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+
+  const response = await fetch(`${getApiBaseUrl()}/admin/listings/${resolvedListingId}/ban-user`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      reason: trimmedReason || null,
+    }),
+  });
+
+  const data = await parseJsonSafely(response);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Your admin session has expired. Please sign in again.');
+    }
+
+    if (response.status === 403) {
+      throw new Error('You are not authorized to ban users.');
+    }
+
+    throw new Error(extractApiErrorMessage(data, 'Failed to ban user'));
+  }
+
+  return {
+    message: data?.message || 'User banned successfully',
+    affectedListings: Number(data?.affected_listings ?? 0),
+    seller: data?.seller || null,
+  };
+};
+
 export const reportListing = async (listingId, reason = '', token) => {
   const resolvedListingId = Number(listingId);
   if (!Number.isFinite(resolvedListingId) || resolvedListingId <= 0) {

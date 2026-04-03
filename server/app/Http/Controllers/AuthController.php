@@ -164,18 +164,28 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $credentials = $request->only('email', 'password');
+        $email = strtolower((string) $request->input('email'));
+        $password = (string) $request->input('password');
 
         try {
 
-            if (!$token = JWTAuth::attempt($credentials)) {
+            $user = User::query()->where('email', $email)->first();
+
+            if (!$user || !Hash::check($password, $user->password)) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Invalid email or password',
                 ], 401);
             }
 
-            $user = JWTAuth::user();
+            if ((bool) $user->is_banned) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Your account is banned. Please contact support.',
+                ], 403);
+            }
+
+            $token = JWTAuth::fromUser($user);
 
             return response()->json([
                 'status' => 'success',

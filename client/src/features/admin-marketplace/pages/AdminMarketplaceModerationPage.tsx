@@ -20,20 +20,42 @@ import type {
 } from '../types/adminMarketplace.types';
 import { ROUTES } from '@/config/routes.config';
 import { useAuthStore } from '@/features/auth/store/authStore';
-import { getListings } from '@/services/listingService';
+import { banListingSeller, deleteAdminListing, getAdminListings } from '@/services/listingService';
 import '../styles/AdminMarketplaceModerationPage.css';
 
-type ApiListingUser = {
+type ApiAdminReporter = {
+  id?: number | string;
+  name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  username?: string | null;
+};
+
+type ApiAdminReport = {
+  id?: number | string;
+  reason?: string | null;
+  message?: string | null;
+  severity?: string | null;
+  created_at?: string | null;
+  reporter?: ApiAdminReporter | null;
+};
+
+type ApiAdminSeller = {
   id?: number | string;
   first_name?: string | null;
   last_name?: string | null;
   username?: string | null;
+  email?: string | null;
   profile_picture?: string | null;
   profile_picture_url?: string | null;
   created_at?: string | null;
+  is_banned?: boolean;
+  total_active_listings?: number | string | null;
+  total_listings?: number | string | null;
+  warning_count?: number | string | null;
 };
 
-type ApiListing = {
+type ApiAdminListing = {
   id?: number | string;
   title?: string | null;
   price?: number | string | null;
@@ -45,7 +67,11 @@ type ApiListing = {
   is_active?: boolean;
   created_at?: string | null;
   updated_at?: string | null;
-  user?: ApiListingUser | null;
+  status?: string | null;
+  report_count?: number | string | null;
+  reports?: ApiAdminReport[];
+  seller?: ApiAdminSeller | null;
+  user?: ApiAdminSeller | null;
 };
 
 const BACKEND_ORIGIN = 'http://127.0.0.1:8000';
@@ -57,17 +83,6 @@ const FALLBACK_IMAGES = [
   'https://images.unsplash.com/photo-1588508065123-287b28e013da?auto=format&fit=crop&w=1200&q=80',
   'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=1200&q=80',
   'https://images.unsplash.com/photo-1511556820780-d912e42b4980?auto=format&fit=crop&w=1200&q=80',
-];
-
-const REPORT_REASONS: AdminReportReason[] = ['Spam', 'Fraud', 'Misleading', 'Inappropriate'];
-
-const REPORTER_NAMES = [
-  'Mahin Rahman',
-  'Asha Akter',
-  'Tariq Hasan',
-  'Nusrat Jahan',
-  'Rakib Ahmed',
-  'Tanisha Noor',
 ];
 
 const tabLabels: Record<AdminMarketplaceTab, string> = {
@@ -92,7 +107,7 @@ const slugify = (value: string): string => {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 };
 
-const buildPhotoUrl = (listing: ApiListing, seed: number): string => {
+const buildPhotoUrl = (listing: ApiAdminListing, seed: number): string => {
   const photoUrl = normalizeText(listing.photo_url ?? null);
   if (photoUrl) {
     return photoUrl;
@@ -114,7 +129,7 @@ const buildPhotoUrl = (listing: ApiListing, seed: number): string => {
   return FALLBACK_IMAGES[seed % FALLBACK_IMAGES.length];
 };
 
-const resolveSellerName = (user: ApiListingUser | null | undefined): string => {
+const resolveSellerName = (user: ApiAdminSeller | null | undefined): string => {
   if (!user) {
     return 'Unknown Seller';
   }
@@ -132,43 +147,124 @@ const resolveSellerName = (user: ApiListingUser | null | undefined): string => {
     return username;
   }
 
+  const email = normalizeText(user.email ?? null);
+  if (email) {
+    return email;
+  }
+
   return 'Unknown Seller';
 };
 
-const buildMockReports = (seed: number, reportCount: number): AdminListingReport[] => {
-  const reports: AdminListingReport[] = [];
+const normalizeReportReason = (value: string): AdminReportReason => {
+  const normalized = value.toLowerCase();
 
-  for (let index = 0; index < reportCount; index += 1) {
-    const reason = REPORT_REASONS[(seed + index) % REPORT_REASONS.length];
-    const severity: AdminReportSeverity =
-      reason === 'Fraud' || reportCount >= 4 ? 'high' : reason === 'Misleading' ? 'medium' : 'low';
-
-    reports.push({
-      id: createId('report'),
-      reporterName: REPORTER_NAMES[(seed + index) % REPORTER_NAMES.length],
-      reason,
-      severity,
-      message:
-        reason === 'Fraud'
-          ? 'Suspicious pricing and repeated repost pattern detected.'
-          : reason === 'Spam'
-            ? 'Repeatedly posted with near-identical content.'
-            : reason === 'Misleading'
-              ? 'Photos and description appear inconsistent.'
-              : 'Contains content that violates community guidelines.',
-      createdAt: new Date(Date.now() - (seed + index + 1) * 36_000_00).toISOString(),
-    });
+  if (normalized.includes('fraud') || normalized.includes('scam') || normalized.includes('fake')) {
+    return 'Fraud';
   }
 
-  return reports;
+  if (normalized.includes('spam')) {
+    return 'Spam';
+  }
+
+  if (normalized.includes('mislead')) {
+    return 'Misleading';
+  }
+
+  return 'Inappropriate';
 };
 
-const mapListingToAdminRecord = (listing: ApiListing, index: number): AdminMarketplaceListing => {
+const normalizeReportSeverity = (value: string, reason: AdminReportReason): AdminReportSeverity => {
+  const normalized = value.toLowerCase();
+
+  if (normalized === 'high' || normalized === 'medium' || normalized === 'low') {
+    return normalized;
+  }
+
+  if (reason === 'Fraud') {
+    return 'high';
+  }
+
+  if (reason === 'Misleading') {
+    return 'medium';
+  }
+
+  return 'low';
+};
+
+const buildReportMessage = (reason: AdminReportReason, message: string): string => {
+  if (message) {
+    return message;
+  }
+
+  if (reason === 'Fraud') {
+    return 'Suspicious listing activity detected by community reports.';
+  }
+
+  if (reason === 'Spam') {
+    return 'Repeated posting pattern reported by neighbors.';
+  }
+
+  if (reason === 'Misleading') {
+    return 'Listing details may not match the provided images or price.';
+  }
+
+  return 'Contains content that may violate community guidelines.';
+};
+
+const resolveReporterName = (reporter: ApiAdminReporter | null | undefined): string => {
+  if (!reporter) {
+    return 'Community member';
+  }
+
+  const explicitName = normalizeText(reporter.name ?? null);
+  if (explicitName) {
+    return explicitName;
+  }
+
+  const firstName = normalizeText(reporter.first_name ?? null);
+  const lastName = normalizeText(reporter.last_name ?? null);
+  const fullName = `${firstName} ${lastName}`.trim();
+
+  if (fullName) {
+    return fullName;
+  }
+
+  const username = normalizeText(reporter.username ?? null);
+  if (username) {
+    return username;
+  }
+
+  return 'Community member';
+};
+
+const mapReportToAdminRecord = (report: ApiAdminReport): AdminListingReport => {
+  const reasonText = normalizeText(report.reason ?? report.message ?? null);
+  const reason = normalizeReportReason(reasonText);
+  const severity = normalizeReportSeverity(normalizeText(report.severity ?? null), reason);
+  const message = buildReportMessage(reason, normalizeText(report.message ?? null));
+
+  return {
+    id: String(report.id ?? createId('report')),
+    reporterName: resolveReporterName(report.reporter),
+    reason,
+    severity,
+    message,
+    createdAt: normalizeText(report.created_at ?? null) || new Date().toISOString(),
+  };
+};
+
+const mapListingToAdminRecord = (listing: ApiAdminListing, index: number): AdminMarketplaceListing => {
   const seed = toSafeNumber(listing.id) || index + 1;
-  const reportCountSeed = seed % 4 === 0 || seed % 7 === 0 ? (seed % 3) + 1 : 0;
-  const reports = buildMockReports(seed, reportCountSeed);
-  const status: AdminMarketplaceListing['status'] = reportCountSeed > 0 ? 'reported' : 'active';
-  const sellerName = resolveSellerName(listing.user);
+  const seller = listing.seller ?? listing.user ?? null;
+
+  const reports = Array.isArray(listing.reports)
+    ? listing.reports.map((report) => mapReportToAdminRecord((report || {}) as ApiAdminReport))
+    : [];
+
+  const reportCount = Math.max(0, toSafeNumber(listing.report_count ?? reports.length));
+  const status: AdminMarketplaceListing['status'] = reportCount > 0 ? 'reported' : 'active';
+
+  const sellerName = resolveSellerName(seller);
   const title = normalizeText(listing.title ?? null) || `Listing #${seed}`;
   const description =
     normalizeText(listing.details ?? null)
@@ -181,12 +277,12 @@ const mapListingToAdminRecord = (listing: ApiListing, index: number): AdminMarke
     ? 'potential_spam'
     : null;
 
-  const sellerId = String(listing.user?.id ?? `seller-${seed}`);
+  const sellerId = String(seller?.id ?? `seller-${seed}`);
   const sellerJoinDate =
-    normalizeText(listing.user?.created_at ?? null)
+    normalizeText(seller?.created_at ?? null)
       || new Date(Date.now() - (seed % 900 + 45) * 86_400_000).toISOString();
 
-  const username = normalizeText(listing.user?.username ?? null) || slugify(sellerName);
+  const username = normalizeText(seller?.username ?? null) || slugify(sellerName);
 
   return {
     id: String(listing.id ?? `listing-${seed}`),
@@ -197,7 +293,7 @@ const mapListingToAdminRecord = (listing: ApiListing, index: number): AdminMarke
     description,
     image: buildPhotoUrl(listing, seed),
     status,
-    reportCount: reports.length,
+    reportCount,
     reports,
     createdAt: normalizeText(listing.created_at ?? null) || new Date().toISOString(),
     updatedAt: normalizeText(listing.updated_at ?? null) || new Date().toISOString(),
@@ -206,16 +302,16 @@ const mapListingToAdminRecord = (listing: ApiListing, index: number): AdminMarke
       name: sellerName,
       username,
       profileImage:
-        normalizeText(listing.user?.profile_picture_url ?? null)
-          || normalizeText(listing.user?.profile_picture ?? null)
+        normalizeText(seller?.profile_picture_url ?? null)
+          || normalizeText(seller?.profile_picture ?? null)
           || null,
-      totalListings: (seed % 9) + 1,
+      totalListings: Math.max(0, toSafeNumber(seller?.total_active_listings ?? seller?.total_listings ?? 0)),
       joinDate: sellerJoinDate,
-      isVerified: seed % 2 === 0,
-      isBanned: false,
-      warningCount: 0,
+      isVerified: false,
+      isBanned: Boolean(seller?.is_banned),
+      warningCount: Math.max(0, toSafeNumber(seller?.warning_count ?? 0)),
     },
-    isDeleted: false,
+    isDeleted: listing.is_active === false,
     aiTag,
   };
 };
@@ -284,13 +380,13 @@ export const AdminMarketplaceModerationPage = () => {
       setLoadingError(null);
 
       try {
-        const apiListings = await getListings();
+        const apiListings = await getAdminListings();
         if (!active) {
           return;
         }
 
         const mapped = apiListings.map((listing, index) =>
-          mapListingToAdminRecord((listing || {}) as ApiListing, index),
+          mapListingToAdminRecord((listing || {}) as ApiAdminListing, index),
         );
 
         setListings(mapped);
@@ -487,60 +583,108 @@ export const AdminMarketplaceModerationPage = () => {
     [listings],
   );
 
-  const confirmModerationAction = useCallback(() => {
-    if (!confirmAction) {
+  const confirmModerationAction = useCallback(async () => {
+    if (!confirmAction || isConfirmSubmitting) {
       return;
     }
 
     setIsConfirmSubmitting(true);
+    setLoadingError(null);
 
     const { type, listingIds, sellerId } = confirmAction;
+    let processedListingIds: string[] = [];
+    let actionError: string | null = null;
 
-    if (type === 'delete' || type === 'bulk-delete') {
-      updateListings((previous) =>
-        previous.map((listing) => {
-          if (!listingIds.includes(listing.id)) {
-            return listing;
-          }
+    try {
+      if (type === 'delete' || type === 'bulk-delete') {
+        const parsedListingIds = listingIds
+          .map((id) => ({
+            raw: id,
+            numeric: Number(id),
+          }))
+          .filter((item) => Number.isFinite(item.numeric) && item.numeric > 0);
 
-          return {
-            ...listing,
-            isDeleted: true,
-          };
-        }),
-      );
+        if (parsedListingIds.length === 0) {
+          throw new Error('No valid listings were selected for deletion.');
+        }
 
+        const deleteResults = await Promise.allSettled(
+          parsedListingIds.map((item) => deleteAdminListing(item.numeric)),
+        );
+
+        processedListingIds = deleteResults
+          .map((result, index) => (result.status === 'fulfilled' ? parsedListingIds[index].raw : null))
+          .filter((value): value is string => Boolean(value));
+
+        if (processedListingIds.length > 0) {
+          updateListings((previous) =>
+            previous.map((listing) => {
+              if (!processedListingIds.includes(listing.id)) {
+                return listing;
+              }
+
+              return {
+                ...listing,
+                isDeleted: true,
+              };
+            }),
+          );
+        }
+
+        const failedCount = deleteResults.length - processedListingIds.length;
+        if (failedCount > 0) {
+          actionError = `${failedCount} moderation action(s) failed. Please retry.`;
+        }
+      }
+
+      if (type === 'ban' && sellerId) {
+        const listingIdForBan = listingIds
+          .map((id) => Number(id))
+          .find((id) => Number.isFinite(id) && id > 0);
+
+        if (!listingIdForBan) {
+          throw new Error('Unable to ban this user because no valid listing was found.');
+        }
+
+        await banListingSeller(listingIdForBan);
+        processedListingIds = listingIds;
+
+        updateListings((previous) =>
+          previous.map((listing) => {
+            if (listing.seller.id !== sellerId) {
+              return listing;
+            }
+
+            return {
+              ...listing,
+              isDeleted: true,
+              seller: {
+                ...listing.seller,
+                isBanned: true,
+              },
+            };
+          }),
+        );
+      }
+    } catch (error) {
+      actionError = error instanceof Error ? error.message : 'Failed to complete moderation action.';
     }
 
-    if (type === 'ban' && sellerId) {
-      updateListings((previous) =>
-        previous.map((listing) => {
-          if (listing.seller.id !== sellerId) {
-            return listing;
-          }
+    if (processedListingIds.length > 0) {
+      setSelectedListingIds((previous) => previous.filter((id) => !processedListingIds.includes(id)));
 
-          return {
-            ...listing,
-            isDeleted: true,
-            seller: {
-              ...listing.seller,
-              isBanned: true,
-            },
-          };
-        }),
-      );
-
+      if (activeListingId && processedListingIds.includes(activeListingId)) {
+        setActiveListingId(null);
+      }
     }
 
-    setSelectedListingIds((previous) => previous.filter((id) => !listingIds.includes(id)));
-
-    if (activeListingId && listingIds.includes(activeListingId)) {
-      setActiveListingId(null);
+    if (actionError) {
+      setLoadingError(actionError);
     }
 
     setConfirmAction(null);
     setIsConfirmSubmitting(false);
-  }, [activeListingId, confirmAction, updateListings]);
+  }, [activeListingId, confirmAction, isConfirmSubmitting, updateListings]);
 
   const closeConfirmModal = useCallback(() => {
     if (isConfirmSubmitting) {

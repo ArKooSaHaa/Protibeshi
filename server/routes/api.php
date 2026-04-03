@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AdminAuthController;
+use App\Http\Controllers\AdminListingModerationController;
 use App\Http\Controllers\AdminPostModerationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatController;
@@ -35,6 +36,10 @@ Route::middleware(['auth:admin_api'])->prefix('admin')->group(function () {
     Route::post('/posts/{id}/verify', [AdminPostModerationController::class, 'verify']);
     Route::post('/posts/{id}/ignore-reports', [AdminPostModerationController::class, 'ignoreReports']);
     Route::delete('/posts/{id}', [AdminPostModerationController::class, 'destroy']);
+
+    Route::get('/listings', [AdminListingModerationController::class, 'index']);
+    Route::delete('/listings/{id}', [AdminListingModerationController::class, 'destroy']);
+    Route::post('/listings/{id}/ban-user', [AdminListingModerationController::class, 'banSeller']);
 });
 
 Route::get('/listings', [ListingController::class, 'index']);
@@ -58,7 +63,7 @@ Route::get('/offers/{id}', [\App\Http\Controllers\Api\OfferController::class, 's
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth:api'])->group(function () {
+Route::middleware(['auth:api', 'not_banned'])->group(function () {
 
     Route::post('/conversations', [ChatController::class, 'startConversation']);
     Route::get('/conversations', [ChatController::class, 'getUserConversations']);
