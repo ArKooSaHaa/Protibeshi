@@ -43,6 +43,7 @@ class ListingController extends Controller
     public function index()
     {
         $listings = Listing::with('user')
+            ->where('is_active', true)
             ->latest()
             ->get()
             ->map(function ($listing) {
