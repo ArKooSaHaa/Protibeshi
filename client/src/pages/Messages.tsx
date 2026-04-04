@@ -8,6 +8,7 @@ import {
   markAsRead,
   sendMessage,
 } from '@/api/chatApi';
+import { GeminiConversationTurn, generateGeminiReply } from '@/api/geminiChatApi';
 import { ConversationList } from '@/components/chat/ConversationList';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { ROUTES } from '@/config/routes.config';
@@ -15,6 +16,28 @@ import { getEcho } from '@/lib/echo';
 import styles from '@/features/messages/pages/MessagesPage.module.css';
 
 const ADMIN_INBOX_FALLBACK_USERNAME = 'admin_inbox_system';
+const GEMINI_CONVERSATION_ID = -900001;
+const GEMINI_ASSISTANT_ID = -900002;
+const GEMINI_ASSISTANT_NAME = 'Gemini Inbox';
+
+const createGeminiWelcomeMessage = (): ChatMessage => {
+  const now = new Date().toISOString();
+
+  return {
+    id: 'gemini-welcome',
+    conversation_id: GEMINI_CONVERSATION_ID,
+    message: 'Hi! I am Gemini. Ask me anything about your neighborhood, writing posts, or local help.',
+    sender_id: GEMINI_ASSISTANT_ID,
+    is_read: true,
+    created_at: now,
+    updated_at: now,
+    sender: {
+      id: GEMINI_ASSISTANT_ID,
+      name: GEMINI_ASSISTANT_NAME,
+      username: 'gemini_ai',
+    },
+  };
+};
 
 const extractStoredUserId = (): number | null => {
   if (typeof window === 'undefined') {
@@ -65,6 +88,7 @@ export const Messages = () => {
 
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [geminiMessages, setGeminiMessages] = useState<ChatMessage[]>(() => [createGeminiWelcomeMessage()]);
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
   const [draft, setDraft] = useState('');
@@ -84,26 +108,59 @@ export const Messages = () => {
     });
   };
 
+  const geminiConversation = useMemo<ChatConversation>(() => {
+    const fallbackMessage = createGeminiWelcomeMessage();
+    const firstMessage = geminiMessages[0] || fallbackMessage;
+    const lastMessage = geminiMessages[geminiMessages.length - 1] || fallbackMessage;
+
+    return {
+      id: GEMINI_CONVERSATION_ID,
+      listing_id: null,
+      last_message: lastMessage.message,
+      unread_count: 0,
+      created_at: firstMessage.created_at,
+      updated_at: lastMessage.updated_at || lastMessage.created_at,
+      user: {
+        id: GEMINI_ASSISTANT_ID,
+        name: GEMINI_ASSISTANT_NAME,
+        username: 'gemini_ai',
+        profile_picture: null,
+      },
+    };
+  }, [geminiMessages]);
+
+  const conversationsWithGemini = useMemo(
+    () => [geminiConversation, ...conversations],
+    [conversations, geminiConversation],
+  );
+
   const filteredConversations = useMemo(() => {
     const term = query.trim().toLowerCase();
     if (!term) {
-      return conversations;
+      return conversationsWithGemini;
     }
 
-    return conversations.filter((conversation) => {
+    return conversationsWithGemini.filter((conversation) => {
       const name = (conversation.user?.name || '').toLowerCase();
       const preview = (conversation.last_message || '').toLowerCase();
       return name.includes(term) || preview.includes(term);
     });
-  }, [conversations, query]);
+  }, [conversationsWithGemini, query]);
 
   const activeConversation = useMemo(
-    () => conversations.find((conversation) => conversation.id === activeConversationId) || null,
-    [conversations, activeConversationId],
+    () => conversationsWithGemini.find((conversation) => conversation.id === activeConversationId) || null,
+    [conversationsWithGemini, activeConversationId],
+  );
+
+  const isGeminiConversation = activeConversationId === GEMINI_CONVERSATION_ID;
+
+  const displayedMessages = useMemo(
+    () => (isGeminiConversation ? geminiMessages : messages),
+    [isGeminiConversation, geminiMessages, messages],
   );
 
   const isAdminInboxConversation = useMemo(() => {
-    if (!activeConversation) {
+    if (!activeConversation || isGeminiConversation) {
       return false;
     }
 
@@ -112,7 +169,7 @@ export const Messages = () => {
     }
 
     return activeConversation.user?.username === ADMIN_INBOX_FALLBACK_USERNAME;
-  }, [activeConversation]);
+  }, [activeConversation, isGeminiConversation]);
 
   const adminInboxReadOnlyMessage = useMemo(() => {
     if (!isAdminInboxConversation) {
@@ -130,17 +187,25 @@ export const Messages = () => {
       setConversations(data);
 
       setActiveConversationId((previousId) => {
+        if (previousId === GEMINI_CONVERSATION_ID) {
+          return previousId;
+        }
+
         if (previousId && data.some((item) => item.id === previousId)) {
           return previousId;
         }
 
         const params = new URLSearchParams(location.search);
         const queryId = Number(params.get('conversation'));
+        if (queryId === GEMINI_CONVERSATION_ID) {
+          return GEMINI_CONVERSATION_ID;
+        }
+
         if (Number.isFinite(queryId) && data.some((item) => item.id === queryId)) {
           return queryId;
         }
 
-        return data[0]?.id ?? null;
+        return data[0]?.id ?? GEMINI_CONVERSATION_ID;
       });
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Failed to load conversations';
@@ -165,6 +230,11 @@ export const Messages = () => {
   useEffect(() => {
     if (!activeConversationId) {
       setMessages([]);
+      return;
+    }
+
+    if (activeConversationId === GEMINI_CONVERSATION_ID) {
+      setLoadingMessages(false);
       return;
     }
 
@@ -206,10 +276,10 @@ export const Messages = () => {
 
   useEffect(() => {
     bottomAnchorRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [displayedMessages]);
 
   useEffect(() => {
-    if (!activeConversationId) {
+    if (!activeConversationId || activeConversationId === GEMINI_CONVERSATION_ID) {
       return;
     }
 
@@ -254,7 +324,7 @@ export const Messages = () => {
   }, [activeConversationId, currentUserId]);
 
   useEffect(() => {
-    if (!activeConversationId) {
+    if (!activeConversationId || activeConversationId === GEMINI_CONVERSATION_ID) {
       return;
     }
 
@@ -299,13 +369,71 @@ export const Messages = () => {
       return;
     }
 
-    if (isAdminInboxConversation) {
-      setError(adminInboxReadOnlyMessage || 'This admin inbox is read-only.');
+    const text = draft.trim();
+    if (!text) {
       return;
     }
 
-    const text = draft.trim();
-    if (!text) {
+    if (isGeminiConversation) {
+      const tempId = `gemini-user-${Date.now()}`;
+      const now = new Date().toISOString();
+      const userMessage: ChatMessage = {
+        id: tempId,
+        conversation_id: GEMINI_CONVERSATION_ID,
+        message: text,
+        sender_id: currentUserId ?? 1,
+        is_read: true,
+        created_at: now,
+        updated_at: now,
+        sender: {
+          id: currentUserId ?? 1,
+          name: 'You',
+        },
+      };
+
+      const history: GeminiConversationTurn[] = [...geminiMessages, userMessage].map((item) => ({
+        role: Number(item.sender_id) === GEMINI_ASSISTANT_ID ? 'model' : 'user',
+        text: item.message,
+      }));
+
+      setGeminiMessages((previous) => [...previous, userMessage]);
+      setDraft('');
+      setError(null);
+      setIsSending(true);
+
+      try {
+        const reply = await generateGeminiReply(history, text);
+        const replyTime = new Date().toISOString();
+        const assistantMessage: ChatMessage = {
+          id: `gemini-model-${Date.now()}`,
+          conversation_id: GEMINI_CONVERSATION_ID,
+          message: reply,
+          sender_id: GEMINI_ASSISTANT_ID,
+          is_read: true,
+          created_at: replyTime,
+          updated_at: replyTime,
+          sender: {
+            id: GEMINI_ASSISTANT_ID,
+            name: GEMINI_ASSISTANT_NAME,
+            username: 'gemini_ai',
+          },
+        };
+
+        setGeminiMessages((previous) => [...previous, assistantMessage]);
+      } catch (requestError) {
+        const message = requestError instanceof Error ? requestError.message : 'Gemini is unavailable right now.';
+        setError(message);
+        setGeminiMessages((previous) => previous.filter((item) => String(item.id) !== tempId));
+        setDraft(text);
+      } finally {
+        setIsSending(false);
+      }
+
+      return;
+    }
+
+    if (isAdminInboxConversation) {
+      setError(adminInboxReadOnlyMessage || 'This admin inbox is read-only.');
       return;
     }
 
@@ -340,6 +468,7 @@ export const Messages = () => {
     );
 
     setDraft('');
+    setError(null);
     setIsSending(true);
 
     try {
@@ -371,12 +500,12 @@ export const Messages = () => {
 
         <ChatWindow
           activeConversation={activeConversation}
-          messages={messages}
+          messages={displayedMessages}
           currentUserId={currentUserId}
           draft={draft}
           isSending={isSending}
-          isReadOnly={isAdminInboxConversation}
-          readOnlyMessage={adminInboxReadOnlyMessage}
+          isReadOnly={!isGeminiConversation && isAdminInboxConversation}
+          readOnlyMessage={!isGeminiConversation ? adminInboxReadOnlyMessage : null}
           onDraftChange={setDraft}
           onSend={handleSend}
           bottomAnchorRef={bottomAnchorRef}
