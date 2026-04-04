@@ -51,7 +51,7 @@ export const ConversationList = ({
         {conversations.map((conversation) => {
           const isActive = conversation.id === activeConversationId;
           const isGeminiInbox =
-            Number(conversation.id) < 0 || conversation.user?.username === 'gemini_ai';
+            Boolean(conversation.is_gemini_inbox) || conversation.user?.username === 'gemini_ai';
           const conversationName = isGeminiInbox
             ? 'Gemini Inbox'
             : (conversation.user?.name || 'Unknown user');

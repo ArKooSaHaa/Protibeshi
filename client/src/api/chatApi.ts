@@ -16,6 +16,7 @@ export type ChatConversation = {
   last_message: string | null;
   unread_count: number;
   is_admin_inbox?: boolean;
+  is_gemini_inbox?: boolean;
   is_read_only?: boolean;
   admin_contact_email?: string | null;
   created_at?: string;
@@ -154,6 +155,26 @@ export const sendMessage = async (
 
   const data = await parseJsonSafely(response);
   throwIfNotOk(response, data, 'Failed to send message');
+  const payload = (data ?? {}) as JsonRecord;
+
+  return {
+    success: Boolean(payload.success),
+    message: payload.message as ChatMessage,
+  };
+};
+
+export const saveGeminiReply = async (
+  conversation_id: number,
+  message: string,
+): Promise<{ success: boolean; message: ChatMessage }> => {
+  const response = await fetch(`${getApiBaseUrl()}/messages/gemini/reply`, {
+    method: 'POST',
+    headers: getAuthHeaders(true),
+    body: JSON.stringify({ conversation_id, message }),
+  });
+
+  const data = await parseJsonSafely(response);
+  throwIfNotOk(response, data, 'Failed to save Gemini reply');
   const payload = (data ?? {}) as JsonRecord;
 
   return {

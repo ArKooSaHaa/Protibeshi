@@ -75,6 +75,7 @@ Route::middleware(['auth:api'])->group(function () {
     Route::get('/conversations', [ChatController::class, 'getUserConversations']);
 
     Route::post('/messages', [ChatController::class, 'sendMessage']);
+    Route::post('/messages/gemini/reply', [ChatController::class, 'saveGeminiReply']);
     Route::get('/conversations/{id}/messages', [ChatController::class, 'getMessages']);
     Route::post('/messages/read', [ChatController::class, 'markAsRead']);
     Route::delete('/conversations/{id}', [ChatController::class, 'deleteConversation']);

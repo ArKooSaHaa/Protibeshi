@@ -6,6 +6,7 @@ import {
   getConversations,
   getMessages,
   markAsRead,
+  saveGeminiReply,
   sendMessage,
 } from '@/api/chatApi';
 import { GeminiConversationTurn, generateGeminiReply } from '@/api/geminiChatApi';
@@ -16,28 +17,7 @@ import { getEcho } from '@/lib/echo';
 import styles from '@/features/messages/pages/MessagesPage.module.css';
 
 const ADMIN_INBOX_FALLBACK_USERNAME = 'admin_inbox_system';
-const GEMINI_CONVERSATION_ID = -900001;
-const GEMINI_ASSISTANT_ID = -900002;
-const GEMINI_ASSISTANT_NAME = 'Gemini Inbox';
-
-const createGeminiWelcomeMessage = (): ChatMessage => {
-  const now = new Date().toISOString();
-
-  return {
-    id: 'gemini-welcome',
-    conversation_id: GEMINI_CONVERSATION_ID,
-    message: 'Hi! I am Gemini. Ask me anything about your neighborhood, writing posts, or local help.',
-    sender_id: GEMINI_ASSISTANT_ID,
-    is_read: true,
-    created_at: now,
-    updated_at: now,
-    sender: {
-      id: GEMINI_ASSISTANT_ID,
-      name: GEMINI_ASSISTANT_NAME,
-      username: 'gemini_ai',
-    },
-  };
-};
+const GEMINI_INBOX_USERNAME = 'gemini_ai';
 
 const extractStoredUserId = (): number | null => {
   if (typeof window === 'undefined') {
@@ -88,7 +68,6 @@ export const Messages = () => {
 
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [geminiMessages, setGeminiMessages] = useState<ChatMessage[]>(() => [createGeminiWelcomeMessage()]);
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
   const [draft, setDraft] = useState('');
@@ -108,56 +87,36 @@ export const Messages = () => {
     });
   };
 
-  const geminiConversation = useMemo<ChatConversation>(() => {
-    const fallbackMessage = createGeminiWelcomeMessage();
-    const firstMessage = geminiMessages[0] || fallbackMessage;
-    const lastMessage = geminiMessages[geminiMessages.length - 1] || fallbackMessage;
-
-    return {
-      id: GEMINI_CONVERSATION_ID,
-      listing_id: null,
-      last_message: lastMessage.message,
-      unread_count: 0,
-      created_at: firstMessage.created_at,
-      updated_at: lastMessage.updated_at || lastMessage.created_at,
-      user: {
-        id: GEMINI_ASSISTANT_ID,
-        name: GEMINI_ASSISTANT_NAME,
-        username: 'gemini_ai',
-        profile_picture: null,
-      },
-    };
-  }, [geminiMessages]);
-
-  const conversationsWithGemini = useMemo(
-    () => [geminiConversation, ...conversations],
-    [conversations, geminiConversation],
-  );
-
   const filteredConversations = useMemo(() => {
     const term = query.trim().toLowerCase();
     if (!term) {
-      return conversationsWithGemini;
+      return conversations;
     }
 
-    return conversationsWithGemini.filter((conversation) => {
+    return conversations.filter((conversation) => {
       const name = (conversation.user?.name || '').toLowerCase();
       const preview = (conversation.last_message || '').toLowerCase();
       return name.includes(term) || preview.includes(term);
     });
-  }, [conversationsWithGemini, query]);
+  }, [conversations, query]);
 
   const activeConversation = useMemo(
-    () => conversationsWithGemini.find((conversation) => conversation.id === activeConversationId) || null,
-    [conversationsWithGemini, activeConversationId],
+    () => conversations.find((conversation) => conversation.id === activeConversationId) || null,
+    [conversations, activeConversationId],
   );
 
-  const isGeminiConversation = activeConversationId === GEMINI_CONVERSATION_ID;
+  const isGeminiConversation = useMemo(() => {
+    if (!activeConversation) {
+      return false;
+    }
 
-  const displayedMessages = useMemo(
-    () => (isGeminiConversation ? geminiMessages : messages),
-    [isGeminiConversation, geminiMessages, messages],
-  );
+    return Boolean(
+      activeConversation.is_gemini_inbox
+      || activeConversation.user?.username === GEMINI_INBOX_USERNAME,
+    );
+  }, [activeConversation]);
+
+  const displayedMessages = useMemo(() => messages, [messages]);
 
   const isAdminInboxConversation = useMemo(() => {
     if (!activeConversation || isGeminiConversation) {
@@ -187,25 +146,18 @@ export const Messages = () => {
       setConversations(data);
 
       setActiveConversationId((previousId) => {
-        if (previousId === GEMINI_CONVERSATION_ID) {
-          return previousId;
-        }
-
         if (previousId && data.some((item) => item.id === previousId)) {
           return previousId;
         }
 
         const params = new URLSearchParams(location.search);
         const queryId = Number(params.get('conversation'));
-        if (queryId === GEMINI_CONVERSATION_ID) {
-          return GEMINI_CONVERSATION_ID;
-        }
 
         if (Number.isFinite(queryId) && data.some((item) => item.id === queryId)) {
           return queryId;
         }
 
-        return data[0]?.id ?? GEMINI_CONVERSATION_ID;
+        return data[0]?.id ?? null;
       });
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Failed to load conversations';
@@ -222,7 +174,7 @@ export const Messages = () => {
 
   useEffect(() => {
     const id = Number(new URLSearchParams(location.search).get('conversation'));
-    if (Number.isFinite(id)) {
+    if (Number.isFinite(id) && id > 0) {
       setActiveConversationId(id);
     }
   }, [location.search]);
@@ -230,11 +182,6 @@ export const Messages = () => {
   useEffect(() => {
     if (!activeConversationId) {
       setMessages([]);
-      return;
-    }
-
-    if (activeConversationId === GEMINI_CONVERSATION_ID) {
-      setLoadingMessages(false);
       return;
     }
 
@@ -279,7 +226,7 @@ export const Messages = () => {
   }, [displayedMessages]);
 
   useEffect(() => {
-    if (!activeConversationId || activeConversationId === GEMINI_CONVERSATION_ID) {
+    if (!activeConversationId || isGeminiConversation) {
       return;
     }
 
@@ -321,10 +268,10 @@ export const Messages = () => {
     return () => {
       echo.leave(channelName);
     };
-  }, [activeConversationId, currentUserId]);
+  }, [activeConversationId, currentUserId, isGeminiConversation]);
 
   useEffect(() => {
-    if (!activeConversationId || activeConversationId === GEMINI_CONVERSATION_ID) {
+    if (!activeConversationId || isGeminiConversation) {
       return;
     }
 
@@ -357,7 +304,7 @@ export const Messages = () => {
       stopped = true;
       window.clearInterval(intervalId);
     };
-  }, [activeConversationId]);
+  }, [activeConversationId, isGeminiConversation]);
 
   const handleSelectConversation = (conversationId: number) => {
     setActiveConversationId(conversationId);
@@ -375,55 +322,70 @@ export const Messages = () => {
     }
 
     if (isGeminiConversation) {
+      const geminiSenderId = Number(activeConversation?.user?.id || 0);
+      if (!geminiSenderId) {
+        setError('Gemini inbox is not available right now.');
+        return;
+      }
+
       const tempId = `gemini-user-${Date.now()}`;
       const now = new Date().toISOString();
-      const userMessage: ChatMessage = {
+      const optimisticUserMessage: ChatMessage = {
         id: tempId,
-        conversation_id: GEMINI_CONVERSATION_ID,
+        conversation_id: activeConversationId,
         message: text,
-        sender_id: currentUserId ?? 1,
-        is_read: true,
+        sender_id: currentUserId ?? 0,
+        is_read: false,
         created_at: now,
         updated_at: now,
-        sender: {
-          id: currentUserId ?? 1,
-          name: 'You',
-        },
+        sender: currentUserId
+          ? {
+              id: currentUserId,
+              name: 'You',
+            }
+          : null,
       };
 
-      const history: GeminiConversationTurn[] = [...geminiMessages, userMessage].map((item) => ({
-        role: Number(item.sender_id) === GEMINI_ASSISTANT_ID ? 'model' : 'user',
+      const history: GeminiConversationTurn[] = messages.map((item) => ({
+        role: Number(item.sender_id) === geminiSenderId ? 'model' : 'user',
         text: item.message,
       }));
 
-      setGeminiMessages((previous) => [...previous, userMessage]);
+      setMessages((previous) => [...previous, optimisticUserMessage]);
+      setConversations((previous) =>
+        previous.map((conversation) =>
+          conversation.id === activeConversationId
+            ? {
+                ...conversation,
+                last_message: text,
+                updated_at: now,
+              }
+            : conversation,
+        ),
+      );
+
       setDraft('');
       setError(null);
       setIsSending(true);
 
       try {
-        const reply = await generateGeminiReply(history, text);
-        const replyTime = new Date().toISOString();
-        const assistantMessage: ChatMessage = {
-          id: `gemini-model-${Date.now()}`,
-          conversation_id: GEMINI_CONVERSATION_ID,
-          message: reply,
-          sender_id: GEMINI_ASSISTANT_ID,
-          is_read: true,
-          created_at: replyTime,
-          updated_at: replyTime,
-          sender: {
-            id: GEMINI_ASSISTANT_ID,
-            name: GEMINI_ASSISTANT_NAME,
-            username: 'gemini_ai',
-          },
-        };
+        const userPersisted = await sendMessage(activeConversationId, text);
+        setMessages((previous) =>
+          previous.map((message) =>
+            String(message.id) === tempId ? userPersisted.message : message,
+          ),
+        );
 
-        setGeminiMessages((previous) => [...previous, assistantMessage]);
+        const reply = await generateGeminiReply(history, text);
+        const assistantPersisted = await saveGeminiReply(activeConversationId, reply);
+        appendMessageWithoutDuplicates(assistantPersisted.message);
+
+        await markAsRead(activeConversationId);
+        await loadConversationList();
       } catch (requestError) {
         const message = requestError instanceof Error ? requestError.message : 'Gemini is unavailable right now.';
         setError(message);
-        setGeminiMessages((previous) => previous.filter((item) => String(item.id) !== tempId));
+        setMessages((previous) => previous.filter((item) => String(item.id) !== tempId));
         setDraft(text);
       } finally {
         setIsSending(false);
