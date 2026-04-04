@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { ConfirmActionType } from '../types/adminMarketplace.types';
 
 interface ConfirmActionModalProps {
@@ -56,11 +57,15 @@ export const ConfirmActionModal = ({
     return null;
   }
 
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
   const meta = actionMeta[actionType];
   const trimmedReason = reason.trim();
   const isReasonValid = trimmedReason.length > 0;
 
-  return (
+  const modal = (
     <AnimatePresence>
       {isOpen ? (
         <motion.div
@@ -129,4 +134,6 @@ export const ConfirmActionModal = ({
       ) : null}
     </AnimatePresence>
   );
+
+  return createPortal(modal, document.body);
 };

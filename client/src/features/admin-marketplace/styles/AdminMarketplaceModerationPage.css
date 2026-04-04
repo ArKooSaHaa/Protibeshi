@@ -944,6 +944,12 @@
   z-index: 110;
 }
 
+.amp-confirm-overlay {
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
 .amp-drawer {
   position: absolute;
   top: 0;
@@ -1178,11 +1184,10 @@
 }
 
 .amp-confirm-card {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: min(420px, 92vw);
+  position: relative;
+  width: min(420px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
   border-radius: 0.95rem;
   border: 1px solid #e2e8f0;
   background: #ffffff;
