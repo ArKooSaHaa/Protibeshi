@@ -51,7 +51,7 @@ class AdminListingModerationController extends Controller
     public function destroy(Request $request, $id)
     {
         $validated = $request->validate([
-            'reason' => 'nullable|string|max:500',
+            'reason' => 'required|string|min:3|max:500',
         ]);
 
         $listing = Listing::query()
@@ -72,7 +72,7 @@ class AdminListingModerationController extends Controller
 
         $notificationSent = false;
         try {
-            $this->adminInboxService->sendListingDeletedNotice($listing, $validated['reason'] ?? null);
+            $this->adminInboxService->sendListingDeletedNotice($listing, $validated['reason']);
             $notificationSent = true;
         } catch (\Throwable $exception) {
             Log::warning('Failed to deliver listing deletion inbox notice', [
@@ -95,7 +95,7 @@ class AdminListingModerationController extends Controller
     public function banSeller(Request $request, $id)
     {
         $validated = $request->validate([
-            'reason' => 'nullable|string|max:500',
+            'reason' => 'required|string|min:3|max:500',
         ]);
 
         $listing = Listing::query()->with('user')->find($id);
@@ -121,7 +121,7 @@ class AdminListingModerationController extends Controller
         $seller->is_banned = true;
         $seller->banned_at = $banStartedAt;
         $seller->banned_until = $banEndsAt;
-        $seller->banned_reason = $validated['reason'] ?? $seller->banned_reason;
+        $seller->banned_reason = $validated['reason'];
         $seller->banned_by_admin_id = Auth::guard('admin_api')->id();
         $seller->save();
 
@@ -143,7 +143,7 @@ class AdminListingModerationController extends Controller
             $this->adminInboxService->sendListingBanNotice(
                 $seller,
                 $banEndsAt,
-                $validated['reason'] ?? null,
+                $validated['reason'],
                 self::LISTING_BAN_DAYS,
             );
             $notificationSent = true;

@@ -1229,6 +1229,44 @@
   font-weight: 600;
 }
 
+.amp-confirm-label {
+  display: block;
+  margin-top: 0.58rem;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.amp-confirm-textarea {
+  width: 100%;
+  margin-top: 0.38rem;
+  border: 1px solid #dbe4ef;
+  border-radius: 0.64rem;
+  background: #f8fafc;
+  color: #1e293b;
+  font-size: 0.82rem;
+  line-height: 1.42;
+  padding: 0.56rem;
+  resize: vertical;
+  min-height: 96px;
+  box-sizing: border-box;
+}
+
+.amp-confirm-textarea:focus {
+  outline: none;
+  border-color: #34d399;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.amp-confirm-hint {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
 .amp-confirm-actions {
   margin-top: 0.7rem;
   display: flex;

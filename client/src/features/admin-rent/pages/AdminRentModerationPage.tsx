@@ -640,11 +640,17 @@ export const AdminRentModerationPage = () => {
       return;
     }
 
+    const trimmedReason = actionReason.trim();
+    if (!trimmedReason) {
+      showFeedback('error', 'Please provide a moderation message before confirming this action.');
+      return;
+    }
+
     setIsActionSubmitting(true);
 
     try {
       if (pendingAction.kind === 'hide' && pendingAction.listing) {
-        const response = await hideAdminRentListing(pendingAction.listing.id, actionReason);
+        const response = await hideAdminRentListing(pendingAction.listing.id, trimmedReason);
 
         setListings((previous) => previous.filter((listing) => listing.id !== pendingAction.listing?.id));
         setSelectedIds((previous) => previous.filter((id) => id !== pendingAction.listing?.id));
@@ -654,7 +660,7 @@ export const AdminRentModerationPage = () => {
       }
 
       if (pendingAction.kind === 'ban' && pendingAction.listing) {
-        const response = await banRentListingOwner(pendingAction.listing.id, actionReason);
+        const response = await banRentListingOwner(pendingAction.listing.id, trimmedReason);
         const sellerId = pendingAction.listing.seller.id;
 
         setListings((previous) => previous.filter((listing) => listing.seller.id !== sellerId));
@@ -679,7 +685,7 @@ export const AdminRentModerationPage = () => {
         }
 
         const results = await Promise.allSettled(
-          listingIds.map((listingId) => hideAdminRentListing(listingId, actionReason)),
+          listingIds.map((listingId) => hideAdminRentListing(listingId, trimmedReason)),
         );
 
         const successfulIds: number[] = [];
@@ -1150,14 +1156,16 @@ export const AdminRentModerationPage = () => {
                   : null}
               </p>
 
-              <label htmlFor="moderation-reason">Reason (optional)</label>
+              <label htmlFor="moderation-reason">Moderation Message (Required)</label>
               <textarea
                 id="moderation-reason"
                 value={actionReason}
                 onChange={(event) => setActionReason(event.target.value)}
-                placeholder="Provide internal moderation reason"
+                placeholder="Explain why this moderation action is being taken"
                 rows={4}
+                maxLength={500}
               />
+              <p className="arp-modal-note">This message will be sent to the user as the official moderation reason.</p>
 
               <div className="arp-modal-actions">
                 <button type="button" className="arp-btn arp-btn-ghost" onClick={closeActionModal} disabled={isActionSubmitting}>
@@ -1167,7 +1175,7 @@ export const AdminRentModerationPage = () => {
                   type="button"
                   className="arp-btn arp-btn-danger"
                   onClick={() => void confirmPendingAction()}
-                  disabled={isActionSubmitting}
+                  disabled={isActionSubmitting || actionReason.trim().length === 0}
                 >
                   {isActionSubmitting ? 'Applying...' : 'Confirm Action'}
                 </button>

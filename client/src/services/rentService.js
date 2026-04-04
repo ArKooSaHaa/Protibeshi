@@ -317,6 +317,9 @@ export const hideAdminRentListing = async (listingId, reason = '', token) => {
   }
 
   const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+  if (!trimmedReason) {
+    throw new Error('Please provide a moderation message before hiding this listing.');
+  }
 
   const response = await fetch(`${getApiBaseUrl()}/admin/rent-listings/${resolvedListingId}`, {
     method: 'DELETE',
@@ -326,7 +329,7 @@ export const hideAdminRentListing = async (listingId, reason = '', token) => {
       Accept: 'application/json',
     },
     body: JSON.stringify({
-      reason: trimmedReason || null,
+      reason: trimmedReason,
     }),
   });
 
@@ -362,6 +365,9 @@ export const banRentListingOwner = async (listingId, reason = '', token) => {
   }
 
   const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+  if (!trimmedReason) {
+    throw new Error('Please provide a moderation message before banning this user.');
+  }
 
   const response = await fetch(`${getApiBaseUrl()}/admin/rent-listings/${resolvedListingId}/ban-user`, {
     method: 'POST',
@@ -371,7 +377,7 @@ export const banRentListingOwner = async (listingId, reason = '', token) => {
       Accept: 'application/json',
     },
     body: JSON.stringify({
-      reason: trimmedReason || null,
+      reason: trimmedReason,
     }),
   });
 

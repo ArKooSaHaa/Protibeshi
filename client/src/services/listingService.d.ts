@@ -9,6 +9,7 @@ export function getAdminListings(token?: string): Promise<any[]>;
 
 export function deleteAdminListing(
   listingId: number | string,
+  reason: string,
   token?: string,
 ): Promise<{
   message: string;

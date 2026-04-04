@@ -51,7 +51,7 @@ class AdminRentModerationController extends Controller
     public function destroy(Request $request, $id)
     {
         $validated = $request->validate([
-            'reason' => 'nullable|string|max:500',
+            'reason' => 'required|string|min:3|max:500',
         ]);
 
         $listing = RentListing::query()
@@ -72,7 +72,7 @@ class AdminRentModerationController extends Controller
 
         $notificationSent = false;
         try {
-            $this->adminInboxService->sendRentListingDeletedNotice($listing, $validated['reason'] ?? null);
+            $this->adminInboxService->sendRentListingDeletedNotice($listing, $validated['reason']);
             $notificationSent = true;
         } catch (\Throwable $exception) {
             Log::warning('Failed to deliver rent listing deletion inbox notice', [
@@ -95,7 +95,7 @@ class AdminRentModerationController extends Controller
     public function banLandlord(Request $request, $id)
     {
         $validated = $request->validate([
-            'reason' => 'nullable|string|max:500',
+            'reason' => 'required|string|min:3|max:500',
         ]);
 
         $listing = RentListing::query()->with('user')->find($id);
@@ -121,7 +121,7 @@ class AdminRentModerationController extends Controller
         $landlord->is_banned = true;
         $landlord->banned_at = $banStartedAt;
         $landlord->banned_until = $banEndsAt;
-        $landlord->banned_reason = $validated['reason'] ?? $landlord->banned_reason;
+        $landlord->banned_reason = $validated['reason'];
         $landlord->banned_by_admin_id = Auth::guard('admin_api')->id();
         $landlord->save();
 
@@ -143,7 +143,7 @@ class AdminRentModerationController extends Controller
             $this->adminInboxService->sendListingBanNotice(
                 $landlord,
                 $banEndsAt,
-                $validated['reason'] ?? null,
+                $validated['reason'],
                 self::LISTING_BAN_DAYS,
             );
             $notificationSent = true;
