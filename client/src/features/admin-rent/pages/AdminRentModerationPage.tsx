@@ -38,6 +38,19 @@ type ApiAdminRentSeller = {
   total_active_rent_listings?: number | string | null;
 };
 
+type ApiAdminRentReport = {
+  id?: number | string;
+  reason?: string | null;
+  message?: string | null;
+  severity?: string | null;
+  created_at?: string | null;
+  reporter?: {
+    id?: number | string;
+    name?: string | null;
+    username?: string | null;
+  } | null;
+};
+
 type ApiAdminRentListing = {
   id?: number | string;
   title?: string | null;
@@ -58,10 +71,12 @@ type ApiAdminRentListing = {
   created_at?: string | null;
   seller?: ApiAdminRentSeller | null;
   user?: ApiAdminRentSeller | null;
+  report_count?: number | string | null;
+  reports?: ApiAdminRentReport[] | null;
 };
 
 type RiskLevel = 'high' | 'medium' | 'low';
-type ModerationTab = 'all' | 'highRisk' | 'unverified' | 'recent';
+type ModerationTab = 'all' | 'reports';
 type SortMode = 'newest' | 'oldest' | 'risk' | 'priceHigh' | 'priceLow';
 type RiskFilter = 'all' | RiskLevel;
 type PendingActionKind = 'hide' | 'ban' | 'bulkHide';
@@ -108,6 +123,15 @@ type AdminRentListingRecord = {
   riskLevel: RiskLevel;
   riskScore: number;
   riskReasons: string[];
+  reportCount: number;
+  reports: Array<{
+    id: number;
+    reason: string;
+    message: string;
+    severity: RiskLevel;
+    createdAt: string;
+    reporterName: string;
+  }>;
 };
 
 type FeedbackState = {
@@ -119,9 +143,7 @@ const FALLBACK_IMAGE = 'https://placehold.co/960x640/e2e8f0/334155?text=Rent+Lis
 
 const TAB_LABELS: Record<ModerationTab, string> = {
   all: 'All Listings',
-  highRisk: 'High Risk',
-  unverified: 'Unverified',
-  recent: 'Recent',
+  reports: 'Reports',
 };
 
 const createId = (prefix: string): string => {
@@ -135,6 +157,16 @@ const toSafeNumber = (value: number | string | null | undefined): number => {
 
 const normalizeText = (value: string | null | undefined): string => {
   return typeof value === 'string' ? value.trim() : '';
+};
+
+const toRiskLevel = (value: string | null | undefined): RiskLevel => {
+  const normalized = normalizeText(value).toLowerCase();
+
+  if (normalized === 'high' || normalized === 'medium' || normalized === 'low') {
+    return normalized;
+  }
+
+  return 'low';
 };
 
 const formatCurrency = (value: number): string => {
@@ -284,6 +316,22 @@ const normalizeAdminRentListing = (
   const sellerName = resolveSellerName(seller);
   const sellerId = Math.max(1, toSafeNumber(seller?.id) || index + 1);
   const sellerUsername = normalizeText(seller?.username) || sellerName.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  const rawReports = Array.isArray(raw.reports) ? raw.reports : [];
+  const normalizedReports = rawReports.map((report, reportIndex) => {
+    const reason = normalizeText(report.reason) || 'Reported by community member';
+
+    return {
+      id: Math.max(1, toSafeNumber(report.id) || reportIndex + 1),
+      reason,
+      message: normalizeText(report.message) || reason,
+      severity: toRiskLevel(report.severity),
+      createdAt: normalizeText(report.created_at) || new Date().toISOString(),
+      reporterName: normalizeText(report.reporter?.name)
+        || normalizeText(report.reporter?.username)
+        || 'Community member',
+    };
+  });
+  const reportCount = Math.max(0, toSafeNumber(raw.report_count));
 
   const record: AdminRentListingRecord = {
     id: Math.max(1, toSafeNumber(raw.id) || index + 1),
@@ -314,6 +362,8 @@ const normalizeAdminRentListing = (
     riskLevel: 'low',
     riskScore: 0,
     riskReasons: [],
+    reportCount: reportCount > 0 ? reportCount : normalizedReports.length,
+    reports: normalizedReports,
   };
 
   const risk = assessRisk({
@@ -470,6 +520,7 @@ export const AdminRentModerationPage = () => {
 
   const stats = useMemo(() => {
     const total = listings.length;
+    const reported = listings.filter((listing) => listing.reportCount > 0).length;
     const highRisk = listings.filter((listing) => listing.riskLevel === 'high').length;
     const unverified = listings.filter((listing) => !listing.verifiedLandlord).length;
     const recent = listings.filter((listing) => isRecentListing(listing.createdAt)).length;
@@ -479,6 +530,7 @@ export const AdminRentModerationPage = () => {
 
     return {
       total,
+      reported,
       highRisk,
       unverified,
       recent,
@@ -490,21 +542,15 @@ export const AdminRentModerationPage = () => {
   const tabCounts = useMemo(() => {
     return {
       all: listings.length,
-      highRisk: listings.filter((listing) => listing.riskLevel === 'high').length,
-      unverified: listings.filter((listing) => !listing.verifiedLandlord).length,
-      recent: listings.filter((listing) => isRecentListing(listing.createdAt)).length,
+      reports: listings.filter((listing) => listing.reportCount > 0).length,
     };
   }, [listings]);
 
   const filteredListings = useMemo(() => {
     let data = [...listings];
 
-    if (activeTab === 'highRisk') {
-      data = data.filter((listing) => listing.riskLevel === 'high');
-    } else if (activeTab === 'unverified') {
-      data = data.filter((listing) => !listing.verifiedLandlord);
-    } else if (activeTab === 'recent') {
-      data = data.filter((listing) => isRecentListing(listing.createdAt));
+    if (activeTab === 'reports') {
+      data = data.filter((listing) => listing.reportCount > 0);
     }
 
     const normalizedQuery = searchTerm.trim().toLowerCase();
@@ -906,6 +952,9 @@ export const AdminRentModerationPage = () => {
               {filteredListings.map((listing) => {
                 const isSelected = selectedIds.includes(listing.id);
                 const isReviewed = reviewedIds.includes(listing.id);
+                const moderationReasons = listing.reportCount > 0
+                  ? listing.reports.map((report) => report.reason)
+                  : listing.riskReasons;
 
                 return (
                   <article key={listing.id} className="arp-card">
@@ -977,8 +1026,14 @@ export const AdminRentModerationPage = () => {
                         )}
                       </div>
 
+                      {listing.reportCount > 0 ? (
+                        <p className="arp-report-count">
+                          {listing.reportCount} report{listing.reportCount === 1 ? '' : 's'} issued
+                        </p>
+                      ) : null}
+
                       <ul className="arp-risk-reasons">
-                        {listing.riskReasons.slice(0, 2).map((reason) => (
+                        {moderationReasons.slice(0, 2).map((reason) => (
                           <li key={`${listing.id}-${reason}`}>{reason}</li>
                         ))}
                       </ul>
@@ -1053,7 +1108,7 @@ export const AdminRentModerationPage = () => {
 
           <div className="arp-quick-summary">
             <span>{stats.recent} fresh listings in last 48h</span>
-            <span>{stats.highRisk} listings require priority review</span>
+            <span>{stats.reported} listings have issued reports</span>
           </div>
         </aside>
       </div>
@@ -1113,7 +1168,10 @@ export const AdminRentModerationPage = () => {
               </div>
 
               <ul>
-                {activeListing.riskReasons.map((reason) => (
+                {(activeListing.reportCount > 0
+                  ? activeListing.reports.map((report) => report.reason)
+                  : activeListing.riskReasons
+                ).map((reason) => (
                   <li key={reason}>{reason}</li>
                 ))}
               </ul>

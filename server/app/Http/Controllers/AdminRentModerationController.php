@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\RentListing;
+use App\Models\RentListingReport;
 use App\Models\User;
 use App\Services\AdminInboxService;
 use Illuminate\Http\Request;
@@ -32,7 +33,9 @@ class AdminRentModerationController extends Controller
                         },
                     ]);
                 },
+                'reports.user',
             ])
+            ->withCount('reports')
             ->where('is_active', true)
             ->latest()
             ->get();
@@ -52,7 +55,7 @@ class AdminRentModerationController extends Controller
         ]);
 
         $listing = RentListing::query()
-            ->with('user')
+            ->with(['user', 'reports'])
             ->find($id);
 
         if (!$listing) {
@@ -179,11 +182,16 @@ class AdminRentModerationController extends Controller
                     },
                 ]);
             },
+            'reports.user',
         ]);
+
+        $listing->loadCount('reports');
     }
 
     private function formatListing(RentListing $listing): array
     {
+        $reportCount = (int) ($listing->reports_count ?? $listing->reports->count());
+
         return [
             'id' => $listing->id,
             'title' => $listing->title,
@@ -204,9 +212,70 @@ class AdminRentModerationController extends Controller
             'is_active' => (bool) $listing->is_active,
             'created_at' => optional($listing->created_at)->toISOString(),
             'updated_at' => optional($listing->updated_at)->toISOString(),
+            'status' => $reportCount > 0 ? 'reported' : 'active',
+            'report_count' => $reportCount,
+            'reports' => $listing->reports
+                ->map(fn (RentListingReport $report) => $this->formatReport($report, $reportCount))
+                ->values(),
             'seller' => $listing->user ? $this->formatLandlord($listing->user) : null,
             'user' => $listing->user ? $this->formatLandlord($listing->user) : null,
         ];
+    }
+
+    private function formatReport(RentListingReport $report, int $totalReports): array
+    {
+        $reason = trim((string) ($report->reason ?? ''));
+        $message = $reason !== '' ? $reason : 'No additional details provided.';
+
+        return [
+            'id' => $report->id,
+            'reason' => $reason !== '' ? $reason : 'Reported by community member',
+            'message' => $message,
+            'severity' => $this->resolveReportSeverity($reason, $totalReports),
+            'created_at' => optional($report->created_at)->toISOString(),
+            'reporter' => $report->user ? [
+                'id' => $report->user->id,
+                'name' => $this->resolveUserName($report->user),
+                'username' => $report->user->username,
+            ] : null,
+        ];
+    }
+
+    private function resolveReportSeverity(string $reason, int $totalReports): string
+    {
+        $normalizedReason = strtolower($reason);
+
+        if ($totalReports >= 3
+            || str_contains($normalizedReason, 'fraud')
+            || str_contains($normalizedReason, 'scam')
+            || str_contains($normalizedReason, 'fake')) {
+            return 'high';
+        }
+
+        if (str_contains($normalizedReason, 'mislead')
+            || str_contains($normalizedReason, 'inappropriate')
+            || str_contains($normalizedReason, 'abuse')) {
+            return 'medium';
+        }
+
+        return 'low';
+    }
+
+    private function resolveUserName(User $user): string
+    {
+        $firstName = trim((string) ($user->first_name ?? ''));
+        $lastName = trim((string) ($user->last_name ?? ''));
+        $fullName = trim($firstName.' '.$lastName);
+
+        if ($fullName !== '') {
+            return $fullName;
+        }
+
+        if (!empty($user->username)) {
+            return (string) $user->username;
+        }
+
+        return (string) ($user->email ?? 'Unknown User');
     }
 
     private function formatLandlord(User $landlord): array

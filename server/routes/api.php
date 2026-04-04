@@ -18,6 +18,7 @@ use App\Http\Controllers\PostLikeController;
 use App\Http\Controllers\PostReportController;
 use App\Http\Controllers\ReliefController;
 use App\Http\Controllers\RentListingController;
+use App\Http\Controllers\RentListingReportController;
 use App\Http\Controllers\SavedPostController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SessionController;
@@ -83,6 +84,7 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('/listings/{id}/report', [ListingReportController::class, 'report']);
     Route::post('/rent-listings', [RentListingController::class, 'store'])
         ->middleware('not_banned');
+    Route::post('/rent-listings/{id}/report', [RentListingReportController::class, 'report']);
     Route::delete('/rent-listings/{id}', [RentListingController::class, 'destroy']);
 
     Route::post('/services', [ServiceController::class, 'store'])
