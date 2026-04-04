@@ -6,6 +6,7 @@ use App\Models\Conversation;
 use App\Models\Listing;
 use App\Models\Message;
 use App\Models\Post;
+use App\Models\RentListing;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
@@ -115,6 +116,26 @@ class AdminInboxService
         $conversation = $this->getOrCreateConversationForRecipient($recipientId);
 
         $messageBody = $this->buildListingDeletionMessage($listing, $reason);
+
+        $message = Message::create([
+            'conversation_id' => (int) $conversation->id,
+            'sender_id' => $this->getInboxUserId(),
+            'message' => $messageBody,
+            'is_read' => false,
+        ]);
+
+        $conversation->last_message = $messageBody;
+        $conversation->save();
+
+        return $message;
+    }
+
+    public function sendRentListingDeletedNotice(RentListing $listing, ?string $reason = null): Message
+    {
+        $recipientId = (int) $listing->user_id;
+        $conversation = $this->getOrCreateConversationForRecipient($recipientId);
+
+        $messageBody = $this->buildRentListingDeletionMessage($listing, $reason);
 
         $message = Message::create([
             'conversation_id' => (int) $conversation->id,
@@ -267,5 +288,40 @@ class AdminInboxService
         }
 
         return 'Violating marketplace community rules.';
+    }
+
+    private function buildRentListingDeletionMessage(RentListing $listing, ?string $reason): string
+    {
+        $title = trim((string) $listing->title);
+        $location = trim((string) ($listing->location ?? ''));
+        $propertyType = trim((string) ($listing->type ?? ''));
+        $availability = trim((string) ($listing->availability ?? ''));
+        $furnishing = trim((string) ($listing->furnishing ?? ''));
+        $price = is_numeric($listing->price) ? number_format((float) $listing->price, 2) : 'N/A';
+        $deposit = is_numeric($listing->deposit) ? number_format((float) $listing->deposit, 2) : 'N/A';
+
+        $normalizedReason = trim((string) ($reason ?? ''));
+        if ($normalizedReason === '') {
+            $normalizedReason = 'Violating rent community rules.';
+        }
+
+        $parts = [
+            'Your rent listing has been deleted by the admin moderation team.',
+            '',
+            'Listing details:',
+            '- Listing ID: ' . (string) $listing->id,
+            '- Title: ' . ($title !== '' ? $title : 'N/A'),
+            '- Price: BDT ' . $price,
+            '- Deposit: BDT ' . $deposit,
+            '- Location: ' . ($location !== '' ? $location : 'N/A'),
+            '- Type: ' . ($propertyType !== '' ? $propertyType : 'N/A'),
+            '- Furnishing: ' . ($furnishing !== '' ? $furnishing : 'N/A'),
+            '- Availability: ' . ($availability !== '' ? $availability : 'N/A'),
+            'Reason: ' . $normalizedReason,
+            '',
+            'If you think this action is a mistake, contact on ' . self::ADMIN_CONTACT_EMAIL . '.',
+        ];
+
+        return implode("\n", $parts);
     }
 }

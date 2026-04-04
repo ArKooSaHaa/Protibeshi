@@ -8,3 +8,24 @@ export function createRentListing(formData: FormData, token: string): Promise<{
 export function getRentListings(): Promise<any[]>;
 
 export function deleteRentListing(id: string | number, token: string): Promise<any>;
+
+export function getAdminRentListings(token?: string): Promise<any[]>;
+
+export function hideAdminRentListing(
+  listingId: number | string,
+  reason?: string,
+  token?: string,
+): Promise<{
+  message: string;
+  listing: unknown;
+}>;
+
+export function banRentListingOwner(
+  listingId: number | string,
+  reason?: string,
+  token?: string,
+): Promise<{
+  message: string;
+  affectedListings: number;
+  seller: unknown;
+}>;
