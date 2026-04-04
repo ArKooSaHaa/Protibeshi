@@ -26,6 +26,7 @@ type FormState = {
   phone: string;
   city: string;
   neighborhood: string;
+  fullAddress: string;
   avatarUrl: string;
   bio: string;
 };
@@ -45,6 +46,7 @@ const validateForm = (formState: FormState): ErrorState => {
   const trimmedPhone = formState.phone.trim();
   const trimmedCity = formState.city.trim();
   const trimmedNeighborhood = formState.neighborhood.trim();
+  const trimmedFullAddress = formState.fullAddress.trim();
   const trimmedAvatarUrl = formState.avatarUrl.trim();
   const trimmedBio = formState.bio.trim();
 
@@ -63,6 +65,10 @@ const validateForm = (formState: FormState): ErrorState => {
     errors.neighborhood = 'Neighborhood must be 60 characters or fewer';
   }
 
+  if (trimmedFullAddress.length > 255) {
+    errors.fullAddress = 'Full address must be 255 characters or fewer';
+  }
+
   if (trimmedAvatarUrl && !isValidUrl(trimmedAvatarUrl)) errors.avatarUrl = 'Profile picture must be a valid URL';
 
   if (trimmedBio && trimmedBio.length < 8) errors.bio = 'Bio should be at least 8 characters';
@@ -77,6 +83,7 @@ const buildFormState = (profile: UserProfile): FormState => ({
   phone: profile.phone,
   city: profile.city,
   neighborhood: profile.neighborhood,
+  fullAddress: profile.fullAddress,
   avatarUrl: profile.avatarUrl,
   bio: profile.bio,
 });
@@ -113,6 +120,7 @@ export const EditProfileModal = ({ open, profile, isSaving, onOpenChange, onSave
       phone: formState.phone.trim(),
       city: formState.city.trim(),
       neighborhood: formState.neighborhood.trim(),
+      fullAddress: formState.fullAddress.trim(),
       avatarUrl: formState.avatarUrl.trim(),
       bio: formState.bio.trim(),
     });
@@ -132,7 +140,7 @@ export const EditProfileModal = ({ open, profile, isSaving, onOpenChange, onSave
     >
       <DialogContent
         overlayClassName="bg-slate-950/40 backdrop-blur-sm"
-        className="max-h-[92vh] w-[min(96vw,56rem)] overflow-y-auto border border-slate-200/90 bg-white/95 p-4 shadow-[0_30px_90px_rgba(15,23,42,0.25)] backdrop-blur-xl sm:p-6"
+        className="max-h-[88vh] w-[min(92vw,44rem)] overflow-y-auto border border-slate-200/90 bg-white/95 p-4 shadow-[0_30px_90px_rgba(15,23,42,0.25)] backdrop-blur-xl sm:p-5"
       >
         <DialogHeader>
           <DialogTitle className="text-slate-950">Edit Profile</DialogTitle>
@@ -210,6 +218,21 @@ export const EditProfileModal = ({ open, profile, isSaving, onOpenChange, onSave
             {errors.neighborhood ? <p className="text-xs text-red-600">{errors.neighborhood}</p> : null}
           </div>
 
+          <div className="space-y-1.5 sm:col-span-2">
+            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500" htmlFor="fullAddress">
+              Full Address
+            </label>
+            <Textarea
+              id="fullAddress"
+              value={formState.fullAddress}
+              aria-invalid={Boolean(errors.fullAddress)}
+              onChange={(e) => onFieldChange('fullAddress', e.target.value)}
+              placeholder="House, road, area, city"
+              className="min-h-20 border-slate-300 bg-white/90"
+            />
+            {errors.fullAddress ? <p className="text-xs text-red-600">{errors.fullAddress}</p> : null}
+          </div>
+
           <div className="space-y-1.5">
             <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500" htmlFor="avatarUrl">
               Profile Picture URL
@@ -233,7 +256,7 @@ export const EditProfileModal = ({ open, profile, isSaving, onOpenChange, onSave
               value={formState.bio}
               aria-invalid={Boolean(errors.bio)}
               onChange={(e) => onFieldChange('bio', e.target.value)}
-              className="min-h-[110px] border-slate-300 bg-white/90"
+              className="min-h-24 border-slate-300 bg-white/90"
             />
             {errors.bio ? <p className="text-xs text-red-600">{errors.bio}</p> : null}
           </div>

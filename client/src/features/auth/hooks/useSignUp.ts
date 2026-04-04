@@ -41,6 +41,39 @@ const getPasswordLevel = (password: string): PasswordLevel => {
   return 'strong';
 };
 
+const extractFirstValidationMessage = (errors: unknown): string | undefined => {
+  if (!errors) {
+    return undefined;
+  }
+
+  if (typeof errors === 'string') {
+    const trimmed = errors.trim();
+    return trimmed || undefined;
+  }
+
+  if (Array.isArray(errors)) {
+    for (const item of errors) {
+      const message = extractFirstValidationMessage(item);
+      if (message) {
+        return message;
+      }
+    }
+
+    return undefined;
+  }
+
+  if (typeof errors === 'object') {
+    for (const value of Object.values(errors as Record<string, unknown>)) {
+      const message = extractFirstValidationMessage(value);
+      if (message) {
+        return message;
+      }
+    }
+  }
+
+  return undefined;
+};
+
 export const useSignUp = () => {
   const form = useForm<SignUpSchema>({
     resolver: zodResolver(signUpSchema),
@@ -116,6 +149,7 @@ export const useSignUp = () => {
       formData.append('username', values.username.trim());
       formData.append('email', values.email.trim().toLowerCase());
       formData.append('password', values.password);
+      formData.append('password_confirmation', values.confirmPassword);
 
       if (values.phone.trim()) {
         formData.append('phone', values.phone.trim());
@@ -142,11 +176,8 @@ export const useSignUp = () => {
 
       console.info('[Auth] Sending signup request', { url: signupUrl, email: values.email.trim().toLowerCase() });
 
-      await axios.post(signupUrl, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      // Let the browser set multipart boundary automatically for FormData.
+      await axios.post(signupUrl, formData);
 
       console.info('[Auth] Signup response received successfully');
 
@@ -161,18 +192,11 @@ export const useSignUp = () => {
       if (axios.isAxiosError(error)) {
         const responseData = error.response?.data as {
           message?: string;
-          errors?: Record<string, string[] | string>;
+          errors?: unknown;
         } | undefined;
 
-        const firstValidationError = responseData?.errors
-          ? Object.values(responseData.errors)[0]
-          : undefined;
-
-        const validationMessage = Array.isArray(firstValidationError)
-          ? firstValidationError[0]
-          : firstValidationError;
-
-        const errorMessage = responseData?.message || validationMessage || error.message;
+        const validationMessage = extractFirstValidationMessage(responseData?.errors);
+        const errorMessage = validationMessage || responseData?.message || error.message;
 
         submitFailure(errorMessage || 'Unable to create account at the moment. Please try again.');
         return;

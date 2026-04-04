@@ -33,6 +33,7 @@ class AccountController extends Controller
             'phone' => ['sometimes', 'nullable', 'string', 'max:20'],
             'city' => ['sometimes', 'nullable', 'string', 'max:100'],
             'neighborhood' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'full_address' => ['sometimes', 'nullable', 'string', 'max:255'],
             'bio' => ['sometimes', 'nullable', 'string', 'max:500'],
             'profile_picture' => ['sometimes', 'nullable', 'string', 'max:2048'],
         ]);
@@ -193,6 +194,7 @@ class AccountController extends Controller
             'phone' => $user->phone,
             'city' => $user->city,
             'neighborhood' => $user->neighborhood,
+            'full_address' => $user->full_address,
             'profile_picture_url' => $this->resolveProfilePictureUrl($user->profile_picture),
             'bio' => $user->bio,
             'created_at' => optional($user->created_at)->toJSON(),

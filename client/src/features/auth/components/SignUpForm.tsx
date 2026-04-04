@@ -12,7 +12,6 @@ import {
 	type GooglePlaceResult,
 } from '@/lib/googleMaps';
 import { ROUTES } from '@/config/routes.config';
-import { SocialLoginButtons } from './SocialLoginButtons';
 import { PasswordStrength } from './PasswordStrength';
 import type { useSignUp } from '../hooks/useSignUp';
 
@@ -203,15 +202,6 @@ export const SignUpForm = ({ signUp }: SignUpFormProps) => {
 				</h1>
 				<p className="text-sm text-slate-600">A neighborhood-first network for trusted local living</p>
 			</header>
-
-			<div className="space-y-3">
-				<SocialLoginButtons mode="signup" disabled={signUp.isSubmitting} />
-			</div>
-
-			<div className="relative py-1 text-center text-[11px] font-semibold tracking-[0.16em] text-slate-500">
-				<span className="relative z-10 bg-white px-2">OR SIGN UP WITH EMAIL</span>
-				<span className="absolute inset-x-0 top-1/2 z-0 h-px -translate-y-1/2 bg-gray-200" aria-hidden="true" />
-			</div>
 
 			<form className="space-y-4" onSubmit={signUp.onSubmit} noValidate>
 				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

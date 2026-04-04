@@ -12,6 +12,7 @@ export type AccountProfileApi = {
   phone?: string | null;
   city?: string | null;
   neighborhood?: string | null;
+  full_address?: string | null;
   profile_picture_url?: string | null;
   bio?: string | null;
   created_at?: string | null;
@@ -33,6 +34,7 @@ type UpdateAccountProfilePayload = {
   phone?: string;
   city?: string;
   neighborhood?: string;
+  full_address?: string;
   bio?: string;
   profile_picture?: string;
 };

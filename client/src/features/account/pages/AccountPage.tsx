@@ -224,14 +224,19 @@ export const AccountPage = () => {
   );
 
   const profileItems = useMemo(
-    () => [
-      { label: 'Full Name', value: profile.fullName, icon: UserRound },
-      { label: 'Username', value: `@${profile.username}`, icon: BadgeCheck },
-      { label: 'Email', value: profile.email, icon: Mail },
-      { label: 'Phone Number', value: profile.phone || 'Not provided', icon: Phone },
-      { label: 'City', value: profile.city || 'Not provided', icon: Building2 },
-      { label: 'Neighborhood', value: profile.neighborhood || 'Not provided', icon: MapPin },
-    ],
+    () => {
+      const fullAddress = profile.fullAddress.trim();
+
+      return [
+        { label: 'Full Name', value: profile.fullName, icon: UserRound },
+        { label: 'Username', value: `@${profile.username}`, icon: BadgeCheck },
+        { label: 'Email', value: profile.email, icon: Mail },
+        { label: 'Phone Number', value: profile.phone || 'Not provided', icon: Phone },
+        { label: 'City', value: profile.city || 'Not provided', icon: Building2 },
+        { label: 'Neighborhood', value: profile.neighborhood || 'Not provided', icon: MapPin },
+        { label: 'Full Address', value: fullAddress || 'N/A', icon: MapPin, fullWidth: true },
+      ];
+    },
     [profile],
   );
 
@@ -506,7 +511,13 @@ export const AccountPage = () => {
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               {profileItems.map((item) => (
-                <div key={item.label} className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4">
+                <div
+                  key={item.label}
+                  className={cn(
+                    'rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4',
+                    item.fullWidth ? 'md:col-span-2' : undefined,
+                  )}
+                >
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
                     <item.icon className="h-4 w-4 text-emerald-600" />
                     {item.label}
