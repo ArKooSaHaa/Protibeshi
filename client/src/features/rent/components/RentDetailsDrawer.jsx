@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 import styles from './RentDetailsDrawer.module.css';
 
 const getAvailabilityLabel = (listing) => {
@@ -19,8 +19,48 @@ const getAvailabilityLabel = (listing) => {
   return 'Flexible';
 };
 
-const RentDetailsDrawer = ({ listing, onClose, onContact }) => {
+const RentDetailsDrawer = ({ listing, onClose, onContact, onReport }) => {
   const availabilityLabel = getAvailabilityLabel(listing);
+  const [isReportPanelOpen, setIsReportPanelOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [reportFeedback, setReportFeedback] = useState(null);
+
+  useEffect(() => {
+    setIsReportPanelOpen(false);
+    setReportReason('');
+    setIsSubmittingReport(false);
+    setReportFeedback(null);
+  }, [listing?.id]);
+
+  const handleSubmitReport = async (event) => {
+    event.preventDefault();
+
+    if (!listing || typeof onReport !== 'function') {
+      return;
+    }
+
+    setIsSubmittingReport(true);
+    setReportFeedback(null);
+
+    try {
+      const response = await onReport(listing, reportReason.trim());
+
+      setReportReason('');
+      setIsReportPanelOpen(false);
+      setReportFeedback({
+        variant: 'success',
+        message: response?.message || 'Rent listing reported successfully.',
+      });
+    } catch (error) {
+      setReportFeedback({
+        variant: 'error',
+        message: error instanceof Error ? error.message : 'Failed to report rent listing.',
+      });
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -99,17 +139,77 @@ const RentDetailsDrawer = ({ listing, onClose, onContact }) => {
                   <li>{listing.listedDays === 0 ? 'Listed today' : `${listing.listedDays} days ago`}</li>
                 </ul>
               </section>
+
+              {reportFeedback ? (
+                <p
+                  className={`${styles.reportFeedback} ${reportFeedback.variant === 'success' ? styles.reportSuccess : styles.reportError}`}
+                >
+                  {reportFeedback.message}
+                </p>
+              ) : null}
+
+              {isReportPanelOpen ? (
+                <form className={styles.reportPanel} onSubmit={handleSubmitReport}>
+                  <label htmlFor={`rent-report-reason-${listing.id}`} className={styles.reportLabel}>
+                    Report reason (optional)
+                  </label>
+                  <textarea
+                    id={`rent-report-reason-${listing.id}`}
+                    className={styles.reportTextarea}
+                    rows={4}
+                    value={reportReason}
+                    onChange={(event) => setReportReason(event.target.value)}
+                    placeholder="Describe why this listing should be reviewed"
+                    maxLength={500}
+                  />
+                  <p className={styles.reportHint}>Submitted reports are reviewed by the moderation team.</p>
+                  <div className={styles.reportActions}>
+                    <button
+                      type="button"
+                      className={styles.reportCancelButton}
+                      onClick={() => {
+                        setIsReportPanelOpen(false);
+                        setReportReason('');
+                      }}
+                      disabled={isSubmittingReport}
+                    >
+                      Cancel
+                    </button>
+                    <button type="submit" className={styles.reportSubmitButton} disabled={isSubmittingReport}>
+                      {isSubmittingReport ? 'Submitting...' : 'Submit Report'}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
             </div>
 
-            <motion.button
-              type="button"
-              className={styles.contactButton}
-              whileHover={{ y: -1, scale: 1.01 }}
-              whileTap={{ y: 1, scale: 0.99 }}
-              onClick={() => onContact(listing)}
-            >
-              Contact Provider
-            </motion.button>
+            <div className={styles.actionButtons}>
+              <motion.button
+                type="button"
+                className={styles.contactButton}
+                whileHover={{ y: -1, scale: 1.01 }}
+                whileTap={{ y: 1, scale: 0.99 }}
+                onClick={() => onContact(listing)}
+              >
+                Contact Provider
+              </motion.button>
+
+              {typeof onReport === 'function' ? (
+                <motion.button
+                  type="button"
+                  className={styles.reportButton}
+                  whileHover={{ y: -1, scale: 1.01 }}
+                  whileTap={{ y: 1, scale: 0.99 }}
+                  onClick={() => {
+                    setIsReportPanelOpen((previous) => !previous);
+                    setReportFeedback(null);
+                  }}
+                  disabled={isSubmittingReport}
+                >
+                  <AlertTriangle size={14} /> {isReportPanelOpen ? 'Hide Report Form' : 'Report Listing'}
+                </motion.button>
+              ) : null}
+            </div>
           </motion.aside>
         </motion.div>
       )}

@@ -4,7 +4,6 @@ import {
   Ban,
   Bath,
   BedDouble,
-  CheckCircle2,
   Clock3,
   Eye,
   Filter,
@@ -78,9 +77,8 @@ type ApiAdminRentListing = {
 type RiskLevel = 'high' | 'medium' | 'low';
 type ModerationTab = 'all' | 'reports';
 type SortMode = 'newest' | 'oldest' | 'risk' | 'priceHigh' | 'priceLow';
-type RiskFilter = 'all' | RiskLevel;
 type PendingActionKind = 'hide' | 'ban' | 'bulkHide';
-type ActivityType = 'system' | 'review' | 'hide' | 'ban' | 'bulk';
+type ActivityType = 'system' | 'hide' | 'ban' | 'bulk';
 
 type ModerationActivity = {
   id: string;
@@ -404,10 +402,6 @@ const getActivityIcon = (type: ActivityType) => {
     return <Ban size={14} />;
   }
 
-  if (type === 'review') {
-    return <CheckCircle2 size={14} />;
-  }
-
   if (type === 'bulk') {
     return <Filter size={14} />;
   }
@@ -418,13 +412,11 @@ const getActivityIcon = (type: ActivityType) => {
 export const AdminRentModerationPage = () => {
   const [listings, setListings] = useState<AdminRentListingRecord[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [reviewedIds, setReviewedIds] = useState<number[]>([]);
   const [activityFeed, setActivityFeed] = useState<ModerationActivity[]>([]);
   const [activeTab, setActiveTab] = useState<ModerationTab>('all');
   const [sortMode, setSortMode] = useState<SortMode>('newest');
   const [availabilityFilter, setAvailabilityFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [riskFilter, setRiskFilter] = useState<RiskFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -534,10 +526,9 @@ export const AdminRentModerationPage = () => {
       highRisk,
       unverified,
       recent,
-      reviewed: reviewedIds.length,
       averagePrice,
     };
-  }, [listings, reviewedIds.length]);
+  }, [listings]);
 
   const tabCounts = useMemo(() => {
     return {
@@ -580,10 +571,6 @@ export const AdminRentModerationPage = () => {
       data = data.filter((listing) => listing.type === typeFilter);
     }
 
-    if (riskFilter !== 'all') {
-      data = data.filter((listing) => listing.riskLevel === riskFilter);
-    }
-
     return data.sort((left, right) => {
       if (sortMode === 'newest') {
         return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
@@ -607,7 +594,6 @@ export const AdminRentModerationPage = () => {
     activeTab,
     availabilityFilter,
     listings,
-    riskFilter,
     searchTerm,
     sortMode,
     typeFilter,
@@ -634,38 +620,6 @@ export const AdminRentModerationPage = () => {
   const clearSelection = useCallback(() => {
     setSelectedIds([]);
   }, []);
-
-  const markListingReviewed = useCallback((listing: AdminRentListingRecord) => {
-    setReviewedIds((previous) => {
-      const alreadyReviewed = previous.includes(listing.id);
-
-      if (alreadyReviewed) {
-        addActivity('review', `Removed review mark from “${listing.title}”.`);
-        return previous.filter((id) => id !== listing.id);
-      }
-
-      addActivity('review', `Marked “${listing.title}” as reviewed.`);
-      return [...previous, listing.id];
-    });
-  }, [addActivity]);
-
-  const markSelectedReviewed = useCallback(() => {
-    if (selectedIds.length === 0) {
-      return;
-    }
-
-    setReviewedIds((previous) => {
-      const next = new Set(previous);
-      selectedIds.forEach((id) => {
-        next.add(id);
-      });
-      return Array.from(next);
-    });
-
-    addActivity('bulk', `Marked ${selectedIds.length} selected listings as reviewed.`);
-    showFeedback('success', `${selectedIds.length} listing(s) marked as reviewed.`);
-    clearSelection();
-  }, [addActivity, clearSelection, selectedIds, showFeedback]);
 
   const openActionModal = useCallback((kind: PendingActionKind, listing: AdminRentListingRecord | null) => {
     setPendingAction({ kind, listing });
@@ -694,7 +648,6 @@ export const AdminRentModerationPage = () => {
 
         setListings((previous) => previous.filter((listing) => listing.id !== pendingAction.listing?.id));
         setSelectedIds((previous) => previous.filter((id) => id !== pendingAction.listing?.id));
-        setReviewedIds((previous) => previous.filter((id) => id !== pendingAction.listing?.id));
 
         addActivity('hide', `Hidden listing “${pendingAction.listing.title}” from rent feed.`);
         showFeedback('success', response.message);
@@ -706,10 +659,6 @@ export const AdminRentModerationPage = () => {
 
         setListings((previous) => previous.filter((listing) => listing.seller.id !== sellerId));
         setSelectedIds((previous) => previous.filter((id) => {
-          const listing = listings.find((entry) => entry.id === id);
-          return listing ? listing.seller.id !== sellerId : true;
-        }));
-        setReviewedIds((previous) => previous.filter((id) => {
           const listing = listings.find((entry) => entry.id === id);
           return listing ? listing.seller.id !== sellerId : true;
         }));
@@ -747,7 +696,6 @@ export const AdminRentModerationPage = () => {
         if (successfulIds.length > 0) {
           setListings((previous) => previous.filter((listing) => !successfulIds.includes(listing.id)));
           setSelectedIds((previous) => previous.filter((id) => !successfulIds.includes(id)));
-          setReviewedIds((previous) => previous.filter((id) => !successfulIds.includes(id)));
           addActivity('bulk', `Bulk hid ${successfulIds.length} listing(s) from rent feed.`);
         }
 
@@ -827,9 +775,9 @@ export const AdminRentModerationPage = () => {
 
         <article className="arp-stat-card">
           <p>
-            <CheckCircle2 size={14} /> Reviewed
+            <ShieldCheck size={14} /> Reported Listings
           </p>
-          <h3>{stats.reviewed}</h3>
+          <h3>{stats.reported}</h3>
           <span>Avg Rent {formatCurrency(stats.averagePrice)}</span>
         </article>
       </section>
@@ -880,16 +828,6 @@ export const AdminRentModerationPage = () => {
               ))}
             </select>
           </label>
-
-          <label>
-            <span>Risk</span>
-            <select value={riskFilter} onChange={(event) => setRiskFilter(event.target.value as RiskFilter)}>
-              <option value="all">All</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
-          </label>
         </div>
 
         <div className="arp-tabs">
@@ -911,9 +849,6 @@ export const AdminRentModerationPage = () => {
         <section className="arp-bulk-bar">
           <p>{selectedCount} listing(s) selected for action.</p>
           <div className="arp-bulk-actions">
-            <button type="button" className="arp-btn arp-btn-soft" onClick={markSelectedReviewed}>
-              <CheckCircle2 size={14} /> Mark Reviewed
-            </button>
             <button
               type="button"
               className="arp-btn arp-btn-danger-outline"
@@ -951,7 +886,6 @@ export const AdminRentModerationPage = () => {
             <div className="arp-listings-grid">
               {filteredListings.map((listing) => {
                 const isSelected = selectedIds.includes(listing.id);
-                const isReviewed = reviewedIds.includes(listing.id);
                 const moderationReasons = listing.reportCount > 0
                   ? listing.reports.map((report) => report.reason)
                   : listing.riskReasons;
@@ -1039,14 +973,6 @@ export const AdminRentModerationPage = () => {
                       </ul>
 
                       <div className="arp-card-actions">
-                        <button
-                          type="button"
-                          className={`arp-btn ${isReviewed ? 'arp-btn-success' : 'arp-btn-soft'}`}
-                          onClick={() => markListingReviewed(listing)}
-                        >
-                          <CheckCircle2 size={14} /> {isReviewed ? 'Reviewed' : 'Review'}
-                        </button>
-
                         <button
                           type="button"
                           className="arp-btn arp-btn-danger-outline"

@@ -225,6 +225,51 @@ export const deleteRentListing = async (id, token) => {
   return data;
 };
 
+export const reportRentListing = async (listingId, reason = '', token) => {
+  const resolvedListingId = Number(listingId);
+  if (!Number.isFinite(resolvedListingId) || resolvedListingId <= 0) {
+    throw new Error('Invalid rent listing selected for report.');
+  }
+
+  const authToken = resolveAuthToken(token);
+  if (!authToken) {
+    throw new Error('Please sign in to report this listing.');
+  }
+
+  const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+
+  const response = await fetch(`${getApiBaseUrl()}/rent-listings/${resolvedListingId}/report`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      reason: trimmedReason || null,
+    }),
+  });
+
+  const data = await parseJsonSafely(response);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Your session has expired. Please sign in again.');
+    }
+
+    if (response.status === 403) {
+      throw new Error(extractApiErrorMessage(data, 'You cannot report your own rent listing.'));
+    }
+
+    throw new Error(extractApiErrorMessage(data, 'Failed to report rent listing'));
+  }
+
+  return {
+    message: data?.message || 'Rent listing reported successfully',
+    reportId: Number(data?.report_id ?? 0),
+  };
+};
+
 export const getAdminRentListings = async (token) => {
   const authToken = resolveAuthToken(token);
   if (!authToken) {

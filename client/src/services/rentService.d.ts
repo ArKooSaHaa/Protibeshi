@@ -9,6 +9,15 @@ export function getRentListings(): Promise<any[]>;
 
 export function deleteRentListing(id: string | number, token: string): Promise<any>;
 
+export function reportRentListing(
+  listingId: number | string,
+  reason?: string,
+  token?: string,
+): Promise<{
+  message: string;
+  reportId: number;
+}>;
+
 export function getAdminRentListings(token?: string): Promise<any[]>;
 
 export function hideAdminRentListing(
