@@ -10,12 +10,14 @@ import styles from './Topbar.module.css';
 type TopbarUser = {
   firstName: string;
   fullName: string;
+  neighborhood: string;
   profilePictureUrl: string | null;
 };
 
 const initialUser: TopbarUser = {
   firstName: 'User',
   fullName: 'User',
+  neighborhood: 'Neighborhood',
   profilePictureUrl: null,
 };
 
@@ -48,9 +50,15 @@ export const Topbar = () => {
             || (profile.full_name && profile.full_name.trim().split(/\s+/)[0])
             || 'User';
 
+        const neighborhood =
+          (profile.neighborhood && profile.neighborhood.trim())
+          || (profile.city && profile.city.trim())
+          || 'Neighborhood';
+
         setUser({
           firstName,
           fullName: profile.full_name || firstName,
+          neighborhood,
           profilePictureUrl: profile.profile_picture_url || null,
         });
       } catch {
@@ -139,8 +147,7 @@ export const Topbar = () => {
       <div className={styles.right}>
         <div className={styles.location}>
           <MapPin size={16} className={styles.locationIcon} />
-          <span className={styles.locationText}>Motijheel</span>
-          <span className={styles.locationDistance}>350m</span>
+          <span className={styles.locationText}>{user.neighborhood}</span>
         </div>
 
         <div className={styles.actions}>
