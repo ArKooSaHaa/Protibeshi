@@ -31,6 +31,7 @@ export interface UserProfile {
   phone: string;
   city: string;
   neighborhood: string;
+  fullAddress: string;
   avatarUrl: string;
   bio: string;
   createdAt: string;
@@ -102,6 +103,7 @@ const initialProfile: UserProfile = {
   phone: '',
   city: '',
   neighborhood: '',
+  fullAddress: '',
   avatarUrl: '',
   bio: '',
   createdAt: '',
@@ -126,6 +128,7 @@ const mapAccountProfile = (profile: AccountProfileApi): UserProfile => ({
   phone: profile.phone || '',
   city: profile.city || '',
   neighborhood: profile.neighborhood || '',
+  fullAddress: profile.full_address || '',
   avatarUrl: profile.profile_picture_url || '',
   bio: profile.bio || '',
   createdAt: profile.created_at || '',
@@ -406,6 +409,7 @@ export const useUserPosts = (): UserPostsResult => {
         ...(payload.phone !== undefined ? { phone: payload.phone.trim() } : {}),
         ...(payload.city !== undefined ? { city: payload.city.trim() } : {}),
         ...(payload.neighborhood !== undefined ? { neighborhood: payload.neighborhood.trim() } : {}),
+        ...(payload.fullAddress !== undefined ? { full_address: payload.fullAddress.trim() } : {}),
         ...(payload.bio !== undefined ? { bio: payload.bio.trim() } : {}),
         ...(payload.avatarUrl !== undefined ? { profile_picture: payload.avatarUrl.trim() } : {}),
       });

@@ -13,6 +13,7 @@ export const Topbar = ({ onMenuClick }) => {
   const [user, setUser] = React.useState({
     firstName: 'User',
     fullName: 'User',
+    neighborhood: 'Neighborhood',
     profilePictureUrl: null,
   });
 
@@ -41,12 +42,14 @@ export const Topbar = ({ onMenuClick }) => {
           const nestedUser = parsed?.user ?? parsed;
           const firstName = nestedUser?.first_name || nestedUser?.firstName || (nestedUser?.name ? String(nestedUser.name).split(/\s+/)[0] : null);
           const fullName = nestedUser?.full_name || nestedUser?.name || firstName;
+          const neighborhood = nestedUser?.neighborhood || nestedUser?.city || null;
           const profilePictureUrl = nestedUser?.profile_picture_url || nestedUser?.profile_picture || null;
 
-          if (firstName || profilePictureUrl) {
+          if (firstName || profilePictureUrl || neighborhood) {
             return {
               firstName: firstName || 'User',
               fullName: fullName || firstName || 'User',
+              neighborhood: neighborhood || 'Neighborhood',
               profilePictureUrl,
             };
           }
@@ -76,9 +79,15 @@ export const Topbar = ({ onMenuClick }) => {
           || (profile.username && profile.username.trim())
           || 'User';
 
+        const neighborhood =
+          (profile.neighborhood && profile.neighborhood.trim())
+          || (profile.city && profile.city.trim())
+          || 'Neighborhood';
+
         setUser({
           firstName,
           fullName: profile.full_name || firstName,
+          neighborhood,
           profilePictureUrl: profile.profile_picture_url || null,
         });
       } catch {
@@ -158,8 +167,7 @@ export const Topbar = ({ onMenuClick }) => {
       <div className={styles.right}>
         <div className={styles.location}>
           <MapPin size={16} className={styles.locationIcon} />
-          <span className={styles.locationText}>Motijheel</span>
-          <span className={styles.locationDistance}>350m</span>
+          <span className={styles.locationText}>{user.neighborhood}</span>
         </div>
 
         <div className={styles.actions}>

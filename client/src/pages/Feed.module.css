@@ -1,10 +1,11 @@
 .page {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: minmax(0, 680px) minmax(0, 460px);
+  gap: 22px;
   max-width: none;
   margin: 0;
-  padding: 24px 0 30px 14px;
+  padding: 20px 0 28px 6px;
+  align-items: start;
 }
 
 .centerColumn {
@@ -12,6 +13,16 @@
   flex-direction: column;
   gap: 16px;
   align-items: flex-start;
+  min-width: 0;
+}
+
+.rightColumn {
+  width: 100%;
+  min-width: 0;
+  max-width: 460px;
+  justify-self: end;
+  position: sticky;
+  top: 8px;
 }
 
 .composerCard {
@@ -143,6 +154,23 @@
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1180px) {
+  .page {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    padding: 18px 0 24px;
+  }
+
+  .centerColumn {
+    width: 100%;
+  }
+
+  .rightColumn {
+    position: static;
+    max-width: 680px;
   }
 }
 

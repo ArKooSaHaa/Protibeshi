@@ -1,8 +1,17 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, Loader2, LockKeyhole, UploadCloud } from 'lucide-react';
+import { CheckCircle2, Loader2, LocateFixed, LockKeyhole, UploadCloud } from 'lucide-react';
 import { m } from 'framer-motion';
+import { ENV } from '@/config/env';
+import {
+	loadGoogleMapsPlaces,
+	reverseGeocode,
+	resolveCityFromPlace,
+	resolveNeighborhoodFromPlace,
+	type GoogleMapsAutocompleteListener,
+	type GooglePlaceResult,
+} from '@/lib/googleMaps';
 import { ROUTES } from '@/config/routes.config';
-import { SocialLoginButtons } from './SocialLoginButtons';
 import { PasswordStrength } from './PasswordStrength';
 import type { useSignUp } from '../hooks/useSignUp';
 
@@ -16,11 +25,173 @@ const INPUT_CLASS =
 const LABEL_CLASS = 'mb-1.5 block text-sm font-medium text-slate-700';
 const ERROR_CLASS = 'mt-1 text-xs text-rose-600';
 
+type LocationFeedback = {
+	tone: 'info' | 'success' | 'error';
+	text: string;
+};
+
 export const SignUpForm = ({ signUp }: SignUpFormProps) => {
 	const {
 		register,
+		setValue,
+		trigger,
 		formState: { errors, isValid },
 	} = signUp.form;
+
+	const mapsApiKey = ENV.GOOGLE_MAPS_API_KEY;
+	const [isLocationLoading, setIsLocationLoading] = useState(false);
+	const [locationFeedback, setLocationFeedback] = useState<LocationFeedback | null>(null);
+	const neighborhoodInputRef = useRef<HTMLInputElement | null>(null);
+	const autocompleteListenerRef = useRef<GoogleMapsAutocompleteListener | null>(null);
+
+	const neighborhoodRegistration = register('neighborhood');
+
+	const applyPlaceToAddressFields = useCallback((place: GooglePlaceResult): boolean => {
+		const neighborhood = resolveNeighborhoodFromPlace(place);
+		const city = resolveCityFromPlace(place);
+		let hasUpdatedFields = false;
+
+		if (city) {
+			setValue('city', city, { shouldDirty: true, shouldValidate: true });
+			hasUpdatedFields = true;
+		}
+
+		if (neighborhood) {
+			setValue('neighborhood', neighborhood, { shouldDirty: true, shouldValidate: true });
+			hasUpdatedFields = true;
+		} else if (place.formatted_address?.trim()) {
+			setValue('neighborhood', place.formatted_address.trim(), { shouldDirty: true, shouldValidate: true });
+			hasUpdatedFields = true;
+		}
+
+		if (hasUpdatedFields) {
+			void trigger(['city', 'neighborhood']);
+		}
+
+		return hasUpdatedFields;
+	}, [setValue, trigger]);
+
+	useEffect(() => {
+		if (!mapsApiKey) {
+			setLocationFeedback({
+				tone: 'info',
+				text: 'Location suggestions are unavailable because Google Maps is not configured.',
+			});
+			return;
+		}
+
+		if (!neighborhoodInputRef.current) {
+			return;
+		}
+
+		let cancelled = false;
+
+		const setupAutocomplete = async () => {
+			try {
+				const mapsApi = await loadGoogleMapsPlaces(mapsApiKey);
+
+				if (cancelled || !neighborhoodInputRef.current) {
+					return;
+				}
+
+				const autocomplete = new mapsApi.maps.places.Autocomplete(neighborhoodInputRef.current, {
+					fields: ['address_components', 'formatted_address', 'name'],
+					types: ['geocode'],
+				});
+
+				autocompleteListenerRef.current = autocomplete.addListener('place_changed', () => {
+					const place = autocomplete.getPlace();
+					const hasUpdate = applyPlaceToAddressFields(place);
+
+					if (hasUpdate) {
+						setLocationFeedback({
+							tone: 'success',
+							text: 'Neighborhood and city were filled from Google Maps.',
+						});
+					}
+				});
+			} catch {
+				if (!cancelled) {
+					setLocationFeedback({
+						tone: 'error',
+						text: 'Unable to load Google Maps suggestions right now.',
+					});
+				}
+			}
+		};
+
+		void setupAutocomplete();
+
+		return () => {
+			cancelled = true;
+			autocompleteListenerRef.current?.remove();
+			autocompleteListenerRef.current = null;
+		};
+	}, [applyPlaceToAddressFields, mapsApiKey]);
+
+	const handleShareCurrentLocation = async () => {
+		if (!mapsApiKey) {
+			setLocationFeedback({
+				tone: 'error',
+				text: 'Google Maps API key is missing. Please configure it first.',
+			});
+			return;
+		}
+
+		if (!navigator.geolocation) {
+			setLocationFeedback({
+				tone: 'error',
+				text: 'Geolocation is not supported in this browser.',
+			});
+			return;
+		}
+
+		setIsLocationLoading(true);
+		setLocationFeedback(null);
+
+		try {
+			const mapsApi = await loadGoogleMapsPlaces(mapsApiKey);
+			const coordinates = await new Promise<{ lat: number; lng: number }>((resolve, reject) => {
+				navigator.geolocation.getCurrentPosition(
+					(position) => {
+						resolve({
+							lat: position.coords.latitude,
+							lng: position.coords.longitude,
+						});
+					},
+					() => reject(new Error('Unable to access current location.')),
+					{
+						enableHighAccuracy: true,
+						timeout: 10000,
+						maximumAge: 30000,
+					},
+				);
+			});
+
+			const place = await reverseGeocode(mapsApi, coordinates);
+			const hasUpdate = applyPlaceToAddressFields(place);
+
+			if (!hasUpdate) {
+				setLocationFeedback({
+					tone: 'error',
+					text: 'Could not derive neighborhood from your current location.',
+				});
+				return;
+			}
+
+			setLocationFeedback({
+				tone: 'success',
+				text: 'Current location shared. Neighborhood and city are now filled.',
+			});
+		} catch {
+			setLocationFeedback({
+				tone: 'error',
+				text: 'Unable to share your location right now. Please try again.',
+			});
+		} finally {
+			setIsLocationLoading(false);
+		}
+	};
 
 	return (
 		<div className="space-y-6 text-slate-800">
@@ -31,15 +202,6 @@ export const SignUpForm = ({ signUp }: SignUpFormProps) => {
 				</h1>
 				<p className="text-sm text-slate-600">A neighborhood-first network for trusted local living</p>
 			</header>
-
-			<div className="space-y-3">
-				<SocialLoginButtons mode="signup" disabled={signUp.isSubmitting} />
-			</div>
-
-			<div className="relative py-1 text-center text-[11px] font-semibold tracking-[0.16em] text-slate-500">
-				<span className="relative z-10 bg-white px-2">OR SIGN UP WITH EMAIL</span>
-				<span className="absolute inset-x-0 top-1/2 z-0 h-px -translate-y-1/2 bg-gray-200" aria-hidden="true" />
-			</div>
 
 			<form className="space-y-4" onSubmit={signUp.onSubmit} noValidate>
 				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -111,7 +273,42 @@ export const SignUpForm = ({ signUp }: SignUpFormProps) => {
 					<label className={LABEL_CLASS} htmlFor="signup-neighborhood">
 						Neighborhood
 					</label>
-					<input id="signup-neighborhood" className={INPUT_CLASS} {...register('neighborhood')} />
+					<input
+						id="signup-neighborhood"
+						className={INPUT_CLASS}
+						autoComplete="off"
+						placeholder="Search your neighborhood"
+						{...neighborhoodRegistration}
+						ref={(element) => {
+							neighborhoodRegistration.ref(element);
+							neighborhoodInputRef.current = element;
+						}}
+					/>
+					<div className="mt-2 flex flex-wrap items-center gap-2">
+						<button
+							type="button"
+							onClick={() => void handleShareCurrentLocation()}
+							disabled={isLocationLoading}
+							className="inline-flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-70"
+						>
+							<LocateFixed size={13} aria-hidden="true" />
+							{isLocationLoading ? 'Sharing location...' : 'Share current location'}
+						</button>
+						<span className="text-xs text-slate-500">Pick from Google Maps suggestions or share your live location.</span>
+					</div>
+					{locationFeedback ? (
+						<p
+							className={`mt-1 text-xs ${
+								locationFeedback.tone === 'success'
+									? 'text-emerald-600'
+									: locationFeedback.tone === 'error'
+										? 'text-rose-600'
+										: 'text-slate-500'
+							}`}
+						>
+							{locationFeedback.text}
+						</p>
+					) : null}
 					{errors.neighborhood ? <p className={ERROR_CLASS}>{errors.neighborhood.message}</p> : null}
 				</div>
 

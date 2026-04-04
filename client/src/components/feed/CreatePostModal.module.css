@@ -96,6 +96,36 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.locationHelperRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.locationActionButton {
+  border: 1px solid var(--emerald-300);
+  border-radius: 8px;
+  background: var(--emerald-50);
+  color: var(--emerald-700);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.locationActionButton:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.locationHint {
+  margin: 0;
+  color: var(--slate-500);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
 .uploadBox {
   border: 1px dashed var(--slate-300);
   border-radius: 10px;
