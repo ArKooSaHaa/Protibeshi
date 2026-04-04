@@ -1,5 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { ConfirmActionType } from '../types/adminMarketplace.types';
 
 interface ConfirmActionModalProps {
@@ -8,7 +10,7 @@ interface ConfirmActionModalProps {
   affectedCount: number;
   isSubmitting: boolean;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: (reason: string) => void;
 }
 
 const actionMeta: Record<
@@ -43,13 +45,27 @@ export const ConfirmActionModal = ({
   onCancel,
   onConfirm,
 }: ConfirmActionModalProps) => {
+  const [reason, setReason] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setReason('');
+    }
+  }, [isOpen, actionType]);
+
   if (!actionType) {
     return null;
   }
 
-  const meta = actionMeta[actionType];
+  if (typeof document === 'undefined') {
+    return null;
+  }
 
-  return (
+  const meta = actionMeta[actionType];
+  const trimmedReason = reason.trim();
+  const isReasonValid = trimmedReason.length > 0;
+
+  const modal = (
     <AnimatePresence>
       {isOpen ? (
         <motion.div
@@ -86,6 +102,20 @@ export const ConfirmActionModal = ({
               <p className="amp-confirm-count">{affectedCount} listings are affected by this action.</p>
             ) : null}
 
+            <label htmlFor="amp-moderation-reason" className="amp-confirm-label">
+              Moderation Message (Required)
+            </label>
+            <textarea
+              id="amp-moderation-reason"
+              className="amp-confirm-textarea"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              placeholder="Explain why this moderation action is being taken"
+              rows={4}
+              maxLength={500}
+            />
+            <p className="amp-confirm-hint">This message will be sent to the user as the official moderation reason.</p>
+
             <footer className="amp-confirm-actions">
               <button type="button" className="amp-btn amp-btn-ghost" onClick={onCancel} disabled={isSubmitting}>
                 Cancel
@@ -93,8 +123,8 @@ export const ConfirmActionModal = ({
               <button
                 type="button"
                 className={`amp-btn ${meta.confirmClass}`}
-                onClick={onConfirm}
-                disabled={isSubmitting}
+                onClick={() => onConfirm(trimmedReason)}
+                disabled={isSubmitting || !isReasonValid}
               >
                 {isSubmitting ? 'Processing...' : meta.confirmLabel}
               </button>
@@ -104,4 +134,6 @@ export const ConfirmActionModal = ({
       ) : null}
     </AnimatePresence>
   );
+
+  return createPortal(modal, document.body);
 };

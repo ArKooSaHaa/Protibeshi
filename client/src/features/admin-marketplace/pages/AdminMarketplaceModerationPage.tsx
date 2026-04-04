@@ -583,8 +583,14 @@ export const AdminMarketplaceModerationPage = () => {
     [listings],
   );
 
-  const confirmModerationAction = useCallback(async () => {
+  const confirmModerationAction = useCallback(async (reason: string) => {
     if (!confirmAction || isConfirmSubmitting) {
+      return;
+    }
+
+    const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+    if (!trimmedReason) {
+      setLoadingError('Please provide a moderation message before confirming this action.');
       return;
     }
 
@@ -609,7 +615,7 @@ export const AdminMarketplaceModerationPage = () => {
         }
 
         const deleteResults = await Promise.allSettled(
-          parsedListingIds.map((item) => deleteAdminListing(item.numeric)),
+          parsedListingIds.map((item) => deleteAdminListing(item.numeric, trimmedReason)),
         );
 
         processedListingIds = deleteResults
@@ -646,7 +652,7 @@ export const AdminMarketplaceModerationPage = () => {
           throw new Error('Unable to ban this user because no valid listing was found.');
         }
 
-        await banListingSeller(listingIdForBan);
+        await banListingSeller(listingIdForBan, trimmedReason);
         processedListingIds = listingIds;
 
         updateListings((previous) =>

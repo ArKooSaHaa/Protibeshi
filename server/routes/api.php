@@ -6,6 +6,7 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\AdminListingModerationController;
 use App\Http\Controllers\AdminPostModerationController;
+use App\Http\Controllers\AdminRentModerationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ComplaintController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\PostLikeController;
 use App\Http\Controllers\PostReportController;
 use App\Http\Controllers\ReliefController;
 use App\Http\Controllers\RentListingController;
+use App\Http\Controllers\RentListingReportController;
 use App\Http\Controllers\SavedPostController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SessionController;
@@ -40,6 +42,10 @@ Route::middleware(['auth:admin_api'])->prefix('admin')->group(function () {
     Route::get('/listings', [AdminListingModerationController::class, 'index']);
     Route::delete('/listings/{id}', [AdminListingModerationController::class, 'destroy']);
     Route::post('/listings/{id}/ban-user', [AdminListingModerationController::class, 'banSeller']);
+
+    Route::get('/rent-listings', [AdminRentModerationController::class, 'index']);
+    Route::delete('/rent-listings/{id}', [AdminRentModerationController::class, 'destroy']);
+    Route::post('/rent-listings/{id}/ban-user', [AdminRentModerationController::class, 'banLandlord']);
 });
 
 Route::get('/listings', [ListingController::class, 'index']);
@@ -78,6 +84,7 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('/listings/{id}/report', [ListingReportController::class, 'report']);
     Route::post('/rent-listings', [RentListingController::class, 'store'])
         ->middleware('not_banned');
+    Route::post('/rent-listings/{id}/report', [RentListingReportController::class, 'report']);
     Route::delete('/rent-listings/{id}', [RentListingController::class, 'destroy']);
 
     Route::post('/services', [ServiceController::class, 'store'])

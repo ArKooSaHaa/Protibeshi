@@ -161,9 +161,110 @@
   line-height: 1.6;
 }
 
-.contactButton {
+.reportFeedback {
+  margin: 12px 0 0;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.reportSuccess {
+  background: #ecfdf5;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.reportError {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.reportPanel {
+  margin-top: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.reportLabel {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.reportTextarea {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 10px;
+  resize: vertical;
+}
+
+.reportTextarea:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
+}
+
+.reportHint {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.reportActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.reportCancelButton,
+.reportSubmitButton {
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.reportCancelButton {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+.reportSubmitButton {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.reportCancelButton:disabled,
+.reportSubmitButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.actionButtons {
   margin-top: 2px;
   flex-shrink: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.contactButton {
   border: none;
   border-radius: 12px;
   background: linear-gradient(135deg, var(--emerald-500), var(--emerald-600));
@@ -172,6 +273,21 @@
   font-weight: 700;
   padding: 11px 14px;
   cursor: pointer;
+}
+
+.reportButton {
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: #fff1f2;
+  color: #b91c1c;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 @media (max-width: 768px) {

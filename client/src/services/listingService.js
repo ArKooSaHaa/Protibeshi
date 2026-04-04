@@ -215,10 +215,15 @@ export const getAdminListings = async (token) => {
   return [];
 };
 
-export const deleteAdminListing = async (listingId, token) => {
+export const deleteAdminListing = async (listingId, reason = '', token) => {
   const resolvedListingId = Number(listingId);
   if (!Number.isFinite(resolvedListingId) || resolvedListingId <= 0) {
     throw new Error('Invalid listing selected for deletion.');
+  }
+
+  const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+  if (!trimmedReason) {
+    throw new Error('Please provide a moderation message before removing this listing.');
   }
 
   const authToken = resolveAuthToken(token);
@@ -230,8 +235,12 @@ export const deleteAdminListing = async (listingId, token) => {
     method: 'DELETE',
     headers: {
       Authorization: `Bearer ${authToken}`,
+      'Content-Type': 'application/json',
       Accept: 'application/json',
     },
+    body: JSON.stringify({
+      reason: trimmedReason,
+    }),
   });
 
   const data = await parseJsonSafely(response);
@@ -266,6 +275,9 @@ export const banListingSeller = async (listingId, reason = '', token) => {
   }
 
   const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+  if (!trimmedReason) {
+    throw new Error('Please provide a moderation message before banning this user.');
+  }
 
   const response = await fetch(`${getApiBaseUrl()}/admin/listings/${resolvedListingId}/ban-user`, {
     method: 'POST',

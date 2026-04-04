@@ -9,7 +9,7 @@ import AddPropertyModal from '../components/AddPropertyModal';
 import RentDetailsDrawer from '../components/RentDetailsDrawer';
 import { getMessages, sendMessage, startConversation } from '@/api/chatApi';
 import { ROUTES } from '@/config/routes.config';
-import { getRentListings } from '@/services/rentService';
+import { getRentListings, reportRentListing } from '@/services/rentService';
 import styles from './RentPage.module.css';
 
 export const RentPage = () => {
@@ -192,6 +192,16 @@ export const RentPage = () => {
     }
   }, [navigate]);
 
+  const reportListing = useCallback(async (listing, reason = '') => {
+    const listingId = Number(listing?.id);
+    if (!Number.isFinite(listingId) || listingId <= 0) {
+      throw new Error('Unable to report this listing right now.');
+    }
+
+    setFeedError(null);
+    return reportRentListing(listingId, reason);
+  }, []);
+
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -347,6 +357,7 @@ export const RentPage = () => {
           setActiveDetails(null);
           void openRentConversation(listing);
         }}
+        onReport={reportListing}
       />
     </div>
   );
