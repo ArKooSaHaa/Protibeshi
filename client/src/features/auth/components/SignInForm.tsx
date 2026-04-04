@@ -2,7 +2,6 @@
 import { Link } from 'react-router-dom';
 import { ROUTES } from '@/config/routes.config';
 import { NeonButton } from './NeonButton';
-import { SocialLoginButtons } from './SocialLoginButtons';
 import type { UseSignInResult } from '../hooks/useSignIn';
 import styles from './SignInForm.module.css';
 
@@ -113,12 +112,6 @@ export const SignInForm = ({ signIn }: SignInFormProps) => {
           Sign In
         </NeonButton>
       </form>
-
-      <div className={styles.divider} role="separator" aria-label="Or continue with social login">
-        <span>Or continue with</span>
-      </div>
-
-      <SocialLoginButtons disabled={signIn.isSubmitting} />
 
       <p className={styles.signupPrompt}>
         Don&apos;t have an account?{' '}
