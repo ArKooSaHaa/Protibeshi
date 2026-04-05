@@ -6,6 +6,7 @@ use App\Models\Conversation;
 use App\Models\Listing;
 use App\Models\Message;
 use App\Models\Post;
+use App\Models\Relief;
 use App\Models\RentListing;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -136,6 +137,26 @@ class AdminInboxService
         $conversation = $this->getOrCreateConversationForRecipient($recipientId);
 
         $messageBody = $this->buildRentListingDeletionMessage($listing, $reason);
+
+        $message = Message::create([
+            'conversation_id' => (int) $conversation->id,
+            'sender_id' => $this->getInboxUserId(),
+            'message' => $messageBody,
+            'is_read' => false,
+        ]);
+
+        $conversation->last_message = $messageBody;
+        $conversation->save();
+
+        return $message;
+    }
+
+    public function sendReliefDeletedNotice(Relief $relief, ?string $reason = null): Message
+    {
+        $recipientId = (int) $relief->user_id;
+        $conversation = $this->getOrCreateConversationForRecipient($recipientId);
+
+        $messageBody = $this->buildReliefDeletionMessage($relief, $reason);
 
         $message = Message::create([
             'conversation_id' => (int) $conversation->id,
@@ -321,6 +342,44 @@ class AdminInboxService
             '',
             'If you think this action is a mistake, contact on ' . self::ADMIN_CONTACT_EMAIL . '.',
         ];
+
+        return implode("\n", $parts);
+    }
+
+    private function buildReliefDeletionMessage(Relief $relief, ?string $reason): string
+    {
+        $title = trim((string) $relief->title);
+        $type = trim((string) ($relief->type ?? ''));
+        $urgency = trim((string) ($relief->urgency ?? ''));
+        $status = trim((string) ($relief->status ?? ''));
+        $location = trim((string) ($relief->location ?? ''));
+        $description = trim((string) ($relief->description ?? ''));
+        $descriptionSnippet = Str::limit($description, 260, '...');
+        $normalizedReason = trim((string) ($reason ?? ''));
+
+        if ($normalizedReason === '') {
+            $normalizedReason = 'Violating relief board community guidelines.';
+        }
+
+        $parts = [
+            'Your relief request has been removed by the admin moderation team.',
+            '',
+            'Relief details:',
+            '- Relief ID: ' . (string) $relief->id,
+            '- Title: ' . ($title !== '' ? $title : 'N/A'),
+            '- Type: ' . ($type !== '' ? $type : 'N/A'),
+            '- Urgency: ' . ($urgency !== '' ? $urgency : 'N/A'),
+            '- Status: ' . ($status !== '' ? $status : 'N/A'),
+            '- Location: ' . ($location !== '' ? $location : 'N/A'),
+        ];
+
+        if ($descriptionSnippet !== '') {
+            $parts[] = '- Description: ' . $descriptionSnippet;
+        }
+
+        $parts[] = 'Reason: ' . $normalizedReason;
+        $parts[] = '';
+        $parts[] = 'If you think this action is a mistake, contact on ' . self::ADMIN_CONTACT_EMAIL . '.';
 
         return implode("\n", $parts);
     }

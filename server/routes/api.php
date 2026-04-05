@@ -6,6 +6,7 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\AdminListingModerationController;
 use App\Http\Controllers\AdminPostModerationController;
+use App\Http\Controllers\AdminReliefModerationController;
 use App\Http\Controllers\AdminRentModerationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatController;
@@ -46,6 +47,10 @@ Route::middleware(['auth:admin_api'])->prefix('admin')->group(function () {
     Route::get('/rent-listings', [AdminRentModerationController::class, 'index']);
     Route::delete('/rent-listings/{id}', [AdminRentModerationController::class, 'destroy']);
     Route::post('/rent-listings/{id}/ban-user', [AdminRentModerationController::class, 'banLandlord']);
+
+    Route::get('/reliefs', [AdminReliefModerationController::class, 'index']);
+    Route::post('/reliefs/{id}/ignore-reports', [AdminReliefModerationController::class, 'ignoreReports']);
+    Route::delete('/reliefs/{id}', [AdminReliefModerationController::class, 'destroy']);
 });
 
 Route::get('/listings', [ListingController::class, 'index']);
