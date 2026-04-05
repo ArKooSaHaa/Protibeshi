@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { getPosts } from '@/api/feedApi';
 import {
   ChatConversation,
   ChatMessage,
@@ -10,14 +11,118 @@ import {
   sendMessage,
 } from '@/api/chatApi';
 import { GeminiConversationTurn, generateGeminiReply } from '@/api/geminiChatApi';
+import { getReliefs } from '@/api/relief';
 import { ConversationList } from '@/components/chat/ConversationList';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { ROUTES } from '@/config/routes.config';
+import { getComplaints } from '@/services/complaintService';
+import { getListings } from '@/services/listingService';
+import { getRentListings } from '@/services/rentService';
+import { getServices } from '@/services/serviceService';
 import { getEcho } from '@/lib/echo';
 import styles from '@/features/messages/pages/MessagesPage.module.css';
 
 const ADMIN_INBOX_FALLBACK_USERNAME = 'admin_inbox_system';
 const GEMINI_INBOX_USERNAME = 'gemini_ai';
+const TODAY_CONTEXT_TTL_MS = 2 * 60 * 1000;
+const TODAY_ITEMS_LIMIT_PER_CATEGORY = 4;
+
+type TodaySnapshotCache = {
+  dayKey: string;
+  expiresAt: number;
+  context: string;
+};
+
+type TodaySnapshotSection = {
+  label: string;
+  count: number;
+  lines: string[];
+  loadError?: string;
+};
+
+const isObjectRecord = (value: unknown): value is Record<string, unknown> => {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+};
+
+const asString = (value: unknown): string => {
+  return typeof value === 'string' ? value.trim() : '';
+};
+
+const asNumber = (value: unknown): number | null => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const truncateText = (value: string, limit = 120): string => {
+  if (value.length <= limit) {
+    return value;
+  }
+
+  return `${value.slice(0, limit - 3)}...`;
+};
+
+const toDateValue = (value: unknown): Date | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  return null;
+};
+
+const isSameLocalDay = (date: Date, reference: Date): boolean => {
+  return (
+    date.getFullYear() === reference.getFullYear()
+    && date.getMonth() === reference.getMonth()
+    && date.getDate() === reference.getDate()
+  );
+};
+
+const isFromToday = (value: unknown, reference: Date): boolean => {
+  const date = toDateValue(value);
+  if (!date) {
+    return false;
+  }
+
+  return isSameLocalDay(date, reference);
+};
+
+const toRecordArray = (value: unknown): Record<string, unknown>[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(isObjectRecord);
+};
+
+const normalizeComplaintArray = (value: unknown): Record<string, unknown>[] => {
+  if (Array.isArray(value)) {
+    return value.filter(isObjectRecord);
+  }
+
+  if (isObjectRecord(value)) {
+    const list = value.complaints;
+    if (Array.isArray(list)) {
+      return list.filter(isObjectRecord);
+    }
+  }
+
+  return [];
+};
+
+const shouldInjectTodaySnapshot = (prompt: string): boolean => {
+  const normalized = prompt.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  return /(today|today's|todays)/.test(normalized) || /(summary|summarize|recap|digest|overview)/.test(normalized);
+};
 
 const extractStoredUserId = (): number | null => {
   if (typeof window === 'undefined') {
@@ -65,6 +170,7 @@ export const Messages = () => {
 
   const currentUserId = useMemo(() => extractStoredUserId(), []);
   const bottomAnchorRef = useRef<HTMLDivElement>(null);
+  const todaySnapshotCacheRef = useRef<TodaySnapshotCache | null>(null);
 
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -311,6 +417,231 @@ export const Messages = () => {
     navigate(`${ROUTES.MESSAGES}?conversation=${conversationId}`, { replace: true });
   };
 
+  const buildTodaySnapshotContext = useCallback(async (): Promise<string | null> => {
+    const now = new Date();
+    const dayKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+    const cached = todaySnapshotCacheRef.current;
+
+    if (cached && cached.dayKey === dayKey && cached.expiresAt > Date.now()) {
+      return cached.context;
+    }
+
+    const [feedResult, marketplaceResult, rentResult, serviceResult, complaintResult, reliefResult] =
+      await Promise.allSettled([
+        getPosts(),
+        getListings(),
+        getRentListings(),
+        getServices(),
+        getComplaints(),
+        getReliefs(),
+      ]);
+
+    const sections: TodaySnapshotSection[] = [];
+
+    if (feedResult.status === 'fulfilled') {
+      const todayItems = toRecordArray(feedResult.value).filter((item) => isFromToday(item.created_at, now));
+
+      sections.push({
+        label: 'Feed Posts',
+        count: todayItems.length,
+        lines: todayItems.slice(0, TODAY_ITEMS_LIMIT_PER_CATEGORY).map((item) => {
+          const title = asString(item.title) || 'Untitled post';
+          const description = asString(item.short_description) || asString(item.content);
+          const locationText = asString(item.location);
+          const compactDescription = truncateText(description || 'No description', 90);
+          return `${title} | ${compactDescription}${locationText ? ` | ${locationText}` : ''}`;
+        }),
+      });
+    } else {
+      sections.push({
+        label: 'Feed Posts',
+        count: 0,
+        lines: [],
+        loadError: feedResult.reason instanceof Error ? feedResult.reason.message : 'Failed to load',
+      });
+    }
+
+    if (marketplaceResult.status === 'fulfilled') {
+      const todayItems = toRecordArray(marketplaceResult.value).filter((item) => isFromToday(item.created_at, now));
+
+      sections.push({
+        label: 'Marketplace Posts',
+        count: todayItems.length,
+        lines: todayItems.slice(0, TODAY_ITEMS_LIMIT_PER_CATEGORY).map((item) => {
+          const title = asString(item.title) || 'Untitled listing';
+          const category = asString(item.category) || 'Uncategorized';
+          const price = asString(item.price) || (asNumber(item.price) !== null ? String(asNumber(item.price)) : 'N/A');
+          const locationText = asString(item.location);
+          return `${title} | ${category} | price: ${price}${locationText ? ` | ${locationText}` : ''}`;
+        }),
+      });
+    } else {
+      sections.push({
+        label: 'Marketplace Posts',
+        count: 0,
+        lines: [],
+        loadError: marketplaceResult.reason instanceof Error ? marketplaceResult.reason.message : 'Failed to load',
+      });
+    }
+
+    if (rentResult.status === 'fulfilled') {
+      const todayItems = toRecordArray(rentResult.value).filter((item) => isFromToday(item.created_at, now));
+
+      sections.push({
+        label: 'Rent Posts',
+        count: todayItems.length,
+        lines: todayItems.slice(0, TODAY_ITEMS_LIMIT_PER_CATEGORY).map((item) => {
+          const title = asString(item.title) || 'Untitled rent listing';
+          const price = asString(item.price) || (asNumber(item.price) !== null ? String(asNumber(item.price)) : 'N/A');
+          const locationText = asString(item.location);
+          const beds = asNumber(item.beds);
+          return `${title} | price: ${price}${beds !== null ? ` | beds: ${beds}` : ''}${locationText ? ` | ${locationText}` : ''}`;
+        }),
+      });
+    } else {
+      sections.push({
+        label: 'Rent Posts',
+        count: 0,
+        lines: [],
+        loadError: rentResult.reason instanceof Error ? rentResult.reason.message : 'Failed to load',
+      });
+    }
+
+    if (serviceResult.status === 'fulfilled') {
+      const todayItems = toRecordArray(serviceResult.value).filter((item) => isFromToday(item.createdAt, now));
+
+      sections.push({
+        label: 'Service Posts',
+        count: todayItems.length,
+        lines: todayItems.slice(0, TODAY_ITEMS_LIMIT_PER_CATEGORY).map((item) => {
+          const title = asString(item.title) || 'Untitled service';
+          const category = asString(item.category) || 'Other';
+          const shortDescription = asString(item.shortDescription) || asString(item.fullDescription);
+          const price = asString(item.price) || (asNumber(item.price) !== null ? String(asNumber(item.price)) : 'N/A');
+          const compactDescription = truncateText(shortDescription || 'No description', 90);
+          return `${title} | ${category} | price: ${price} | ${compactDescription}`;
+        }),
+      });
+    } else {
+      sections.push({
+        label: 'Service Posts',
+        count: 0,
+        lines: [],
+        loadError: serviceResult.reason instanceof Error ? serviceResult.reason.message : 'Failed to load',
+      });
+    }
+
+    if (complaintResult.status === 'fulfilled') {
+      const complaintItems = normalizeComplaintArray(complaintResult.value);
+      const todayItems = complaintItems.filter((item) => isFromToday(item.created_at, now));
+
+      sections.push({
+        label: 'Complaint Posts',
+        count: todayItems.length,
+        lines: todayItems.slice(0, TODAY_ITEMS_LIMIT_PER_CATEGORY).map((item) => {
+          const title = asString(item.title) || 'Untitled complaint';
+          const priority = asString(item.priority) || 'normal';
+          const status = asString(item.status) || 'open';
+          const locationText = asString(item.location);
+          const description = truncateText(asString(item.description) || 'No description', 90);
+          return `${title} | priority: ${priority} | status: ${status}${locationText ? ` | ${locationText}` : ''} | ${description}`;
+        }),
+      });
+    } else {
+      sections.push({
+        label: 'Complaint Posts',
+        count: 0,
+        lines: [],
+        loadError: complaintResult.reason instanceof Error ? complaintResult.reason.message : 'Failed to load',
+      });
+    }
+
+    if (reliefResult.status === 'fulfilled') {
+      const todayItems = toRecordArray(reliefResult.value).filter((item) => isFromToday(item.created_at, now));
+
+      sections.push({
+        label: 'Relief Posts',
+        count: todayItems.length,
+        lines: todayItems.slice(0, TODAY_ITEMS_LIMIT_PER_CATEGORY).map((item) => {
+          const title = asString(item.title) || 'Untitled relief request';
+          const type = asString(item.type) || 'unknown';
+          const urgency = asString(item.urgency) || 'normal';
+          const locationText = asString(item.location);
+          const description = truncateText(asString(item.description) || 'No description', 90);
+          return `${title} | ${type} | urgency: ${urgency}${locationText ? ` | ${locationText}` : ''} | ${description}`;
+        }),
+      });
+    } else {
+      sections.push({
+        label: 'Relief Posts',
+        count: 0,
+        lines: [],
+        loadError: reliefResult.reason instanceof Error ? reliefResult.reason.message : 'Failed to load',
+      });
+    }
+
+    const hasAnyData = sections.some((section) => section.count > 0);
+    const hasAnyErrors = sections.some((section) => Boolean(section.loadError));
+
+    if (!hasAnyData && !hasAnyErrors) {
+      return null;
+    }
+
+    const countsLine = sections
+      .map((section) => `${section.label}: ${section.count}`)
+      .join(' | ');
+
+    const sectionLines = sections.map((section) => {
+      if (section.loadError) {
+        return `${section.label} (today count: 0)\n- Could not load: ${section.loadError}`;
+      }
+
+      if (section.lines.length === 0) {
+        return `${section.label} (today count: 0)\n- No posts today.`;
+      }
+
+      const listed = section.lines.map((line, index) => `${index + 1}. ${line}`).join('\n');
+      return `${section.label} (today count: ${section.count})\n${listed}`;
+    }).join('\n\n');
+
+    const context = [
+      'TODAY COMMUNITY SNAPSHOT (Protibeshi backend data)',
+      `Snapshot time: ${now.toLocaleString()}`,
+      `Counts: ${countsLine}`,
+      '',
+      sectionLines,
+    ].join('\n');
+
+    todaySnapshotCacheRef.current = {
+      dayKey,
+      expiresAt: Date.now() + TODAY_CONTEXT_TTL_MS,
+      context,
+    };
+
+    return context;
+  }, []);
+
+  const buildGeminiPromptWithTodaySnapshot = useCallback(async (rawPrompt: string): Promise<string> => {
+    if (!shouldInjectTodaySnapshot(rawPrompt)) {
+      return rawPrompt;
+    }
+
+    const snapshotContext = await buildTodaySnapshotContext();
+    if (!snapshotContext) {
+      return rawPrompt;
+    }
+
+    return [
+      'Use the backend snapshot below as the source of truth for requests about today updates/summary.',
+      'If a category has 0 posts today, explicitly mention it.',
+      'If a category failed to load, state that it could not be loaded.',
+      '',
+      snapshotContext,
+      '',
+      `User request: ${rawPrompt}`,
+    ].join('\n');
+  }, [buildTodaySnapshotContext]);
+
   const handleSend = async () => {
     if (!activeConversationId) {
       return;
@@ -376,7 +707,8 @@ export const Messages = () => {
           ),
         );
 
-        const reply = await generateGeminiReply(history, text);
+        const enrichedPrompt = await buildGeminiPromptWithTodaySnapshot(text);
+        const reply = await generateGeminiReply(history, enrichedPrompt);
         const assistantPersisted = await saveGeminiReply(activeConversationId, reply);
         appendMessageWithoutDuplicates(assistantPersisted.message);
 
