@@ -25,8 +25,10 @@ export const ReliefPage = () => {
     isSubmitting,
     offeringRequestId,
     commentingRequestId,
+    reportingRequestId,
     errorMessage,
     successMessage,
+    currentUserId,
     filteredRequests,
     filteredOffers,
     filters,
@@ -51,6 +53,7 @@ export const ReliefPage = () => {
     handleSubmitRequest,
     onOfferHelp,
     onSubmitRequestComment,
+    onReportRequest,
     clearFeedback,
     offerForm,
     offerFormErrors,
@@ -153,8 +156,11 @@ export const ReliefPage = () => {
       {/* Details Drawer */}
       <ReliefDetailsDrawer
         request={selectedRequest}
+        currentUserId={currentUserId}
         isSubmittingComment={commentingRequestId === selectedRequest?.id}
+        isSubmittingReport={reportingRequestId === selectedRequest?.id}
         onSubmitComment={onSubmitRequestComment}
+        onReport={onReportRequest}
         onClose={() => setSelectedRequest(null)}
       />
 

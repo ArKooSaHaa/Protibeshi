@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Relief;
 use App\Models\ReliefComment;
 use App\Models\ReliefHelper;
+use App\Models\ReliefReport;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -205,6 +206,69 @@ class ReliefController extends Controller
             'message' => 'Comment added successfully',
             'comment' => $comment,
         ], 201);
+    }
+
+    public function report(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'reason' => 'required|string|max:500',
+        ]);
+
+        $reason = trim($validated['reason']);
+        if (mb_strlen($reason) < 5) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please provide at least 5 characters for the report reason',
+            ], 422);
+        }
+
+        try {
+            $relief = Relief::findOrFail($id);
+        } catch (ModelNotFoundException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Relief request not found',
+            ], 404);
+        }
+
+        if ((int) $relief->user_id === (int) Auth::id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot report your own relief request',
+            ], 403);
+        }
+
+        $report = ReliefReport::firstOrCreate(
+            [
+                'relief_id' => $relief->id,
+                'user_id' => Auth::id(),
+            ],
+            [
+                'reason' => $reason,
+            ]
+        );
+
+        $isUpdated = false;
+
+        if (!$report->wasRecentlyCreated && $report->reason !== $reason) {
+            $report->reason = $reason;
+            $report->save();
+            $isUpdated = true;
+        }
+
+        $message = 'Relief request reported successfully. Admin team will review it.';
+
+        if (!$report->wasRecentlyCreated && !$isUpdated) {
+            $message = 'Relief report already submitted. Admin team will review it.';
+        } elseif ($isUpdated) {
+            $message = 'Relief report updated successfully. Admin team will review it.';
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'report_id' => $report->id,
+        ], $report->wasRecentlyCreated ? 201 : 200);
     }
 
     public function updateStatus(Request $request, $id)

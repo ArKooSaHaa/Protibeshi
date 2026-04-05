@@ -43,4 +43,9 @@ class Relief extends Model
         return $this->hasMany(ReliefComment::class)
             ->orderBy('created_at', 'asc');
     }
+
+    public function reports()
+    {
+        return $this->hasMany(ReliefReport::class);
+    }
 }

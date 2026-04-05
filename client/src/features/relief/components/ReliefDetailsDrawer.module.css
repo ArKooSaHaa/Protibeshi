@@ -411,7 +411,15 @@
      justify-content: center;
      flex-shrink: 0;
      margin-top: 1px;
+    overflow: hidden;
  }
+
+.commentAvatarImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
 
  .commentBody {
      flex: 1;
@@ -449,11 +457,17 @@
      padding: 12px;
  }
 
+.commentComposerDock {
+    flex-shrink: 0;
+    padding: 12px 22px 14px;
+    border-top: 1px solid var(--slate-100);
+    background: #fff;
+}
+
 .commentComposer {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-top: 4px;
 }
 
 .commentInput {
@@ -488,6 +502,102 @@
     cursor: not-allowed;
 }
 
+.reportFeedback {
+    margin: 0 22px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.reportSuccess {
+    background: #ecfdf5;
+    border-color: #86efac;
+    color: #166534;
+}
+
+.reportError {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+
+.reportPanel {
+    margin: 10px 22px 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+    padding: 12px;
+    display: grid;
+    gap: 8px;
+}
+
+.reportLabel {
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.reportTextarea {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #1e293b;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 10px;
+    resize: vertical;
+}
+
+.reportTextarea:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
+}
+
+.reportHint {
+    margin: 0;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.reportActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.reportCancelButton,
+.reportSubmitButton {
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.reportCancelButton {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+}
+
+.reportSubmitButton {
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.reportCancelButton:disabled,
+.reportSubmitButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
  /* ── Resolution ── */
  .resolutionBox {
      background: #f0fdf4;
@@ -507,7 +617,7 @@
      display: flex;
      gap: 8px;
      align-items: center;
-    justify-content: flex-end;
+     justify-content: flex-end;
  }
 
  .btnVolunteer {
@@ -546,4 +656,14 @@
  .btnReport:hover {
      border-color: #ef4444;
      color: #dc2626;
+ }
+
+ .btnReport:disabled {
+     opacity: 0.6;
+     cursor: not-allowed;
+ }
+
+ .ownerNote {
+     font-size: 12px;
+     color: var(--slate-400);
  }

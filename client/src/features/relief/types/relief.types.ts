@@ -71,6 +71,7 @@ export interface ReliefComment {
     id: string;
     author: string;
     avatarInitials: string;
+    avatarUrl?: string | null;
     message: string;
     createdAt: string;
 }

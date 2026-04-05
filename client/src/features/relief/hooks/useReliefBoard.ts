@@ -6,6 +6,7 @@ import {
   deleteRelief,
   getReliefs,
   offerHelp,
+  reportRelief,
   ReliefApiError,
 } from '@/api/relief';
 import type { ReliefApiComment, ReliefApiItem, ReliefApiUser } from '@/api/relief';
@@ -263,11 +264,13 @@ const resolveCommentAuthorName = (comment: ReliefApiComment): string => {
 
 const normalizeReliefComment = (comment: ReliefApiComment): ReliefComment => {
   const author = resolveCommentAuthorName(comment);
+  const avatarUrl = resolveReliefUserProfilePhoto(comment.user);
 
   return {
     id: String(comment.id),
     author,
     avatarInitials: toAvatarInitials(author),
+    avatarUrl,
     message: String(comment.comment || ''),
     createdAt: String(comment.created_at || new Date().toISOString()),
   };
@@ -415,6 +418,7 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [offeringRequestId, setOfferingRequestId] = useState<string | null>(null);
   const [commentingRequestId, setCommentingRequestId] = useState<string | null>(null);
+  const [reportingRequestId, setReportingRequestId] = useState<string | null>(null);
   const [deletingRequestId, setDeletingRequestId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -752,6 +756,58 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
     }
   }, [loadReliefs, onUnauthorized]);
 
+  const onReportRequest = useCallback(async (
+    request: ReliefRequest,
+    reason: string,
+  ): Promise<{ message: string }> => {
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
+    if (!token) {
+      const message = 'Please sign in to report this relief request.';
+      setErrorMessage(message);
+      onUnauthorized?.();
+      throw new Error(message);
+    }
+
+    const content = reason.trim();
+    if (content.length < 5) {
+      const message = 'Please provide at least 5 characters for the report reason.';
+      setErrorMessage(message);
+      throw new Error(message);
+    }
+
+    const targetId = request.backendId ?? Number(request.id);
+    if (!Number.isFinite(targetId)) {
+      const message = 'Invalid relief request.';
+      setErrorMessage(message);
+      throw new Error(message);
+    }
+
+    setReportingRequestId(request.id);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await reportRelief(targetId, content);
+      const message = response.message || 'Relief request reported successfully. Admin team will review it.';
+      setSuccessMessage(message);
+
+      return { message };
+    } catch (error) {
+      if (error instanceof ReliefApiError && error.status === 401) {
+        const message = 'Your session has expired. Please sign in again.';
+        setErrorMessage(message);
+        onUnauthorized?.();
+        throw new Error(message);
+      }
+
+      const message = error instanceof Error ? error.message : 'Failed to report relief request';
+      setErrorMessage(message);
+      throw new Error(message);
+    } finally {
+      setReportingRequestId(null);
+    }
+  }, [onUnauthorized]);
+
   const onDeleteRequest = useCallback(async (request: ReliefRequest) => {
     const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
     if (!token) {
@@ -803,6 +859,7 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
     isSubmitting,
     offeringRequestId,
     commentingRequestId,
+    reportingRequestId,
     deletingRequestId,
     errorMessage,
     successMessage,
@@ -837,6 +894,7 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
     handleSubmitRequest,
     onOfferHelp,
     onSubmitRequestComment,
+    onReportRequest,
     onDeleteRequest,
     // offer form
     offerForm,

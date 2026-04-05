@@ -133,6 +133,7 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('/reliefs', [ReliefController::class, 'store']);
     Route::post('/reliefs/{id}/offer-help', [ReliefController::class, 'offerHelp']);
     Route::post('/reliefs/{id}/comments', [ReliefController::class, 'addComment']);
+    Route::post('/reliefs/{id}/report', [ReliefController::class, 'report']);
     Route::patch('/reliefs/{id}/status', [ReliefController::class, 'updateStatus']);
     Route::delete('/reliefs/{id}', [ReliefController::class, 'destroy']);
 });

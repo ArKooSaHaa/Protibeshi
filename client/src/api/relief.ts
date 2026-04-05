@@ -148,6 +148,25 @@ export const addReliefComment = async (
   }
 };
 
+export const reportRelief = async (
+  id: number | string,
+  reason: string,
+): Promise<{ success?: boolean; message?: string; report_id?: number }> => {
+  try {
+    const response = await reliefClient.post<{
+      success?: boolean;
+      message?: string;
+      report_id?: number;
+    }>(`/reliefs/${id}/report`, {
+      reason,
+    });
+
+    return response.data || {};
+  } catch (error) {
+    return toReliefApiError(error, 'Failed to report relief request');
+  }
+};
+
 export const deleteRelief = async (id: number | string): Promise<{ success?: boolean; message?: string }> => {
   try {
     const response = await reliefClient.delete<{ success?: boolean; message?: string }>(`/reliefs/${id}`);

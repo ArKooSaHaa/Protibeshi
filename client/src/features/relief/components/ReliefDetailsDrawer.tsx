@@ -12,22 +12,43 @@ import styles from './ReliefDetailsDrawer.module.css';
 
 interface ReliefDetailsDrawerProps {
   request: ReliefRequest | null;
+  currentUserId?: number | null;
   isSubmittingComment?: boolean;
+  isSubmittingReport?: boolean;
   onSubmitComment?: (request: ReliefRequest, message: string) => Promise<boolean>;
+  onReport?: (request: ReliefRequest, reason: string) => Promise<{ message: string }>;
   onClose: () => void;
 }
 
 export const ReliefDetailsDrawer = ({
   request,
+  currentUserId = null,
   isSubmittingComment = false,
+  isSubmittingReport = false,
   onSubmitComment,
+  onReport,
   onClose,
 }:
   ReliefDetailsDrawerProps) => {
   const [commentDraft, setCommentDraft] = useState('');
+  const [isReportPanelOpen, setIsReportPanelOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportFeedback, setReportFeedback] = useState<{
+    variant: 'success' | 'error';
+    message: string;
+  } | null>(null);
+
+  const isOwnRequest =
+    !!request
+    && typeof request.userId === 'number'
+    && typeof currentUserId === 'number'
+    && request.userId === currentUserId;
 
   useEffect(() => {
     setCommentDraft('');
+    setIsReportPanelOpen(false);
+    setReportReason('');
+    setReportFeedback(null);
   }, [request?.id]);
 
   const handleCommentSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -45,6 +66,41 @@ export const ReliefDetailsDrawer = ({
     const isSuccess = await onSubmitComment?.(request, message);
     if (isSuccess !== false) {
       setCommentDraft('');
+    }
+  };
+
+  const handleSubmitReport = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!request || !onReport) {
+      return;
+    }
+
+    const trimmedReason = reportReason.trim();
+    if (trimmedReason.length < 5) {
+      setReportFeedback({
+        variant: 'error',
+        message: 'Please provide at least 5 characters for the report reason.',
+      });
+      return;
+    }
+
+    setReportFeedback(null);
+
+    try {
+      const response = await onReport(request, trimmedReason);
+
+      setReportReason('');
+      setIsReportPanelOpen(false);
+      setReportFeedback({
+        variant: 'success',
+        message: response?.message || 'Report submitted successfully. Admin team will review it.',
+      });
+    } catch (error) {
+      setReportFeedback({
+        variant: 'error',
+        message: error instanceof Error ? error.message : 'Failed to submit report.',
+      });
     }
   };
 
@@ -172,8 +228,16 @@ ${styles.completed}`} />
                   ) : (
                     request.comments.map((c) => (
                       <div key={c.id} className={styles.commentItem}>
-                        <div
-                          className={styles.commentAvatar}>{c.avatarInitials}</div>
+                        <div className={styles.commentAvatar}>
+                          {c.avatarUrl ? (
+                            <img
+                              src={c.avatarUrl}
+                              alt={`${c.author} profile`}
+                              className={styles.commentAvatarImage}
+                              loading="lazy"
+                            />
+                          ) : c.avatarInitials}
+                        </div>
                         <div className={styles.commentBody}>
                           <div className={styles.commentMeta}>
                             <span
@@ -189,23 +253,6 @@ ${styles.completed}`} />
                     ))
                   )}
                 </div>
-                <form className={styles.commentComposer} onSubmit={handleCommentSubmit}>
-                  <input
-                    className={styles.commentInput}
-                    type="text"
-                    placeholder="Write a comment..."
-                    value={commentDraft}
-                    onChange={(event) => setCommentDraft(event.target.value)}
-                    disabled={isSubmittingComment}
-                  />
-                  <button
-                    className={styles.commentPostButton}
-                    type="submit"
-                    disabled={isSubmittingComment || !commentDraft.trim()}
-                  >
-                    {isSubmittingComment ? 'Posting...' : 'Post'}
-                  </button>
-                </form>
               </div>
 
               {/* Resolution summary */}
@@ -219,12 +266,89 @@ ${styles.completed}`} />
               )}
             </div>
 
+            <div className={styles.commentComposerDock}>
+              <form className={styles.commentComposer} onSubmit={handleCommentSubmit}>
+                <input
+                  className={styles.commentInput}
+                  type="text"
+                  placeholder="Write a comment..."
+                  value={commentDraft}
+                  onChange={(event) => setCommentDraft(event.target.value)}
+                  disabled={isSubmittingComment}
+                />
+                <button
+                  className={styles.commentPostButton}
+                  type="submit"
+                  disabled={isSubmittingComment || !commentDraft.trim()}
+                >
+                  {isSubmittingComment ? 'Posting...' : 'Post'}
+                </button>
+              </form>
+            </div>
+
+            {!isOwnRequest && reportFeedback ? (
+              <p
+                className={`${styles.reportFeedback} ${reportFeedback.variant === 'success'
+                  ? styles.reportSuccess
+                  : styles.reportError}`}
+              >
+                {reportFeedback.message}
+              </p>
+            ) : null}
+
+            {!isOwnRequest && isReportPanelOpen ? (
+              <form className={styles.reportPanel} onSubmit={handleSubmitReport}>
+                <label htmlFor={`relief-report-${request.id}`} className={styles.reportLabel}>
+                  Report reason
+                </label>
+                <textarea
+                  id={`relief-report-${request.id}`}
+                  className={styles.reportTextarea}
+                  rows={4}
+                  value={reportReason}
+                  onChange={(event) => setReportReason(event.target.value)}
+                  placeholder="Describe why this relief request should be reviewed"
+                  maxLength={500}
+                  disabled={isSubmittingReport}
+                />
+                <p className={styles.reportHint}>Submitted reports are reviewed by the admin moderation team.</p>
+                <div className={styles.reportActions}>
+                  <button
+                    type="button"
+                    className={styles.reportCancelButton}
+                    onClick={() => {
+                      setIsReportPanelOpen(false);
+                      setReportReason('');
+                    }}
+                    disabled={isSubmittingReport}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className={styles.reportSubmitButton} disabled={isSubmittingReport}>
+                    {isSubmittingReport ? 'Submitting...' : 'Submit Report'}
+                  </button>
+                </div>
+              </form>
+            ) : null}
+
             {/* Footer */}
             <div className={styles.footer}>
-              <button className={styles.btnReport} type="button">
-                <Flag size={13} />
-                Report
-              </button>
+              {!isOwnRequest ? (
+                <button
+                  className={styles.btnReport}
+                  type="button"
+                  onClick={() => {
+                    setIsReportPanelOpen((previous) => !previous);
+                    setReportFeedback(null);
+                  }}
+                  disabled={isSubmittingReport}
+                >
+                  <Flag size={13} />
+                  {isReportPanelOpen ? 'Hide Report Form' : 'Report to Admin'}
+                </button>
+              ) : (
+                <span className={styles.ownerNote}>You cannot report your own relief request.</span>
+              )}
             </div>
           </motion.div>
         </>
