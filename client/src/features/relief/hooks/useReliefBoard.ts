@@ -29,7 +29,8 @@ import { useReliefFilters } from './useReliefFilters';
 type ModalMode = 'request' | 'offer' | null;
 
 const DEFAULT_API_BASE = 'http://127.0.0.1:8000';
-const OFFERED_RELIEF_IDS_STORAGE_KEY = 'relief.offered.help.ids';
+const OFFERED_RELIEF_IDS_STORAGE_KEY_PREFIX = 'relief.offered.help.ids.v2';
+const LEGACY_OFFERED_RELIEF_IDS_STORAGE_KEY = 'relief.offered.help.ids';
 
 const initialRequestForm: ReliefRequestFormState = {
   title: '',
@@ -86,6 +87,27 @@ const decodeCurrentUserIdFromToken = () => {
   } catch {
     return null;
   }
+};
+
+const resolveStorageUserId = (providedUserId?: number | null) => {
+  if (
+    typeof providedUserId === 'number'
+    && Number.isFinite(providedUserId)
+    && providedUserId > 0
+  ) {
+    return providedUserId;
+  }
+
+  return decodeCurrentUserIdFromToken();
+};
+
+const getOfferedReliefIdsStorageKey = (providedUserId?: number | null) => {
+  const userId = resolveStorageUserId(providedUserId);
+  if (typeof userId !== 'number' || !Number.isFinite(userId) || userId <= 0) {
+    return null;
+  }
+
+  return `${OFFERED_RELIEF_IDS_STORAGE_KEY_PREFIX}.${userId}`;
 };
 
 const toTitleCase = (value: string) =>
@@ -196,13 +218,18 @@ const resolveReliefUserProfilePhoto = (user: ReliefApiUser | null | undefined) =
   return null;
 };
 
-const getStoredOfferedReliefIds = () => {
+const getStoredOfferedReliefIds = (providedUserId?: number | null) => {
   if (typeof window === 'undefined') {
     return new Set<string>();
   }
 
+  const storageKey = getOfferedReliefIdsStorageKey(providedUserId);
+  if (!storageKey) {
+    return new Set<string>();
+  }
+
   try {
-    const raw = window.localStorage.getItem(OFFERED_RELIEF_IDS_STORAGE_KEY);
+    const raw = window.localStorage.getItem(storageKey);
     if (!raw) {
       return new Set<string>();
     }
@@ -218,14 +245,30 @@ const getStoredOfferedReliefIds = () => {
   }
 };
 
-const markReliefAsOfferedInStorage = (reliefId: number | string) => {
+const markReliefAsOfferedInStorage = (
+  reliefId: number | string,
+  providedUserId?: number | null,
+) => {
   if (typeof window === 'undefined') {
     return;
   }
 
-  const next = getStoredOfferedReliefIds();
+  const storageKey = getOfferedReliefIdsStorageKey(providedUserId);
+  if (!storageKey) {
+    return;
+  }
+
+  const next = getStoredOfferedReliefIds(providedUserId);
   next.add(String(reliefId));
-  window.localStorage.setItem(OFFERED_RELIEF_IDS_STORAGE_KEY, JSON.stringify(Array.from(next)));
+  window.localStorage.setItem(storageKey, JSON.stringify(Array.from(next)));
+};
+
+const clearLegacyOfferedReliefIdsStorage = () => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.removeItem(LEGACY_OFFERED_RELIEF_IDS_STORAGE_KEY);
 };
 
 const resolveUserName = (relief: ReliefApiItem): string => {
@@ -468,7 +511,9 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
   }, []);
 
   useEffect(() => {
-    setCurrentUserId(decodeCurrentUserIdFromToken());
+    const decodedUserId = decodeCurrentUserIdFromToken();
+    setCurrentUserId(decodedUserId);
+    clearLegacyOfferedReliefIdsStorage();
     void loadReliefs();
   }, [loadReliefs]);
 
@@ -644,10 +689,11 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
 
     try {
       const updated = await offerHelp(targetId);
+      const viewerId = resolveStorageUserId(currentUserId);
 
       if (updated) {
         const normalized = normalizeRelief(updated);
-        markReliefAsOfferedInStorage(targetId);
+        markReliefAsOfferedInStorage(targetId, viewerId);
         setRequests((prev) => prev.map((item) => (
           item.id === request.id
             ? {
@@ -668,7 +714,8 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
         setErrorMessage('Your session has expired. Please sign in again.');
         onUnauthorized?.();
       } else if (error instanceof ReliefApiError && error.status === 409) {
-        markReliefAsOfferedInStorage(targetId);
+        const viewerId = resolveStorageUserId(currentUserId);
+        markReliefAsOfferedInStorage(targetId, viewerId);
         setRequests((prev) => prev.map((item) => (
           item.id === request.id ? { ...item, hasOfferedHelp: true } : item
         )));
