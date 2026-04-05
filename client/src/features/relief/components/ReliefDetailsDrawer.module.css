@@ -449,6 +449,45 @@
      padding: 12px;
  }
 
+.commentComposer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.commentInput {
+    flex: 1;
+    border: 1px solid var(--slate-200);
+    border-radius: 9px;
+    padding: 9px 11px;
+    font-size: 13px;
+    color: var(--slate-700);
+    background: #fff;
+}
+
+.commentInput:focus {
+    outline: none;
+    border-color: var(--emerald-400);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.commentPostButton {
+    border: none;
+    border-radius: 9px;
+    padding: 9px 13px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, var(--emerald-500), var(--emerald-600));
+    cursor: pointer;
+}
+
+.commentPostButton:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
  /* ── Resolution ── */
  .resolutionBox {
      background: #f0fdf4;
@@ -468,6 +507,7 @@
      display: flex;
      gap: 8px;
      align-items: center;
+    justify-content: flex-end;
  }
 
  .btnVolunteer {

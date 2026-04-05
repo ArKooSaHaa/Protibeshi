@@ -2,6 +2,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, Clock, Flag, MapPin, Users, X } from
   'lucide-react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import type { ReliefRequest } from '../types/relief.types';
 import {
   formatDistance, formatRelativeTime, statusConfig,
@@ -14,8 +15,98 @@ interface ReliefDetailsDrawerProps {
   onClose: () => void;
 }
 
+const toInitials = (name: string) => {
+  const words = name
+    .split(' ')
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (words.length === 0) {
+    return 'YO';
+  }
+
+  const first = words[0]?.[0] || '';
+  const second = words[1]?.[0] || words[0]?.[1] || '';
+  return `${first}${second}`.toUpperCase();
+};
+
+const resolveCurrentUserName = () => {
+  if (typeof window === 'undefined') {
+    return 'You';
+  }
+
+  const keys = ['user', 'auth_user', 'authUser', 'currentUser', 'profile'];
+  for (const key of keys) {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (!parsed || typeof parsed !== 'object') {
+        continue;
+      }
+
+      const source = parsed as Record<string, unknown>;
+      const directName = typeof source.name === 'string' ? source.name.trim() : '';
+      const directUsername = typeof source.username === 'string' ? source.username.trim() : '';
+      const nestedUser = source.user && typeof source.user === 'object'
+        ? (source.user as Record<string, unknown>)
+        : null;
+      const nestedName = nestedUser && typeof nestedUser.name === 'string'
+        ? nestedUser.name.trim()
+        : '';
+
+      if (directName) return directName;
+      if (nestedName) return nestedName;
+      if (directUsername) return directUsername;
+    } catch {
+      continue;
+    }
+  }
+
+  return 'You';
+};
+
 export const ReliefDetailsDrawer = ({ request, onClose }:
   ReliefDetailsDrawerProps) => {
+  const [localComments, setLocalComments] = useState(request?.comments ?? []);
+  const [commentDraft, setCommentDraft] = useState('');
+  const currentUserName = useMemo(() => resolveCurrentUserName(), []);
+
+  useEffect(() => {
+    if (!request) {
+      setLocalComments([]);
+      setCommentDraft('');
+      return;
+    }
+
+    setLocalComments(request.comments ?? []);
+    setCommentDraft('');
+  }, [request]);
+
+  const handleCommentSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const message = commentDraft.trim();
+    if (!message) {
+      return;
+    }
+
+    setLocalComments((prev) => ([
+      ...prev,
+      {
+        id: `local-${Date.now()}`,
+        author: currentUserName,
+        avatarInitials: toInitials(currentUserName),
+        message,
+        createdAt: new Date().toISOString(),
+      },
+    ]));
+    setCommentDraft('');
+  };
+
   return (
     <AnimatePresence>
       {request && (
@@ -128,50 +219,17 @@ ${styles.completed}`} />
                 </div>
               </div>
 
-              {/* Volunteers */}
-              <div className={styles.section}>
-                <span className={styles.sectionLabel}>
-                  Volunteers ({request.volunteers.length})
-                </span>
-                <div className={styles.volunteers}>
-                  {request.volunteers.length === 0 ? (
-                    <div className={styles.noVolunteers}>
-                      No volunteers yet. Be the first to help.
-                    </div>
-                  ) : (
-                    request.volunteers.map((v) => (
-                      <div key={v.id} className={styles.volunteerItem}>
-                        <div
-                          className={styles.avatar}>{v.avatarInitials}</div>
-                        <div>
-                          <div
-                            className={styles.volunteerName}>{v.name}</div>
-                          <div className={styles.volunteerSince}>
-                            Joined {formatRelativeTime(v.joinedAt)}
-                          </div>
-                        </div>
-                        {v.verifiedNeighbor && (
-                          <span className={styles.verifiedSmall}>
-                            <CheckCircle2 size={11} /> Verified
-                          </span>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
               {/* Comments */}
               <div className={styles.section}>
                 <span className={styles.sectionLabel}>
-                  Comments ({request.comments.length})
+                  Comments ({localComments.length})
                 </span>
                 <div className={styles.comments}>
-                  {request.comments.length === 0 ? (
+                  {localComments.length === 0 ? (
                     <p className={styles.noComments}>No comments
                       yet.</p>
                   ) : (
-                    request.comments.map((c) => (
+                    localComments.map((c) => (
                       <div key={c.id} className={styles.commentItem}>
                         <div
                           className={styles.commentAvatar}>{c.avatarInitials}</div>
@@ -190,6 +248,22 @@ ${styles.completed}`} />
                     ))
                   )}
                 </div>
+                <form className={styles.commentComposer} onSubmit={handleCommentSubmit}>
+                  <input
+                    className={styles.commentInput}
+                    type="text"
+                    placeholder="Write a comment..."
+                    value={commentDraft}
+                    onChange={(event) => setCommentDraft(event.target.value)}
+                  />
+                  <button
+                    className={styles.commentPostButton}
+                    type="submit"
+                    disabled={!commentDraft.trim()}
+                  >
+                    Post
+                  </button>
+                </form>
               </div>
 
               {/* Resolution summary */}
@@ -205,13 +279,6 @@ ${styles.completed}`} />
 
             {/* Footer */}
             <div className={styles.footer}>
-              {(request.status === 'Open' || request.status ===
-                'Assigned') && (
-                  <button className={styles.btnVolunteer} type="button">
-                    <Users size={15} />
-                    Volunteer to Help
-                  </button>
-                )}
               <button className={styles.btnReport} type="button">
                 <Flag size={13} />
                 Report
