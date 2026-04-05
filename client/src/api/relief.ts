@@ -9,6 +9,20 @@ export type ReliefApiUser = {
   name?: string | null;
   username?: string | null;
   email?: string | null;
+  avatar?: string | null;
+  avatar_url?: string | null;
+  profile_picture?: string | null;
+  profile_picture_url?: string | null;
+};
+
+export type ReliefApiComment = {
+  id: number;
+  relief_id: number;
+  user_id: number;
+  comment: string;
+  created_at: string;
+  updated_at: string;
+  user?: ReliefApiUser | null;
 };
 
 export type ReliefApiItem = {
@@ -24,6 +38,8 @@ export type ReliefApiItem = {
   location: string;
   status: string;
   helpers_count: number;
+  has_offered_help?: boolean;
+  comments?: ReliefApiComment[];
   created_at: string;
   updated_at: string;
   user?: ReliefApiUser | null;
@@ -114,6 +130,40 @@ export const offerHelp = async (id: number | string): Promise<ReliefApiItem | nu
     return response.data?.relief || null;
   } catch (error) {
     return toReliefApiError(error, 'Failed to offer help');
+  }
+};
+
+export const addReliefComment = async (
+  id: number | string,
+  comment: string,
+): Promise<ReliefApiComment | null> => {
+  try {
+    const response = await reliefClient.post<{ comment?: ReliefApiComment }>(`/reliefs/${id}/comments`, {
+      comment,
+    });
+
+    return response.data?.comment || null;
+  } catch (error) {
+    return toReliefApiError(error, 'Failed to add comment');
+  }
+};
+
+export const reportRelief = async (
+  id: number | string,
+  reason: string,
+): Promise<{ success?: boolean; message?: string; report_id?: number }> => {
+  try {
+    const response = await reliefClient.post<{
+      success?: boolean;
+      message?: string;
+      report_id?: number;
+    }>(`/reliefs/${id}/report`, {
+      reason,
+    });
+
+    return response.data || {};
+  } catch (error) {
+    return toReliefApiError(error, 'Failed to report relief request');
   }
 };
 

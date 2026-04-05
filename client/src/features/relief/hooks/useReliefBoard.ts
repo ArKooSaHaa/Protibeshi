@@ -1,17 +1,20 @@
 // src/features/relief/hooks/useReliefBoard.ts
 import { useCallback, useEffect, useState } from 'react';
 import {
+  addReliefComment,
   createRelief,
   deleteRelief,
   getReliefs,
   offerHelp,
+  reportRelief,
   ReliefApiError,
 } from '@/api/relief';
-import type { ReliefApiItem } from '@/api/relief';
+import type { ReliefApiComment, ReliefApiItem, ReliefApiUser } from '@/api/relief';
 import { createOffer, getOffers } from '@/api/offerApi';
 import type { OfferApiItem } from '@/api/offerApi';
 import type {
   HelpOffer,
+  ReliefComment,
   HelpOfferFormState,
   ReliefFormErrors,
   ReliefHelpType,
@@ -24,6 +27,10 @@ import { reliefHelpTypes } from '../types/relief.types';
 import { useReliefFilters } from './useReliefFilters';
 
 type ModalMode = 'request' | 'offer' | null;
+
+const DEFAULT_API_BASE = 'http://127.0.0.1:8000';
+const OFFERED_RELIEF_IDS_STORAGE_KEY_PREFIX = 'relief.offered.help.ids.v2';
+const LEGACY_OFFERED_RELIEF_IDS_STORAGE_KEY = 'relief.offered.help.ids';
 
 const initialRequestForm: ReliefRequestFormState = {
   title: '',
@@ -82,6 +89,27 @@ const decodeCurrentUserIdFromToken = () => {
   }
 };
 
+const resolveStorageUserId = (providedUserId?: number | null) => {
+  if (
+    typeof providedUserId === 'number'
+    && Number.isFinite(providedUserId)
+    && providedUserId > 0
+  ) {
+    return providedUserId;
+  }
+
+  return decodeCurrentUserIdFromToken();
+};
+
+const getOfferedReliefIdsStorageKey = (providedUserId?: number | null) => {
+  const userId = resolveStorageUserId(providedUserId);
+  if (typeof userId !== 'number' || !Number.isFinite(userId) || userId <= 0) {
+    return null;
+  }
+
+  return `${OFFERED_RELIEF_IDS_STORAGE_KEY_PREFIX}.${userId}`;
+};
+
 const toTitleCase = (value: string) =>
   value
     .split(' ')
@@ -135,6 +163,114 @@ const toAvatarInitials = (name: string): string => {
   return `${first}${second}`.toUpperCase();
 };
 
+const resolveUserImageUrl = (rawPath: string | null | undefined) => {
+  if (!rawPath) {
+    return null;
+  }
+
+  const normalizedPath = rawPath.replace(/\\/g, '/').trim();
+  if (!normalizedPath) {
+    return null;
+  }
+
+  if (normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')) {
+    return normalizedPath;
+  }
+
+  const baseUrl = import.meta.env.VITE_API_URL || DEFAULT_API_BASE;
+
+  if (normalizedPath.startsWith('/')) {
+    return `${baseUrl}${normalizedPath}`;
+  }
+
+  if (normalizedPath.startsWith('storage/')) {
+    return `${baseUrl}/${normalizedPath}`;
+  }
+
+  if (normalizedPath.startsWith('public/storage/')) {
+    return `${baseUrl}/${normalizedPath.replace(/^public\//, '')}`;
+  }
+
+  return `${baseUrl}/storage/${normalizedPath}`;
+};
+
+const resolveReliefUserProfilePhoto = (user: ReliefApiUser | null | undefined) => {
+  if (!user) {
+    return null;
+  }
+
+  const candidates = [
+    user.profile_picture_url,
+    user.profile_picture,
+    user.avatar_url,
+    user.avatar,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      const resolved = resolveUserImageUrl(candidate);
+      if (resolved) {
+        return resolved;
+      }
+    }
+  }
+
+  return null;
+};
+
+const getStoredOfferedReliefIds = (providedUserId?: number | null) => {
+  if (typeof window === 'undefined') {
+    return new Set<string>();
+  }
+
+  const storageKey = getOfferedReliefIdsStorageKey(providedUserId);
+  if (!storageKey) {
+    return new Set<string>();
+  }
+
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) {
+      return new Set<string>();
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return new Set<string>();
+    }
+
+    return new Set(parsed.map((value) => String(value)));
+  } catch {
+    return new Set<string>();
+  }
+};
+
+const markReliefAsOfferedInStorage = (
+  reliefId: number | string,
+  providedUserId?: number | null,
+) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const storageKey = getOfferedReliefIdsStorageKey(providedUserId);
+  if (!storageKey) {
+    return;
+  }
+
+  const next = getStoredOfferedReliefIds(providedUserId);
+  next.add(String(reliefId));
+  window.localStorage.setItem(storageKey, JSON.stringify(Array.from(next)));
+};
+
+const clearLegacyOfferedReliefIdsStorage = () => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.removeItem(LEGACY_OFFERED_RELIEF_IDS_STORAGE_KEY);
+};
+
 const resolveUserName = (relief: ReliefApiItem): string => {
   const user = relief.user;
   if (!user) {
@@ -152,8 +288,40 @@ const resolveUserName = (relief: ReliefApiItem): string => {
   return String(user.name || user.username || user.email || 'Neighbor').trim() || 'Neighbor';
 };
 
+const resolveCommentAuthorName = (comment: ReliefApiComment): string => {
+  const user = comment.user;
+  if (!user) {
+    return 'Neighbor';
+  }
+
+  const firstName = String(user.first_name || '').trim();
+  const lastName = String(user.last_name || '').trim();
+  const fullName = `${firstName} ${lastName}`.trim();
+
+  if (fullName) {
+    return fullName;
+  }
+
+  return String(user.name || user.username || user.email || 'Neighbor').trim() || 'Neighbor';
+};
+
+const normalizeReliefComment = (comment: ReliefApiComment): ReliefComment => {
+  const author = resolveCommentAuthorName(comment);
+  const avatarUrl = resolveReliefUserProfilePhoto(comment.user);
+
+  return {
+    id: String(comment.id),
+    author,
+    avatarInitials: toAvatarInitials(author),
+    avatarUrl,
+    message: String(comment.comment || ''),
+    createdAt: String(comment.created_at || new Date().toISOString()),
+  };
+};
+
 const normalizeRelief = (relief: ReliefApiItem): ReliefRequest => {
   const postedBy = resolveUserName(relief);
+  const avatarUrl = resolveReliefUserProfilePhoto(relief.user);
 
   return {
     id: String(relief.id),
@@ -178,8 +346,10 @@ const normalizeRelief = (relief: ReliefApiItem): ReliefRequest => {
     updatedAt: String(relief.updated_at || new Date().toISOString()),
     postedBy,
     avatarInitials: toAvatarInitials(postedBy),
+    avatarUrl,
     verified: false,
     anonymous: false,
+    hasOfferedHelp: Boolean(relief.has_offered_help),
     volunteerCount: Number(relief.helpers_count || 0),
     volunteers: [],
     timeline: [
@@ -188,7 +358,9 @@ const normalizeRelief = (relief: ReliefApiItem): ReliefRequest => {
         date: String(relief.created_at || new Date().toISOString()),
       },
     ],
-    comments: [],
+    comments: Array.isArray(relief.comments)
+      ? relief.comments.map(normalizeReliefComment)
+      : [],
     photos: [],
   };
 };
@@ -288,6 +460,8 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [offeringRequestId, setOfferingRequestId] = useState<string | null>(null);
+  const [commentingRequestId, setCommentingRequestId] = useState<string | null>(null);
+  const [reportingRequestId, setReportingRequestId] = useState<string | null>(null);
   const [deletingRequestId, setDeletingRequestId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -314,7 +488,19 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
 
     try {
       const [reliefData, offerData] = await Promise.all([getReliefs(), getOffers()]);
-      setRequests(reliefData.map(normalizeRelief));
+      const storedOfferedIds = getStoredOfferedReliefIds();
+      setRequests(reliefData.map((relief) => {
+        const normalized = normalizeRelief(relief);
+
+        if (!normalized.hasOfferedHelp && storedOfferedIds.has(String(relief.id))) {
+          return {
+            ...normalized,
+            hasOfferedHelp: true,
+          };
+        }
+
+        return normalized;
+      }));
       setOffers(offerData.map(normalizeOffer));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to load relief requests';
@@ -325,7 +511,9 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
   }, []);
 
   useEffect(() => {
-    setCurrentUserId(decodeCurrentUserIdFromToken());
+    const decodedUserId = decodeCurrentUserIdFromToken();
+    setCurrentUserId(decodedUserId);
+    clearLegacyOfferedReliefIdsStorage();
     void loadReliefs();
   }, [loadReliefs]);
 
@@ -484,6 +672,11 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
       return;
     }
 
+    if (request.hasOfferedHelp) {
+      setErrorMessage('You have already offered help for this request.');
+      return;
+    }
+
     const targetId = request.backendId ?? Number(request.id);
     if (!Number.isFinite(targetId)) {
       setErrorMessage('Invalid relief request.');
@@ -494,37 +687,171 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    setRequests((prev) => prev.map((item) => (
-      item.id === request.id ? { ...item, volunteerCount: item.volunteerCount + 1 } : item
-    )));
-
     try {
       const updated = await offerHelp(targetId);
+      const viewerId = resolveStorageUserId(currentUserId);
 
       if (updated) {
         const normalized = normalizeRelief(updated);
+        markReliefAsOfferedInStorage(targetId, viewerId);
         setRequests((prev) => prev.map((item) => (
           item.id === request.id
-            ? { ...item, volunteerCount: normalized.volunteerCount, status: normalized.status }
+            ? {
+              ...item,
+              volunteerCount: normalized.volunteerCount,
+              status: normalized.status,
+              hasOfferedHelp: normalized.hasOfferedHelp,
+            }
             : item
         )));
+      } else {
+        await loadReliefs();
       }
 
       setSuccessMessage('Thank you for offering help.');
     } catch (error) {
-      setRequests((prev) => prev.map((item) => (
-        item.id === request.id ? { ...item, volunteerCount: Math.max(0, item.volunteerCount - 1) } : item
-      )));
-
       if (error instanceof ReliefApiError && error.status === 401) {
         setErrorMessage('Your session has expired. Please sign in again.');
         onUnauthorized?.();
+      } else if (error instanceof ReliefApiError && error.status === 409) {
+        const viewerId = resolveStorageUserId(currentUserId);
+        markReliefAsOfferedInStorage(targetId, viewerId);
+        setRequests((prev) => prev.map((item) => (
+          item.id === request.id ? { ...item, hasOfferedHelp: true } : item
+        )));
+        setErrorMessage(error.message || 'You have already offered help for this request.');
       } else {
         const message = error instanceof Error ? error.message : 'Failed to offer help';
         setErrorMessage(message);
       }
     } finally {
       setOfferingRequestId(null);
+    }
+  }, [loadReliefs, onUnauthorized]);
+
+  const onSubmitRequestComment = useCallback(async (
+    request: ReliefRequest,
+    message: string,
+  ) => {
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
+    if (!token) {
+      setErrorMessage('Please sign in to add a comment.');
+      onUnauthorized?.();
+      return false;
+    }
+
+    const content = message.trim();
+    if (!content) {
+      setErrorMessage('Comment cannot be empty.');
+      return false;
+    }
+
+    const targetId = request.backendId ?? Number(request.id);
+    if (!Number.isFinite(targetId)) {
+      setErrorMessage('Invalid relief request.');
+      return false;
+    }
+
+    setCommentingRequestId(request.id);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      const createdComment = await addReliefComment(targetId, content);
+
+      if (createdComment) {
+        const normalizedComment = normalizeReliefComment(createdComment);
+        setRequests((prev) => prev.map((item) => {
+          if (item.id !== request.id) {
+            return item;
+          }
+
+          return {
+            ...item,
+            comments: [...item.comments, normalizedComment],
+          };
+        }));
+
+        setSelectedRequest((prev) => {
+          if (!prev || prev.id !== request.id) {
+            return prev;
+          }
+
+          return {
+            ...prev,
+            comments: [...prev.comments, normalizedComment],
+          };
+        });
+      } else {
+        await loadReliefs();
+      }
+
+      setSuccessMessage('Comment added successfully.');
+      return true;
+    } catch (error) {
+      if (error instanceof ReliefApiError && error.status === 401) {
+        setErrorMessage('Your session has expired. Please sign in again.');
+        onUnauthorized?.();
+      } else {
+        const fallbackMessage = error instanceof Error ? error.message : 'Failed to add comment';
+        setErrorMessage(fallbackMessage);
+      }
+
+      return false;
+    } finally {
+      setCommentingRequestId(null);
+    }
+  }, [loadReliefs, onUnauthorized]);
+
+  const onReportRequest = useCallback(async (
+    request: ReliefRequest,
+    reason: string,
+  ): Promise<{ message: string }> => {
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
+    if (!token) {
+      const message = 'Please sign in to report this relief request.';
+      setErrorMessage(message);
+      onUnauthorized?.();
+      throw new Error(message);
+    }
+
+    const content = reason.trim();
+    if (content.length < 5) {
+      const message = 'Please provide at least 5 characters for the report reason.';
+      setErrorMessage(message);
+      throw new Error(message);
+    }
+
+    const targetId = request.backendId ?? Number(request.id);
+    if (!Number.isFinite(targetId)) {
+      const message = 'Invalid relief request.';
+      setErrorMessage(message);
+      throw new Error(message);
+    }
+
+    setReportingRequestId(request.id);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await reportRelief(targetId, content);
+      const message = response.message || 'Relief request reported successfully. Admin team will review it.';
+      setSuccessMessage(message);
+
+      return { message };
+    } catch (error) {
+      if (error instanceof ReliefApiError && error.status === 401) {
+        const message = 'Your session has expired. Please sign in again.';
+        setErrorMessage(message);
+        onUnauthorized?.();
+        throw new Error(message);
+      }
+
+      const message = error instanceof Error ? error.message : 'Failed to report relief request';
+      setErrorMessage(message);
+      throw new Error(message);
+    } finally {
+      setReportingRequestId(null);
     }
   }, [onUnauthorized]);
 
@@ -578,6 +905,8 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
     isLoading,
     isSubmitting,
     offeringRequestId,
+    commentingRequestId,
+    reportingRequestId,
     deletingRequestId,
     errorMessage,
     successMessage,
@@ -611,6 +940,8 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
     updateRequestField,
     handleSubmitRequest,
     onOfferHelp,
+    onSubmitRequestComment,
+    onReportRequest,
     onDeleteRequest,
     // offer form
     offerForm,

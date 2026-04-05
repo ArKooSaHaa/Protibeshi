@@ -6,6 +6,7 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\AdminListingModerationController;
 use App\Http\Controllers\AdminPostModerationController;
+use App\Http\Controllers\AdminReliefModerationController;
 use App\Http\Controllers\AdminRentModerationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatController;
@@ -46,6 +47,10 @@ Route::middleware(['auth:admin_api'])->prefix('admin')->group(function () {
     Route::get('/rent-listings', [AdminRentModerationController::class, 'index']);
     Route::delete('/rent-listings/{id}', [AdminRentModerationController::class, 'destroy']);
     Route::post('/rent-listings/{id}/ban-user', [AdminRentModerationController::class, 'banLandlord']);
+
+    Route::get('/reliefs', [AdminReliefModerationController::class, 'index']);
+    Route::post('/reliefs/{id}/ignore-reports', [AdminReliefModerationController::class, 'ignoreReports']);
+    Route::delete('/reliefs/{id}', [AdminReliefModerationController::class, 'destroy']);
 });
 
 Route::get('/listings', [ListingController::class, 'index']);
@@ -75,6 +80,7 @@ Route::middleware(['auth:api'])->group(function () {
     Route::get('/conversations', [ChatController::class, 'getUserConversations']);
 
     Route::post('/messages', [ChatController::class, 'sendMessage']);
+    Route::post('/messages/gemini/reply', [ChatController::class, 'saveGeminiReply']);
     Route::get('/conversations/{id}/messages', [ChatController::class, 'getMessages']);
     Route::post('/messages/read', [ChatController::class, 'markAsRead']);
     Route::delete('/conversations/{id}', [ChatController::class, 'deleteConversation']);
@@ -131,6 +137,8 @@ Route::middleware(['auth:api'])->group(function () {
     Route::patch('/complaints/{id}/status', [ComplaintController::class, 'updateStatus']);
     Route::post('/reliefs', [ReliefController::class, 'store']);
     Route::post('/reliefs/{id}/offer-help', [ReliefController::class, 'offerHelp']);
+    Route::post('/reliefs/{id}/comments', [ReliefController::class, 'addComment']);
+    Route::post('/reliefs/{id}/report', [ReliefController::class, 'report']);
     Route::patch('/reliefs/{id}/status', [ReliefController::class, 'updateStatus']);
     Route::delete('/reliefs/{id}', [ReliefController::class, 'destroy']);
 });

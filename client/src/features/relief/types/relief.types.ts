@@ -71,6 +71,7 @@ export interface ReliefComment {
     id: string;
     author: string;
     avatarInitials: string;
+    avatarUrl?: string | null;
     message: string;
     createdAt: string;
 }
@@ -102,8 +103,10 @@ export interface ReliefRequest {
     updatedAt: string;
     postedBy: string;
     avatarInitials: string;
+    avatarUrl?: string | null;
     verified: boolean;
     anonymous: boolean;
+    hasOfferedHelp?: boolean;
     volunteerCount: number;
     volunteers: ReliefVolunteer[];
     timeline: ReliefTimelineEntry[];

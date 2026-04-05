@@ -6,6 +6,7 @@ use App\Events\MessageSent;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Services\AdminInboxService;
+use App\Services\GeminiInboxService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,10 +15,12 @@ use Illuminate\Support\Facades\Storage;
 class ChatController extends Controller
 {
     private AdminInboxService $adminInboxService;
+    private GeminiInboxService $geminiInboxService;
 
-    public function __construct(AdminInboxService $adminInboxService)
+    public function __construct(AdminInboxService $adminInboxService, GeminiInboxService $geminiInboxService)
     {
         $this->adminInboxService = $adminInboxService;
+        $this->geminiInboxService = $geminiInboxService;
     }
 
     public function startConversation(Request $request)
@@ -82,6 +85,9 @@ class ChatController extends Controller
     {
         $authId = (int) Auth::id();
 
+        // Ensure each user always has a Gemini inbox conversation persisted in DB.
+        $this->geminiInboxService->getOrCreateConversationForRecipient($authId);
+
         $conversations = Conversation::with(['userOne', 'userTwo'])
             ->withCount([
                 'messages as unread_count' => function ($query) use ($authId) {
@@ -102,6 +108,55 @@ class ChatController extends Controller
             'success' => true,
             'conversations' => $conversations,
         ], 200);
+    }
+
+    public function saveGeminiReply(Request $request)
+    {
+        $validated = $request->validate([
+            'conversation_id' => 'required|integer|exists:conversations,id',
+            'message' => 'required|string|max:5000',
+        ]);
+
+        $authId = (int) Auth::id();
+
+        try {
+            $conversation = Conversation::findOrFail($validated['conversation_id']);
+        } catch (ModelNotFoundException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Conversation not found',
+            ], 404);
+        }
+
+        if (!$this->isConversationParticipant($conversation, $authId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to send messages in this conversation',
+            ], 403);
+        }
+
+        if (!$this->geminiInboxService->isGeminiInboxConversation($conversation)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This endpoint is only for Gemini inbox conversations',
+            ], 422);
+        }
+
+        if ($this->geminiInboxService->isInboxUserId($authId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gemini inbox user cannot call this endpoint',
+            ], 403);
+        }
+
+        $message = $this->geminiInboxService
+            ->saveAssistantReply($conversation, (string) $validated['message'])
+            ->load('sender');
+
+        return response()->json([
+            'success' => true,
+            'message' => $this->formatMessage($message),
+        ], 201);
     }
 
     public function sendMessage(Request $request)
@@ -268,6 +323,7 @@ class ChatController extends Controller
             : $conversation->userOne;
 
         $isAdminInboxConversation = $this->adminInboxService->isAdminInboxConversation($conversation);
+        $isGeminiInboxConversation = $this->geminiInboxService->isGeminiInboxConversation($conversation);
         $isReadOnlyForCurrentUser = $isAdminInboxConversation && !$this->adminInboxService->isInboxUserId($authId);
 
         return [
@@ -278,6 +334,7 @@ class ChatController extends Controller
             'updated_at' => $conversation->updated_at,
             'unread_count' => isset($conversation->unread_count) ? (int) $conversation->unread_count : 0,
             'is_admin_inbox' => $isAdminInboxConversation,
+            'is_gemini_inbox' => $isGeminiInboxConversation,
             'is_read_only' => $isReadOnlyForCurrentUser,
             'admin_contact_email' => $isAdminInboxConversation ? AdminInboxService::ADMIN_CONTACT_EMAIL : null,
             'user' => $otherUser ? [

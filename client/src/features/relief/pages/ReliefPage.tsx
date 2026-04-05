@@ -24,7 +24,8 @@ export const ReliefPage = () => {
     isLoading,
     isSubmitting,
     offeringRequestId,
-    deletingRequestId,
+    commentingRequestId,
+    reportingRequestId,
     errorMessage,
     successMessage,
     currentUserId,
@@ -51,7 +52,8 @@ export const ReliefPage = () => {
     updateRequestField,
     handleSubmitRequest,
     onOfferHelp,
-    onDeleteRequest,
+    onSubmitRequestComment,
+    onReportRequest,
     clearFeedback,
     offerForm,
     offerFormErrors,
@@ -134,10 +136,7 @@ export const ReliefPage = () => {
         offers={filteredOffers}
         onViewRequest={handleViewRequest}
         onVolunteer={handleVolunteer}
-          offeringRequestId={offeringRequestId}
-          currentUserId={currentUserId}
-          deletingRequestId={deletingRequestId}
-          onDeleteRequest={onDeleteRequest}
+        offeringRequestId={offeringRequestId}
         onViewOffer={handleViewOffer}
         onRequestSupport={handleRequestSupport}
       />
@@ -157,6 +156,11 @@ export const ReliefPage = () => {
       {/* Details Drawer */}
       <ReliefDetailsDrawer
         request={selectedRequest}
+        currentUserId={currentUserId}
+        isSubmittingComment={commentingRequestId === selectedRequest?.id}
+        isSubmittingReport={reportingRequestId === selectedRequest?.id}
+        onSubmitComment={onSubmitRequestComment}
+        onReport={onReportRequest}
         onClose={() => setSelectedRequest(null)}
       />
 

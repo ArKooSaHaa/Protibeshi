@@ -50,6 +50,11 @@ export const ConversationList = ({
       <div className={styles.chatList}>
         {conversations.map((conversation) => {
           const isActive = conversation.id === activeConversationId;
+          const isGeminiInbox =
+            Boolean(conversation.is_gemini_inbox) || conversation.user?.username === 'gemini_ai';
+          const conversationName = isGeminiInbox
+            ? 'Gemini Inbox'
+            : (conversation.user?.name || 'Unknown user');
 
           return (
             <button
@@ -58,10 +63,10 @@ export const ConversationList = ({
               className={`${styles.chatItem} ${isActive ? styles.chatItemActive : ''}`}
               onClick={() => onSelectConversation(conversation.id)}
             >
-              <div className={styles.avatar}>{getInitials(conversation.user?.name)}</div>
+              <div className={styles.avatar}>{getInitials(conversationName)}</div>
               <div className={styles.chatMeta}>
                 <div className={styles.chatMetaHead}>
-                  <h3>{conversation.user?.name || 'Unknown user'}</h3>
+                  <h3>{conversationName}</h3>
                   <span>
                     {conversation.updated_at
                       ? new Date(conversation.updated_at).toLocaleTimeString([], {

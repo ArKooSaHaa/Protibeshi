@@ -1,5 +1,5 @@
 // src/features/relief/components/ReliefRequestCard.tsx 
-import { forwardRef } from 'react';
+import { forwardRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Clock, MapPin, Users } from 'lucide-react';
 import type { ReliefRequest } from '../types/relief.types';
@@ -16,9 +16,6 @@ interface ReliefRequestCardProps {
   onViewDetails: (r: ReliefRequest) => void;
   onVolunteer: (r: ReliefRequest) => void;
   isOffering?: boolean;
-  canDelete?: boolean;
-  isDeleting?: boolean;
-  onDelete?: (r: ReliefRequest) => void;
 }
 
 export const ReliefRequestCard = forwardRef<HTMLDivElement, ReliefRequestCardProps>(({
@@ -26,12 +23,10 @@ export const ReliefRequestCard = forwardRef<HTMLDivElement, ReliefRequestCardPro
   onViewDetails,
   onVolunteer,
   isOffering = false,
-  canDelete = false,
-  isDeleting = false,
-  onDelete,
 }, ref) => {
   const urg = urgencyConfig[request.urgency];
   const stat = statusConfig[request.status];
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
   const urgentClass =
     request.urgency === 'Critical'
@@ -95,7 +90,16 @@ ${styles[stat.colorClass]}`}>
       {/* Footer */}
       <div className={styles.footer}>
         <div className={styles.poster}>
-          <div className={styles.avatar}>{request.avatarInitials}</div>
+          <div className={styles.avatar}>
+            {request.avatarUrl && !avatarFailed && !request.anonymous ? (
+              <img
+                src={request.avatarUrl}
+                alt={request.postedBy || 'User profile'}
+                className={styles.avatarImage}
+                onError={() => setAvatarFailed(true)}
+              />
+            ) : request.avatarInitials}
+          </div>
           <span>{request.anonymous ? 'Anonymous' :
             request.postedBy}</span>
         </div>
@@ -112,21 +116,9 @@ ${styles[stat.colorClass]}`}>
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               type="button"
-              disabled={isOffering}
+              disabled={isOffering || request.hasOfferedHelp}
             >
-              {isOffering ? 'Offering...' : 'Offer Help'}
-            </motion.button>
-          ) : null}
-          {canDelete && onDelete ? (
-            <motion.button
-              className={styles.btnDelete}
-              onClick={() => onDelete(request)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
-              type="button"
-              disabled={isDeleting}
-            >
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {request.hasOfferedHelp ? 'Helping' : isOffering ? 'Offering...' : 'Offer Help'}
             </motion.button>
           ) : null}
           <motion.button

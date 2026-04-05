@@ -32,4 +32,20 @@ class Relief extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function helpers()
+    {
+        return $this->hasMany(ReliefHelper::class);
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(ReliefComment::class)
+            ->orderBy('created_at', 'asc');
+    }
+
+    public function reports()
+    {
+        return $this->hasMany(ReliefReport::class);
+    }
 }
