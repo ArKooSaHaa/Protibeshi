@@ -2,7 +2,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, Clock, Flag, MapPin, Users, X } from
   'lucide-react';
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import type { ReliefRequest } from '../types/relief.types';
 import {
   formatDistance, formatRelativeTime, statusConfig,
@@ -12,99 +12,40 @@ import styles from './ReliefDetailsDrawer.module.css';
 
 interface ReliefDetailsDrawerProps {
   request: ReliefRequest | null;
+  isSubmittingComment?: boolean;
+  onSubmitComment?: (request: ReliefRequest, message: string) => Promise<boolean>;
   onClose: () => void;
 }
 
-const toInitials = (name: string) => {
-  const words = name
-    .split(' ')
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (words.length === 0) {
-    return 'YO';
-  }
-
-  const first = words[0]?.[0] || '';
-  const second = words[1]?.[0] || words[0]?.[1] || '';
-  return `${first}${second}`.toUpperCase();
-};
-
-const resolveCurrentUserName = () => {
-  if (typeof window === 'undefined') {
-    return 'You';
-  }
-
-  const keys = ['user', 'auth_user', 'authUser', 'currentUser', 'profile'];
-  for (const key of keys) {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) {
-      continue;
-    }
-
-    try {
-      const parsed = JSON.parse(raw) as unknown;
-      if (!parsed || typeof parsed !== 'object') {
-        continue;
-      }
-
-      const source = parsed as Record<string, unknown>;
-      const directName = typeof source.name === 'string' ? source.name.trim() : '';
-      const directUsername = typeof source.username === 'string' ? source.username.trim() : '';
-      const nestedUser = source.user && typeof source.user === 'object'
-        ? (source.user as Record<string, unknown>)
-        : null;
-      const nestedName = nestedUser && typeof nestedUser.name === 'string'
-        ? nestedUser.name.trim()
-        : '';
-
-      if (directName) return directName;
-      if (nestedName) return nestedName;
-      if (directUsername) return directUsername;
-    } catch {
-      continue;
-    }
-  }
-
-  return 'You';
-};
-
-export const ReliefDetailsDrawer = ({ request, onClose }:
+export const ReliefDetailsDrawer = ({
+  request,
+  isSubmittingComment = false,
+  onSubmitComment,
+  onClose,
+}:
   ReliefDetailsDrawerProps) => {
-  const [localComments, setLocalComments] = useState(request?.comments ?? []);
   const [commentDraft, setCommentDraft] = useState('');
-  const currentUserName = useMemo(() => resolveCurrentUserName(), []);
 
   useEffect(() => {
+    setCommentDraft('');
+  }, [request?.id]);
+
+  const handleCommentSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
     if (!request) {
-      setLocalComments([]);
-      setCommentDraft('');
       return;
     }
-
-    setLocalComments(request.comments ?? []);
-    setCommentDraft('');
-  }, [request]);
-
-  const handleCommentSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
 
     const message = commentDraft.trim();
     if (!message) {
       return;
     }
 
-    setLocalComments((prev) => ([
-      ...prev,
-      {
-        id: `local-${Date.now()}`,
-        author: currentUserName,
-        avatarInitials: toInitials(currentUserName),
-        message,
-        createdAt: new Date().toISOString(),
-      },
-    ]));
-    setCommentDraft('');
+    const isSuccess = await onSubmitComment?.(request, message);
+    if (isSuccess !== false) {
+      setCommentDraft('');
+    }
   };
 
   return (
@@ -222,14 +163,14 @@ ${styles.completed}`} />
               {/* Comments */}
               <div className={styles.section}>
                 <span className={styles.sectionLabel}>
-                  Comments ({localComments.length})
+                  Comments ({request.comments.length})
                 </span>
                 <div className={styles.comments}>
-                  {localComments.length === 0 ? (
+                  {request.comments.length === 0 ? (
                     <p className={styles.noComments}>No comments
                       yet.</p>
                   ) : (
-                    localComments.map((c) => (
+                    request.comments.map((c) => (
                       <div key={c.id} className={styles.commentItem}>
                         <div
                           className={styles.commentAvatar}>{c.avatarInitials}</div>
@@ -255,13 +196,14 @@ ${styles.completed}`} />
                     placeholder="Write a comment..."
                     value={commentDraft}
                     onChange={(event) => setCommentDraft(event.target.value)}
+                    disabled={isSubmittingComment}
                   />
                   <button
                     className={styles.commentPostButton}
                     type="submit"
-                    disabled={!commentDraft.trim()}
+                    disabled={isSubmittingComment || !commentDraft.trim()}
                   >
-                    Post
+                    {isSubmittingComment ? 'Posting...' : 'Post'}
                   </button>
                 </form>
               </div>

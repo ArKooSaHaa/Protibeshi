@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Relief;
+use App\Models\ReliefComment;
 use App\Models\ReliefHelper;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -53,7 +54,7 @@ class ReliefController extends Controller
             $payload['cover_photo'] = $validated['cover_photo'] ?? null;
         }
 
-        $relief = Relief::create($payload)->load('user');
+        $relief = Relief::create($payload)->load(['user', 'comments.user']);
         $this->appendReliefMetadata($relief, false);
 
         return response()->json([
@@ -66,7 +67,7 @@ class ReliefController extends Controller
     public function index(Request $request)
     {
         $viewerId = $this->resolveViewerId($request);
-        $reliefs = Relief::with('user')->latest()->get();
+        $reliefs = Relief::with(['user', 'comments.user'])->latest()->get();
 
         $offeredReliefLookup = [];
         if ($viewerId && Schema::hasTable('relief_helpers') && $reliefs->isNotEmpty()) {
@@ -94,7 +95,7 @@ class ReliefController extends Controller
     {
         try {
             $viewerId = $this->resolveViewerId($request);
-            $relief = Relief::with('user')->findOrFail($id);
+            $relief = Relief::with(['user', 'comments.user'])->findOrFail($id);
             $hasOfferedHelp = false;
 
             if ($viewerId && Schema::hasTable('relief_helpers')) {
@@ -174,6 +175,36 @@ class ReliefController extends Controller
             'helpers_count' => (int) $freshRelief->helpers_count,
             'relief' => $freshRelief,
         ], 200);
+    }
+
+    public function addComment(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'comment' => 'required|string|max:1000',
+        ]);
+
+        try {
+            $relief = Relief::findOrFail($id);
+        } catch (ModelNotFoundException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Relief request not found',
+            ], 404);
+        }
+
+        $comment = ReliefComment::create([
+            'relief_id' => $relief->id,
+            'user_id' => Auth::id(),
+            'comment' => $validated['comment'],
+        ])->load('user');
+
+        $this->appendCommentMetadata($comment);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Comment added successfully',
+            'comment' => $comment,
+        ], 201);
     }
 
     public function updateStatus(Request $request, $id)
@@ -272,6 +303,22 @@ class ReliefController extends Controller
             $relief->user->setAttribute(
                 'profile_picture_url',
                 $this->resolveProfilePictureUrl($relief->user->profile_picture)
+            );
+        }
+
+        if ($relief->relationLoaded('comments')) {
+            $relief->comments->each(function (ReliefComment $comment) {
+                $this->appendCommentMetadata($comment);
+            });
+        }
+    }
+
+    private function appendCommentMetadata(ReliefComment $comment): void
+    {
+        if ($comment->relationLoaded('user') && $comment->user) {
+            $comment->user->setAttribute(
+                'profile_picture_url',
+                $this->resolveProfilePictureUrl($comment->user->profile_picture)
             );
         }
     }

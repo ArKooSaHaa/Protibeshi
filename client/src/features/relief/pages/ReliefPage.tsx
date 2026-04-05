@@ -24,6 +24,7 @@ export const ReliefPage = () => {
     isLoading,
     isSubmitting,
     offeringRequestId,
+    commentingRequestId,
     errorMessage,
     successMessage,
     filteredRequests,
@@ -49,6 +50,7 @@ export const ReliefPage = () => {
     updateRequestField,
     handleSubmitRequest,
     onOfferHelp,
+    onSubmitRequestComment,
     clearFeedback,
     offerForm,
     offerFormErrors,
@@ -151,6 +153,8 @@ export const ReliefPage = () => {
       {/* Details Drawer */}
       <ReliefDetailsDrawer
         request={selectedRequest}
+        isSubmittingComment={commentingRequestId === selectedRequest?.id}
+        onSubmitComment={onSubmitRequestComment}
         onClose={() => setSelectedRequest(null)}
       />
 

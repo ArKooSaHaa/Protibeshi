@@ -1,17 +1,19 @@
 // src/features/relief/hooks/useReliefBoard.ts
 import { useCallback, useEffect, useState } from 'react';
 import {
+  addReliefComment,
   createRelief,
   deleteRelief,
   getReliefs,
   offerHelp,
   ReliefApiError,
 } from '@/api/relief';
-import type { ReliefApiItem, ReliefApiUser } from '@/api/relief';
+import type { ReliefApiComment, ReliefApiItem, ReliefApiUser } from '@/api/relief';
 import { createOffer, getOffers } from '@/api/offerApi';
 import type { OfferApiItem } from '@/api/offerApi';
 import type {
   HelpOffer,
+  ReliefComment,
   HelpOfferFormState,
   ReliefFormErrors,
   ReliefHelpType,
@@ -242,6 +244,35 @@ const resolveUserName = (relief: ReliefApiItem): string => {
   return String(user.name || user.username || user.email || 'Neighbor').trim() || 'Neighbor';
 };
 
+const resolveCommentAuthorName = (comment: ReliefApiComment): string => {
+  const user = comment.user;
+  if (!user) {
+    return 'Neighbor';
+  }
+
+  const firstName = String(user.first_name || '').trim();
+  const lastName = String(user.last_name || '').trim();
+  const fullName = `${firstName} ${lastName}`.trim();
+
+  if (fullName) {
+    return fullName;
+  }
+
+  return String(user.name || user.username || user.email || 'Neighbor').trim() || 'Neighbor';
+};
+
+const normalizeReliefComment = (comment: ReliefApiComment): ReliefComment => {
+  const author = resolveCommentAuthorName(comment);
+
+  return {
+    id: String(comment.id),
+    author,
+    avatarInitials: toAvatarInitials(author),
+    message: String(comment.comment || ''),
+    createdAt: String(comment.created_at || new Date().toISOString()),
+  };
+};
+
 const normalizeRelief = (relief: ReliefApiItem): ReliefRequest => {
   const postedBy = resolveUserName(relief);
   const avatarUrl = resolveReliefUserProfilePhoto(relief.user);
@@ -281,7 +312,9 @@ const normalizeRelief = (relief: ReliefApiItem): ReliefRequest => {
         date: String(relief.created_at || new Date().toISOString()),
       },
     ],
-    comments: [],
+    comments: Array.isArray(relief.comments)
+      ? relief.comments.map(normalizeReliefComment)
+      : [],
     photos: [],
   };
 };
@@ -381,6 +414,7 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [offeringRequestId, setOfferingRequestId] = useState<string | null>(null);
+  const [commentingRequestId, setCommentingRequestId] = useState<string | null>(null);
   const [deletingRequestId, setDeletingRequestId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -644,6 +678,80 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
     }
   }, [loadReliefs, onUnauthorized]);
 
+  const onSubmitRequestComment = useCallback(async (
+    request: ReliefRequest,
+    message: string,
+  ) => {
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
+    if (!token) {
+      setErrorMessage('Please sign in to add a comment.');
+      onUnauthorized?.();
+      return false;
+    }
+
+    const content = message.trim();
+    if (!content) {
+      setErrorMessage('Comment cannot be empty.');
+      return false;
+    }
+
+    const targetId = request.backendId ?? Number(request.id);
+    if (!Number.isFinite(targetId)) {
+      setErrorMessage('Invalid relief request.');
+      return false;
+    }
+
+    setCommentingRequestId(request.id);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      const createdComment = await addReliefComment(targetId, content);
+
+      if (createdComment) {
+        const normalizedComment = normalizeReliefComment(createdComment);
+        setRequests((prev) => prev.map((item) => {
+          if (item.id !== request.id) {
+            return item;
+          }
+
+          return {
+            ...item,
+            comments: [...item.comments, normalizedComment],
+          };
+        }));
+
+        setSelectedRequest((prev) => {
+          if (!prev || prev.id !== request.id) {
+            return prev;
+          }
+
+          return {
+            ...prev,
+            comments: [...prev.comments, normalizedComment],
+          };
+        });
+      } else {
+        await loadReliefs();
+      }
+
+      setSuccessMessage('Comment added successfully.');
+      return true;
+    } catch (error) {
+      if (error instanceof ReliefApiError && error.status === 401) {
+        setErrorMessage('Your session has expired. Please sign in again.');
+        onUnauthorized?.();
+      } else {
+        const fallbackMessage = error instanceof Error ? error.message : 'Failed to add comment';
+        setErrorMessage(fallbackMessage);
+      }
+
+      return false;
+    } finally {
+      setCommentingRequestId(null);
+    }
+  }, [loadReliefs, onUnauthorized]);
+
   const onDeleteRequest = useCallback(async (request: ReliefRequest) => {
     const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
     if (!token) {
@@ -694,6 +802,7 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
     isLoading,
     isSubmitting,
     offeringRequestId,
+    commentingRequestId,
     deletingRequestId,
     errorMessage,
     successMessage,
@@ -727,6 +836,7 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
     updateRequestField,
     handleSubmitRequest,
     onOfferHelp,
+    onSubmitRequestComment,
     onDeleteRequest,
     // offer form
     offerForm,

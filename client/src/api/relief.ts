@@ -15,6 +15,16 @@ export type ReliefApiUser = {
   profile_picture_url?: string | null;
 };
 
+export type ReliefApiComment = {
+  id: number;
+  relief_id: number;
+  user_id: number;
+  comment: string;
+  created_at: string;
+  updated_at: string;
+  user?: ReliefApiUser | null;
+};
+
 export type ReliefApiItem = {
   id: number;
   user_id: number;
@@ -29,6 +39,7 @@ export type ReliefApiItem = {
   status: string;
   helpers_count: number;
   has_offered_help?: boolean;
+  comments?: ReliefApiComment[];
   created_at: string;
   updated_at: string;
   user?: ReliefApiUser | null;
@@ -119,6 +130,21 @@ export const offerHelp = async (id: number | string): Promise<ReliefApiItem | nu
     return response.data?.relief || null;
   } catch (error) {
     return toReliefApiError(error, 'Failed to offer help');
+  }
+};
+
+export const addReliefComment = async (
+  id: number | string,
+  comment: string,
+): Promise<ReliefApiComment | null> => {
+  try {
+    const response = await reliefClient.post<{ comment?: ReliefApiComment }>(`/reliefs/${id}/comments`, {
+      comment,
+    });
+
+    return response.data?.comment || null;
+  } catch (error) {
+    return toReliefApiError(error, 'Failed to add comment');
   }
 };
 
