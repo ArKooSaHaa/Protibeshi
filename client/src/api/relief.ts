@@ -9,6 +9,10 @@ export type ReliefApiUser = {
   name?: string | null;
   username?: string | null;
   email?: string | null;
+  avatar?: string | null;
+  avatar_url?: string | null;
+  profile_picture?: string | null;
+  profile_picture_url?: string | null;
 };
 
 export type ReliefApiItem = {
@@ -24,6 +28,7 @@ export type ReliefApiItem = {
   location: string;
   status: string;
   helpers_count: number;
+  has_offered_help?: boolean;
   created_at: string;
   updated_at: string;
   user?: ReliefApiUser | null;

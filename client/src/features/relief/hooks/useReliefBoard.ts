@@ -7,7 +7,7 @@ import {
   offerHelp,
   ReliefApiError,
 } from '@/api/relief';
-import type { ReliefApiItem } from '@/api/relief';
+import type { ReliefApiItem, ReliefApiUser } from '@/api/relief';
 import { createOffer, getOffers } from '@/api/offerApi';
 import type { OfferApiItem } from '@/api/offerApi';
 import type {
@@ -24,6 +24,9 @@ import { reliefHelpTypes } from '../types/relief.types';
 import { useReliefFilters } from './useReliefFilters';
 
 type ModalMode = 'request' | 'offer' | null;
+
+const DEFAULT_API_BASE = 'http://127.0.0.1:8000';
+const OFFERED_RELIEF_IDS_STORAGE_KEY = 'relief.offered.help.ids';
 
 const initialRequestForm: ReliefRequestFormState = {
   title: '',
@@ -135,6 +138,93 @@ const toAvatarInitials = (name: string): string => {
   return `${first}${second}`.toUpperCase();
 };
 
+const resolveUserImageUrl = (rawPath: string | null | undefined) => {
+  if (!rawPath) {
+    return null;
+  }
+
+  const normalizedPath = rawPath.replace(/\\/g, '/').trim();
+  if (!normalizedPath) {
+    return null;
+  }
+
+  if (normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')) {
+    return normalizedPath;
+  }
+
+  const baseUrl = import.meta.env.VITE_API_URL || DEFAULT_API_BASE;
+
+  if (normalizedPath.startsWith('/')) {
+    return `${baseUrl}${normalizedPath}`;
+  }
+
+  if (normalizedPath.startsWith('storage/')) {
+    return `${baseUrl}/${normalizedPath}`;
+  }
+
+  if (normalizedPath.startsWith('public/storage/')) {
+    return `${baseUrl}/${normalizedPath.replace(/^public\//, '')}`;
+  }
+
+  return `${baseUrl}/storage/${normalizedPath}`;
+};
+
+const resolveReliefUserProfilePhoto = (user: ReliefApiUser | null | undefined) => {
+  if (!user) {
+    return null;
+  }
+
+  const candidates = [
+    user.profile_picture_url,
+    user.profile_picture,
+    user.avatar_url,
+    user.avatar,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      const resolved = resolveUserImageUrl(candidate);
+      if (resolved) {
+        return resolved;
+      }
+    }
+  }
+
+  return null;
+};
+
+const getStoredOfferedReliefIds = () => {
+  if (typeof window === 'undefined') {
+    return new Set<string>();
+  }
+
+  try {
+    const raw = window.localStorage.getItem(OFFERED_RELIEF_IDS_STORAGE_KEY);
+    if (!raw) {
+      return new Set<string>();
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return new Set<string>();
+    }
+
+    return new Set(parsed.map((value) => String(value)));
+  } catch {
+    return new Set<string>();
+  }
+};
+
+const markReliefAsOfferedInStorage = (reliefId: number | string) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const next = getStoredOfferedReliefIds();
+  next.add(String(reliefId));
+  window.localStorage.setItem(OFFERED_RELIEF_IDS_STORAGE_KEY, JSON.stringify(Array.from(next)));
+};
+
 const resolveUserName = (relief: ReliefApiItem): string => {
   const user = relief.user;
   if (!user) {
@@ -154,6 +244,7 @@ const resolveUserName = (relief: ReliefApiItem): string => {
 
 const normalizeRelief = (relief: ReliefApiItem): ReliefRequest => {
   const postedBy = resolveUserName(relief);
+  const avatarUrl = resolveReliefUserProfilePhoto(relief.user);
 
   return {
     id: String(relief.id),
@@ -178,8 +269,10 @@ const normalizeRelief = (relief: ReliefApiItem): ReliefRequest => {
     updatedAt: String(relief.updated_at || new Date().toISOString()),
     postedBy,
     avatarInitials: toAvatarInitials(postedBy),
+    avatarUrl,
     verified: false,
     anonymous: false,
+    hasOfferedHelp: Boolean(relief.has_offered_help),
     volunteerCount: Number(relief.helpers_count || 0),
     volunteers: [],
     timeline: [
@@ -314,7 +407,19 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
 
     try {
       const [reliefData, offerData] = await Promise.all([getReliefs(), getOffers()]);
-      setRequests(reliefData.map(normalizeRelief));
+      const storedOfferedIds = getStoredOfferedReliefIds();
+      setRequests(reliefData.map((relief) => {
+        const normalized = normalizeRelief(relief);
+
+        if (!normalized.hasOfferedHelp && storedOfferedIds.has(String(relief.id))) {
+          return {
+            ...normalized,
+            hasOfferedHelp: true,
+          };
+        }
+
+        return normalized;
+      }));
       setOffers(offerData.map(normalizeOffer));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to load relief requests';
@@ -484,6 +589,11 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
       return;
     }
 
+    if (request.hasOfferedHelp) {
+      setErrorMessage('You have already offered help for this request.');
+      return;
+    }
+
     const targetId = request.backendId ?? Number(request.id);
     if (!Number.isFinite(targetId)) {
       setErrorMessage('Invalid relief request.');
@@ -494,31 +604,37 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    setRequests((prev) => prev.map((item) => (
-      item.id === request.id ? { ...item, volunteerCount: item.volunteerCount + 1 } : item
-    )));
-
     try {
       const updated = await offerHelp(targetId);
 
       if (updated) {
         const normalized = normalizeRelief(updated);
+        markReliefAsOfferedInStorage(targetId);
         setRequests((prev) => prev.map((item) => (
           item.id === request.id
-            ? { ...item, volunteerCount: normalized.volunteerCount, status: normalized.status }
+            ? {
+              ...item,
+              volunteerCount: normalized.volunteerCount,
+              status: normalized.status,
+              hasOfferedHelp: normalized.hasOfferedHelp,
+            }
             : item
         )));
+      } else {
+        await loadReliefs();
       }
 
       setSuccessMessage('Thank you for offering help.');
     } catch (error) {
-      setRequests((prev) => prev.map((item) => (
-        item.id === request.id ? { ...item, volunteerCount: Math.max(0, item.volunteerCount - 1) } : item
-      )));
-
       if (error instanceof ReliefApiError && error.status === 401) {
         setErrorMessage('Your session has expired. Please sign in again.');
         onUnauthorized?.();
+      } else if (error instanceof ReliefApiError && error.status === 409) {
+        markReliefAsOfferedInStorage(targetId);
+        setRequests((prev) => prev.map((item) => (
+          item.id === request.id ? { ...item, hasOfferedHelp: true } : item
+        )));
+        setErrorMessage(error.message || 'You have already offered help for this request.');
       } else {
         const message = error instanceof Error ? error.message : 'Failed to offer help';
         setErrorMessage(message);
@@ -526,7 +642,7 @@ export const useReliefBoard = (options: UseReliefBoardOptions = {}) => {
     } finally {
       setOfferingRequestId(null);
     }
-  }, [onUnauthorized]);
+  }, [loadReliefs, onUnauthorized]);
 
   const onDeleteRequest = useCallback(async (request: ReliefRequest) => {
     const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;

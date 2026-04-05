@@ -24,10 +24,8 @@ export const ReliefPage = () => {
     isLoading,
     isSubmitting,
     offeringRequestId,
-    deletingRequestId,
     errorMessage,
     successMessage,
-    currentUserId,
     filteredRequests,
     filteredOffers,
     filters,
@@ -51,7 +49,6 @@ export const ReliefPage = () => {
     updateRequestField,
     handleSubmitRequest,
     onOfferHelp,
-    onDeleteRequest,
     clearFeedback,
     offerForm,
     offerFormErrors,
@@ -134,10 +131,7 @@ export const ReliefPage = () => {
         offers={filteredOffers}
         onViewRequest={handleViewRequest}
         onVolunteer={handleVolunteer}
-          offeringRequestId={offeringRequestId}
-          currentUserId={currentUserId}
-          deletingRequestId={deletingRequestId}
-          onDeleteRequest={onDeleteRequest}
+        offeringRequestId={offeringRequestId}
         onViewOffer={handleViewOffer}
         onRequestSupport={handleRequestSupport}
       />

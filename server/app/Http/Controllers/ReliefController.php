@@ -3,11 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Relief;
+use App\Models\ReliefHelper;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Throwable;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class ReliefController extends Controller
 {
@@ -49,18 +53,35 @@ class ReliefController extends Controller
             $payload['cover_photo'] = $validated['cover_photo'] ?? null;
         }
 
-        $relief = Relief::create($payload);
+        $relief = Relief::create($payload)->load('user');
+        $this->appendReliefMetadata($relief, false);
 
         return response()->json([
             'success' => true,
             'message' => 'Relief request created successfully',
-            'relief' => $relief->load('user'),
+            'relief' => $relief,
         ], 201);
     }
 
-    public function index()
+    public function index(Request $request)
     {
+        $viewerId = $this->resolveViewerId($request);
         $reliefs = Relief::with('user')->latest()->get();
+
+        $offeredReliefLookup = [];
+        if ($viewerId && Schema::hasTable('relief_helpers') && $reliefs->isNotEmpty()) {
+            $offeredReliefIds = ReliefHelper::query()
+                ->where('user_id', $viewerId)
+                ->whereIn('relief_id', $reliefs->pluck('id'))
+                ->pluck('relief_id')
+                ->all();
+
+            $offeredReliefLookup = array_fill_keys($offeredReliefIds, true);
+        }
+
+        $reliefs->each(function (Relief $relief) use ($offeredReliefLookup) {
+            $this->appendReliefMetadata($relief, isset($offeredReliefLookup[$relief->id]));
+        });
 
         return response()->json([
             'success' => true,
@@ -69,10 +90,21 @@ class ReliefController extends Controller
         ], 200);
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
         try {
+            $viewerId = $this->resolveViewerId($request);
             $relief = Relief::with('user')->findOrFail($id);
+            $hasOfferedHelp = false;
+
+            if ($viewerId && Schema::hasTable('relief_helpers')) {
+                $hasOfferedHelp = ReliefHelper::query()
+                    ->where('relief_id', $relief->id)
+                    ->where('user_id', $viewerId)
+                    ->exists();
+            }
+
+            $this->appendReliefMetadata($relief, $hasOfferedHelp);
 
             return response()->json([
                 'success' => true,
@@ -89,6 +121,8 @@ class ReliefController extends Controller
 
     public function offerHelp($id)
     {
+        $currentUserId = (int) Auth::id();
+
         try {
             $relief = Relief::findOrFail($id);
         } catch (ModelNotFoundException $exception) {
@@ -98,13 +132,47 @@ class ReliefController extends Controller
             ], 404);
         }
 
+        if (!Schema::hasTable('relief_helpers')) {
+            $relief->increment('helpers_count');
+
+            $freshRelief = $relief->fresh('user');
+            $this->appendReliefMetadata($freshRelief, true);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Help offer submitted successfully',
+                'helpers_count' => (int) $freshRelief->helpers_count,
+                'relief' => $freshRelief,
+            ], 200);
+        }
+
+        $helpRecord = ReliefHelper::firstOrCreate([
+            'relief_id' => $relief->id,
+            'user_id' => $currentUserId,
+        ]);
+
+        if (!$helpRecord->wasRecentlyCreated) {
+            $freshRelief = $relief->fresh('user');
+            $this->appendReliefMetadata($freshRelief, true);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'You have already offered help for this request',
+                'helpers_count' => (int) $freshRelief->helpers_count,
+                'relief' => $freshRelief,
+            ], 409);
+        }
+
         $relief->increment('helpers_count');
+
+        $freshRelief = $relief->fresh('user');
+        $this->appendReliefMetadata($freshRelief, true);
 
         return response()->json([
             'success' => true,
             'message' => 'Help offer submitted successfully',
-            'helpers_count' => (int) $relief->fresh()->helpers_count,
-            'relief' => $relief->fresh('user'),
+            'helpers_count' => (int) $freshRelief->helpers_count,
+            'relief' => $freshRelief,
         ], 200);
     }
 
@@ -164,5 +232,64 @@ class ReliefController extends Controller
             'success' => true,
             'message' => 'Relief request deleted successfully',
         ], 200);
+    }
+
+    private function resolveViewerId(Request $request): ?int
+    {
+        try {
+            $viewerId = Auth::guard('api')->id();
+
+            if ($viewerId) {
+                return (int) $viewerId;
+            }
+        } catch (Throwable $exception) {
+            // Continue to token-based fallback for public routes.
+        }
+
+        $token = $request->bearerToken();
+        if (!$token) {
+            return null;
+        }
+
+        try {
+            $user = JWTAuth::setToken($token)->authenticate();
+
+            if ($user && isset($user->id)) {
+                return (int) $user->id;
+            }
+        } catch (Throwable $exception) {
+            return null;
+        }
+
+        return null;
+    }
+
+    private function appendReliefMetadata(Relief $relief, bool $hasOfferedHelp): void
+    {
+        $relief->setAttribute('has_offered_help', $hasOfferedHelp);
+
+        if ($relief->relationLoaded('user') && $relief->user) {
+            $relief->user->setAttribute(
+                'profile_picture_url',
+                $this->resolveProfilePictureUrl($relief->user->profile_picture)
+            );
+        }
+    }
+
+    private function resolveProfilePictureUrl(?string $profilePicture): string
+    {
+        if (!$profilePicture) {
+            return '';
+        }
+
+        if (filter_var($profilePicture, FILTER_VALIDATE_URL)) {
+            return $profilePicture;
+        }
+
+        if (str_starts_with($profilePicture, '/')) {
+            return url($profilePicture);
+        }
+
+        return url(Storage::url($profilePicture));
     }
 }
