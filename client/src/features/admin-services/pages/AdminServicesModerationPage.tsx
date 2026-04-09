@@ -18,13 +18,20 @@ import {
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { servicesData } from '@/features/services/mock/servicesData';
 import type {
   ServiceAvailability,
   ServiceCategory,
   ServiceItem,
 } from '@/features/services/types/service.types';
-import { getServices } from '@/services/serviceService';
+import {
+  banServiceProvider,
+  dismissAdminServiceReports,
+  flagAdminService,
+  getAdminServices,
+  hideAdminService,
+  normalizeService,
+  verifyAdminService,
+} from '@/services/serviceService';
 import '../styles/AdminServicesModerationPage.css';
 
 type RiskLevel = 'high' | 'medium' | 'low';
@@ -88,6 +95,60 @@ type ModerationActivity = {
   timestamp: string;
 };
 
+type ApiReporter = {
+  id?: number | string;
+  name?: string | null;
+  username?: string | null;
+  type?: 'user' | 'admin' | string;
+} | null;
+
+type ApiServiceReport = {
+  id?: number | string;
+  reason?: string | null;
+  message?: string | null;
+  severity?: string | null;
+  created_at?: string | null;
+  reporter?: ApiReporter;
+  source?: string | null;
+};
+
+type ApiServiceSeller = {
+  id?: number | string;
+  first_name?: string | null;
+  last_name?: string | null;
+  username?: string | null;
+  email?: string | null;
+  profile_picture?: string | null;
+  profile_picture_url?: string | null;
+  is_banned?: boolean;
+  banned_until?: string | null;
+};
+
+type ApiAdminService = {
+  id?: number | string;
+  title?: string | null;
+  category?: string | null;
+  short_description?: string | null;
+  full_description?: string | null;
+  price?: number | string | null;
+  price_type?: string | null;
+  availability?: string | null;
+  experience_years?: number | string | null;
+  service_radius?: number | string | null;
+  location?: string | null;
+  working_hours?: string | null;
+  cover_photo?: string | null;
+  cover_photo_url?: string | null;
+  verified_provider?: boolean;
+  is_active?: boolean;
+  status?: string | null;
+  report_count?: number | string | null;
+  reports?: ApiServiceReport[] | null;
+  seller?: ApiServiceSeller | null;
+  user?: ApiServiceSeller | null;
+  created_at?: string | null;
+};
+
 const TAB_LABELS: Record<ModerationTab, string> = {
   all: 'All Services',
   reported: 'Reported',
@@ -147,22 +208,6 @@ const ACTION_COPY: Record<PendingActionKind, { title: string; description: strin
   },
 };
 
-const REPORT_REASONS = [
-  'Misleading service claim',
-  'Spam or repetitive posting',
-  'Suspicious payment request',
-  'Low-quality or incomplete details',
-  'Unverified trust signal',
-];
-
-const REPORTERS = [
-  'Neighbor Watch Team',
-  'Community member',
-  'Local moderator',
-  'Verified resident',
-  'Trust patrol',
-];
-
 const cardContainerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
@@ -188,16 +233,6 @@ const cardItemVariants: Variants = {
 
 const createId = (prefix: string): string => `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 
-const hashString = (value: string): number => {
-  let hash = 0;
-
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) % 10_000;
-  }
-
-  return hash;
-};
-
 const toSafeNumber = (value: unknown, fallback: number = 0): number => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -214,6 +249,16 @@ const toRiskLevel = (score: number): RiskLevel => {
 
   if (score >= 34) {
     return 'medium';
+  }
+
+  return 'low';
+};
+
+const normalizeRiskLevel = (value: unknown): RiskLevel => {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+
+  if (normalized === 'high' || normalized === 'medium' || normalized === 'low') {
+    return normalized;
   }
 
   return 'low';
@@ -247,12 +292,25 @@ const formatSince = (isoDate: string | null): string => {
   return `${diffDays}d ago`;
 };
 
-const buildProviderKey = (service: Pick<ServiceItem, 'ownerId' | 'providerName'>): string => {
-  if (service.ownerId !== null && service.ownerId !== undefined) {
-    return `owner-${service.ownerId}`;
+const resolveProviderName = (seller: ApiServiceSeller | null | undefined, fallbackName: string): string => {
+  if (!seller) {
+    return fallbackName;
   }
 
-  return `name-${service.providerName.trim().toLowerCase()}`;
+  const fullName = `${seller.first_name || ''} ${seller.last_name || ''}`.trim();
+  if (fullName) {
+    return fullName;
+  }
+
+  if (typeof seller.username === 'string' && seller.username.trim()) {
+    return seller.username.trim();
+  }
+
+  if (typeof seller.email === 'string' && seller.email.trim()) {
+    return seller.email.trim();
+  }
+
+  return fallbackName;
 };
 
 const computeModerationMetrics = (input: {
@@ -355,89 +413,61 @@ const computeModerationMetrics = (input: {
   };
 };
 
-const buildSyntheticReports = (
-  service: ServiceItem,
-  reportCount: number,
-  seed: number,
-  baseSeverity: RiskLevel,
-): ModerationReport[] => {
-  if (reportCount <= 0) {
-    return [];
-  }
+const normalizeToAdminRecord = (raw: ApiAdminService, index: number): AdminServiceRecord => {
+  const normalizedService = normalizeService(raw || {});
+  const seller = raw?.seller || raw?.user || null;
+  const reportItems = Array.isArray(raw?.reports) ? raw.reports : [];
 
-  return Array.from({ length: reportCount }).map((_, index) => {
-    const reason = REPORT_REASONS[(seed + index) % REPORT_REASONS.length];
-    const severity: RiskLevel = index === 0
-      ? baseSeverity
-      : (baseSeverity === 'high' ? 'medium' : baseSeverity);
+  const reports: ModerationReport[] = reportItems.map((report, reportIndex) => {
+    const reporterName = report?.reporter?.name?.trim()
+      || report?.reporter?.username?.trim()
+      || (report?.source === 'admin' ? 'Admin moderator' : 'Community member');
+
+    const reason = typeof report?.reason === 'string' && report.reason.trim()
+      ? report.reason.trim()
+      : 'Reported by community member';
+
+    const message = typeof report?.message === 'string' && report.message.trim()
+      ? report.message.trim()
+      : reason;
 
     return {
-      id: `${service.id}-report-${index + 1}`,
+      id: String(report?.id ?? `${normalizedService.id}-report-${reportIndex + 1}`),
       reason,
-      message: `Auto-generated moderation note: ${reason.toLowerCase()} for review queue simulation.`,
-      severity,
-      reporterName: REPORTERS[(seed + index * 2) % REPORTERS.length],
-      createdAt: new Date(Date.now() - (index + 1) * 3_600_000).toISOString(),
+      message,
+      severity: normalizeRiskLevel(report?.severity),
+      reporterName,
+      createdAt: typeof report?.created_at === 'string' && report.created_at
+        ? report.created_at
+        : new Date().toISOString(),
     };
   });
-};
 
-const normalizeToAdminRecord = (service: ServiceItem, index: number): AdminServiceRecord => {
-  const safeId = `${service.id || `svc-${index + 1}`}`;
-  const seed = hashString(`${safeId}-${service.providerName}-${service.title}`);
-  const text = `${service.title} ${service.shortDescription}`;
+  const reportCount = Math.max(0, toSafeNumber(raw?.report_count, reports.length));
+  const providerName = resolveProviderName(seller, normalizedService.providerName);
+  const providerBanned = Boolean(seller?.is_banned);
+  const isHidden = raw?.status === 'hidden' || raw?.is_active === false;
 
-  let reportCount = 0;
-
-  if (seed % 5 === 0) {
-    reportCount += 1;
-  }
-
-  if (!service.verified && seed % 3 === 0) {
-    reportCount += 1;
-  }
-
-  if (service.price < 300) {
-    reportCount += 1;
-  }
-
-  if (/(urgent|cash only|advance|wire|bkash first|dm)/i.test(text)) {
-    reportCount += 2;
-  }
-
-  reportCount = clamp(reportCount, 0, 4);
-
-  const baseMetrics = computeModerationMetrics({
-    title: service.title,
-    shortDescription: service.shortDescription,
-    price: service.price,
-    verified: service.verified,
-    experience: service.experience,
-    reviews: service.reviews,
-    availability: service.availability,
-    distance: service.distance,
-    reportCount,
-    flagged: false,
-    providerBanned: false,
-    moderationStatus: 'active',
-  });
-
-  const reports = buildSyntheticReports(service, reportCount, seed, baseMetrics.riskLevel);
-
-  return {
-    ...service,
-    id: safeId,
-    moderationStatus: 'active',
-    providerBanned: false,
-    flagged: false,
+  const normalizedRecord: AdminServiceRecord = {
+    ...normalizedService,
+    id: normalizedService.id || `svc-${index + 1}`,
+    ownerId: toSafeNumber(seller?.id, normalizedService.ownerId ?? 0) || normalizedService.ownerId,
+    providerName,
+    avatar: (seller?.profile_picture_url || seller?.profile_picture || normalizedService.avatar || 'https://i.pravatar.cc/120?img=11'),
+    verified: Boolean(raw?.verified_provider ?? normalizedService.verified),
+    moderationStatus: isHidden ? 'hidden' : 'active',
+    providerBanned,
+    flagged: reportCount > 0,
     reviewed: false,
     reportCount,
     reports,
-    riskLevel: baseMetrics.riskLevel,
-    riskScore: baseMetrics.riskScore,
-    riskSignals: baseMetrics.riskSignals,
-    trustScore: baseMetrics.trustScore,
+    riskLevel: 'low',
+    riskScore: 0,
+    riskSignals: [],
+    trustScore: 50,
   };
+
+  return applyMetrics(normalizedRecord);
 };
 
 const applyMetrics = (record: AdminServiceRecord): AdminServiceRecord => {
@@ -558,26 +588,25 @@ export const AdminServicesModerationPage = () => {
     setErrorMessage(null);
 
     try {
-      const remote = await getServices();
-      const source = remote.length > 0 ? remote : servicesData;
-      const normalized = source.map((service, index) => normalizeToAdminRecord(service, index));
+      const remote = await getAdminServices();
+      const normalized = remote.map((service: ApiAdminService, index: number) => normalizeToAdminRecord(service, index));
 
       setServices(normalized);
       setLastSyncedAt(new Date().toISOString());
       addActivity('system', `Loaded ${normalized.length} services into moderation queue.`);
     } catch (error) {
-      const fallback = servicesData.map((service, index) => normalizeToAdminRecord(service, index));
       const message = error instanceof Error ? error.message : 'Failed to fetch services moderation queue.';
 
-      setServices(fallback);
-      setErrorMessage(`${message} Showing local preview data.`);
+      setServices([]);
+      setErrorMessage(message);
+      showFeedback('error', message);
       setLastSyncedAt(new Date().toISOString());
-      addActivity('system', 'API unavailable. Loaded local preview dataset for UI moderation.');
+      addActivity('system', 'Failed to sync service moderation queue from API.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [addActivity]);
+  }, [addActivity, showFeedback]);
 
   useEffect(() => {
     void fetchModerationQueue(false);
@@ -780,75 +809,29 @@ export const AdminServicesModerationPage = () => {
     setActionReason('');
   }, [isActionSubmitting]);
 
-  const applyAction = useCallback((kind: PendingActionKind, targetIds: string[], reason: string) => {
-    const targetSet = new Set(targetIds);
+  const executeBatchAction = useCallback(async (
+    targetIds: string[],
+    executor: (serviceId: string) => Promise<unknown>,
+  ) => {
+    const outcomes = await Promise.allSettled(targetIds.map((serviceId) => executor(serviceId)));
 
-    setServices((previous) => {
-      return previous.map((service) => {
-        if (!targetSet.has(service.id)) {
-          return service;
-        }
+    const successIds: string[] = [];
+    const failedMessages: string[] = [];
 
-        let next: AdminServiceRecord = service;
+    outcomes.forEach((outcome, index) => {
+      if (outcome.status === 'fulfilled') {
+        successIds.push(targetIds[index]);
+        return;
+      }
 
-        if (kind === 'hide' || kind === 'bulkHide') {
-          next = {
-            ...next,
-            moderationStatus: 'hidden',
-            reviewed: true,
-          };
-        }
-
-        if (kind === 'verify' || kind === 'bulkVerify') {
-          next = {
-            ...next,
-            verified: true,
-            reviewed: true,
-            flagged: false,
-          };
-        }
-
-        if (kind === 'flag') {
-          const report: ModerationReport = {
-            id: `${service.id}-manual-${Date.now()}`,
-            reason: reason || 'Moderator escalation',
-            message: reason || 'Escalated for manual review',
-            severity: 'high',
-            reporterName: 'Admin moderator',
-            createdAt: new Date().toISOString(),
-          };
-
-          next = {
-            ...next,
-            flagged: true,
-            reportCount: service.reportCount + 1,
-            reports: [report, ...service.reports].slice(0, 8),
-            reviewed: true,
-          };
-        }
-
-        if (kind === 'dismissReports' || kind === 'bulkDismissReports') {
-          next = {
-            ...next,
-            reportCount: 0,
-            reports: [],
-            flagged: false,
-            reviewed: true,
-          };
-        }
-
-        if (kind === 'banProvider') {
-          next = {
-            ...next,
-            providerBanned: true,
-            moderationStatus: 'hidden',
-            reviewed: true,
-          };
-        }
-
-        return applyMetrics(next);
-      });
+      const message = outcome.reason instanceof Error ? outcome.reason.message : 'Moderation action failed.';
+      failedMessages.push(message);
     });
+
+    return {
+      successIds,
+      failedMessages,
+    };
   }, []);
 
   const confirmAction = useCallback(async () => {
@@ -867,20 +850,10 @@ export const AdminServicesModerationPage = () => {
       return;
     }
 
-    let resolvedIds = [...pendingAction.targetIds];
+    const resolvedIds = [...pendingAction.targetIds];
+    const primaryTargetId = pendingAction.contextId || resolvedIds[0] || null;
 
-    if (pendingAction.kind === 'banProvider' && pendingAction.contextId) {
-      const targetService = services.find((service) => service.id === pendingAction.contextId) ?? null;
-
-      if (targetService) {
-        const providerKey = buildProviderKey(targetService);
-        resolvedIds = services
-          .filter((service) => buildProviderKey(service) === providerKey)
-          .map((service) => service.id);
-      }
-    }
-
-    if (resolvedIds.length === 0) {
+    if (resolvedIds.length === 0 && !primaryTargetId) {
       setPendingAction(null);
       setActionReason('');
       return;
@@ -888,50 +861,83 @@ export const AdminServicesModerationPage = () => {
 
     setIsActionSubmitting(true);
 
-    await new Promise((resolve) => {
-      window.setTimeout(resolve, 360);
-    });
+    try {
+      if (pendingAction.kind === 'hide' || pendingAction.kind === 'bulkHide') {
+        const result = await executeBatchAction(resolvedIds, (serviceId) => hideAdminService(serviceId, reason));
 
-    applyAction(pendingAction.kind, resolvedIds, reason);
+        if (result.successIds.length > 0) {
+          addActivity(result.successIds.length > 1 ? 'bulk' : 'hide', `Hidden ${result.successIds.length} service listing(s) from public queue.`);
+          await fetchModerationQueue(true);
+          setSelectedIds((previous) => previous.filter((id) => !result.successIds.includes(id)));
+        }
 
-    setSelectedIds((previous) => previous.filter((id) => !resolvedIds.includes(id)));
+        if (result.failedMessages.length > 0) {
+          showFeedback('error', `${result.failedMessages.length} action(s) failed. ${result.failedMessages[0]}`);
+        } else {
+          showFeedback('success', `${result.successIds.length} service listing(s) hidden.`);
+        }
+      }
 
-    const count = resolvedIds.length;
+      if (pendingAction.kind === 'verify' || pendingAction.kind === 'bulkVerify') {
+        const result = await executeBatchAction(resolvedIds, (serviceId) => verifyAdminService(serviceId));
 
-    if (pendingAction.kind === 'hide' || pendingAction.kind === 'bulkHide') {
-      addActivity(count > 1 ? 'bulk' : 'hide', `Hidden ${count} service listing(s) from public queue.`);
-      showFeedback('success', `${count} service listing(s) hidden.`);
+        if (result.successIds.length > 0) {
+          addActivity(result.successIds.length > 1 ? 'bulk' : 'verify', `Verified ${result.successIds.length} provider profile(s).`);
+          await fetchModerationQueue(true);
+          setSelectedIds((previous) => previous.filter((id) => !result.successIds.includes(id)));
+        }
+
+        if (result.failedMessages.length > 0) {
+          showFeedback('error', `${result.failedMessages.length} action(s) failed. ${result.failedMessages[0]}`);
+        } else {
+          showFeedback('success', `${result.successIds.length} provider profile(s) verified.`);
+        }
+      }
+
+      if (pendingAction.kind === 'dismissReports' || pendingAction.kind === 'bulkDismissReports') {
+        const result = await executeBatchAction(resolvedIds, (serviceId) => dismissAdminServiceReports(serviceId));
+
+        if (result.successIds.length > 0) {
+          addActivity(result.successIds.length > 1 ? 'bulk' : 'dismiss', `Dismissed reports for ${result.successIds.length} service listing(s).`);
+          await fetchModerationQueue(true);
+          setSelectedIds((previous) => previous.filter((id) => !result.successIds.includes(id)));
+        }
+
+        if (result.failedMessages.length > 0) {
+          showFeedback('error', `${result.failedMessages.length} action(s) failed. ${result.failedMessages[0]}`);
+        } else {
+          showFeedback('success', `Reports cleared for ${result.successIds.length} service listing(s).`);
+        }
+      }
+
+      if (pendingAction.kind === 'flag' && primaryTargetId) {
+        const response = await flagAdminService(primaryTargetId, reason);
+        addActivity('flag', 'Escalated selected service with a moderation report.');
+        showFeedback('success', response.message || 'Service flagged successfully.');
+        await fetchModerationQueue(true);
+      }
+
+      if (pendingAction.kind === 'banProvider' && primaryTargetId) {
+        const response = await banServiceProvider(primaryTargetId, reason);
+        addActivity('ban', `Banned provider and hid ${response.affectedServices} linked service listing(s).`);
+        showFeedback('success', response.message || 'Provider banned successfully.');
+        setSelectedIds([]);
+        await fetchModerationQueue(true);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Moderation action failed.';
+      showFeedback('error', message);
+    } finally {
+      setPendingAction(null);
+      setActionReason('');
+      setIsActionSubmitting(false);
     }
-
-    if (pendingAction.kind === 'verify' || pendingAction.kind === 'bulkVerify') {
-      addActivity(count > 1 ? 'bulk' : 'verify', `Verified ${count} provider profile(s).`);
-      showFeedback('success', `${count} provider profile(s) verified.`);
-    }
-
-    if (pendingAction.kind === 'flag') {
-      addActivity('flag', 'Escalated selected service with a manual moderation report.');
-      showFeedback('success', 'Service flagged for manual escalation.');
-    }
-
-    if (pendingAction.kind === 'banProvider') {
-      addActivity('ban', `Banned provider and hid ${count} linked service listing(s).`);
-      showFeedback('success', `Provider banned in UI preview. ${count} linked listing(s) hidden.`);
-    }
-
-    if (pendingAction.kind === 'dismissReports' || pendingAction.kind === 'bulkDismissReports') {
-      addActivity(count > 1 ? 'bulk' : 'dismiss', `Dismissed reports for ${count} service listing(s).`);
-      showFeedback('success', `Reports cleared for ${count} service listing(s).`);
-    }
-
-    setPendingAction(null);
-    setActionReason('');
-    setIsActionSubmitting(false);
   }, [
     actionReason,
     addActivity,
-    applyAction,
+    executeBatchAction,
+    fetchModerationQueue,
     pendingAction,
-    services,
     showFeedback,
   ]);
 

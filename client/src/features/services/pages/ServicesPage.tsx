@@ -1,11 +1,12 @@
 //  src/features/services/pages/ServicesPage.tsx 
-import { useCallback, useEffect, useRef } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useScroll, useTransform } from
   'framer-motion';
 import { TriangleAlert, X } from 'lucide-react';
 import { startConversation, getMessages, sendMessage } from '@/api/chatApi';
 import { ROUTES } from '@/config/routes.config';
+import { reportService } from '@/services/serviceService';
 import { OfferServiceModal } from '../components/OfferServiceModal';
 import { ServiceCard } from '../components/ServiceCard';
 import { ServiceChatDrawer } from '../components/ServiceChatDrawer';
@@ -44,6 +45,11 @@ const cardItemVariants = {
 export const ServicesPage = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const [reportTarget, setReportTarget] = useState<ServiceItem | null>(null);
+  const [reportDetails, setReportDetails] = useState('');
+  const [isReportSubmitting, setIsReportSubmitting] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [reportSuccess, setReportSuccess] = useState<string | null>(null);
 
   const {
     filters,
@@ -115,9 +121,50 @@ export const ServicesPage = () => {
     }
   }, [navigate]);
 
-  const handleReport = (service: ServiceItem) => {
-    window.alert(`Service report submitted for ${service.providerName}. 
-Our team will review this.`);
+  const handleOpenReportModal = useCallback((service: ServiceItem) => {
+    setReportTarget(service);
+    setReportDetails('');
+    setReportError(null);
+  }, []);
+
+  const handleCloseReportModal = useCallback(() => {
+    if (isReportSubmitting) {
+      return;
+    }
+
+    setReportTarget(null);
+    setReportDetails('');
+    setReportError(null);
+  }, [isReportSubmitting]);
+
+  const handleReportSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!reportTarget) {
+      return;
+    }
+
+    const trimmedDetails = reportDetails.trim();
+
+    if (trimmedDetails.length < 8) {
+      setReportError('Please write at least 8 characters so the admin can review your report details.');
+      return;
+    }
+
+    setIsReportSubmitting(true);
+    setReportError(null);
+
+    try {
+      const response = await reportService(reportTarget.id, trimmedDetails);
+      setReportSuccess(response.message || 'Service reported successfully.');
+      setReportTarget(null);
+      setReportDetails('');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to submit service report.';
+      setReportError(message);
+    } finally {
+      setIsReportSubmitting(false);
+    }
   };
 
   useEffect(() => {
@@ -131,6 +178,18 @@ Our team will review this.`);
 
     return () => window.clearTimeout(timeoutId);
   }, [successMessage, clearFeedback]);
+
+  useEffect(() => {
+    if (!reportSuccess) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setReportSuccess(null);
+    }, 2600);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [reportSuccess]);
 
   useEffect(() => {
     if (!isFilterDrawerOpen) {
@@ -147,6 +206,24 @@ Our team will review this.`);
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isFilterDrawerOpen, setIsFilterDrawerOpen]);
 
+  useEffect(() => {
+    if (!reportTarget || isReportSubmitting) {
+      return;
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        handleCloseReportModal();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+
+    return () => {
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [handleCloseReportModal, isReportSubmitting, reportTarget]);
+
   return (
     <div className={styles.page} ref={containerRef}>
       <ServicesHero
@@ -160,6 +237,8 @@ Our team will review this.`);
         {isLoading && <p className={styles.stateInfo}>Loading services...</p>}
         {errorMessage && <p className={styles.errorBanner}>{errorMessage}</p>}
         {successMessage && <p className={styles.successBanner}>{successMessage}</p>}
+        {reportError && <p className={styles.errorBanner}>{reportError}</p>}
+        {reportSuccess && <p className={styles.successBanner}>{reportSuccess}</p>}
 
         <motion.div
           className={styles.servicesGrid}
@@ -176,7 +255,7 @@ Our team will review this.`);
                 onToggleBookmark={onToggleBookmark}
                 onMessage={openServiceConversation}
                 onViewDetails={setActiveDetails}
-                onReport={handleReport}
+                onReport={handleOpenReportModal}
               />
             </motion.div>
           ))}
@@ -253,6 +332,88 @@ Our team will review this.`);
         onSubmit={onAddService}
         isSubmitting={isSubmitting}
       />
+
+      <AnimatePresence>
+        {reportTarget && (
+          <motion.div
+            className={styles.reportOverlay}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={handleCloseReportModal}
+          >
+            <motion.div
+              className={styles.reportModal}
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={styles.reportHeader}>
+                <h4>Report Service</h4>
+                <button
+                  type="button"
+                  className={styles.reportCloseButton}
+                  onClick={handleCloseReportModal}
+                  aria-label="Close report modal"
+                  disabled={isReportSubmitting}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <p className={styles.reportHint}>
+                Share clear details so the admin team can review this service faster.
+              </p>
+
+              <p className={styles.reportTarget}>
+                <strong>{reportTarget.title}</strong>
+                <span> by {reportTarget.providerName}</span>
+              </p>
+
+              <form className={styles.reportForm} onSubmit={handleReportSubmit}>
+                <label className={styles.reportLabel} htmlFor="service-report-details">
+                  Report details
+                </label>
+                <textarea
+                  id="service-report-details"
+                  className={styles.reportTextarea}
+                  value={reportDetails}
+                  onChange={(event) => setReportDetails(event.target.value)}
+                  placeholder="Example: The description says certified electrician, but provider requested advance payment and gave inconsistent details..."
+                  rows={6}
+                  maxLength={500}
+                  required
+                  disabled={isReportSubmitting}
+                />
+                <div className={styles.reportMetaRow}>
+                  <span>Minimum 8 characters</span>
+                  <span>{reportDetails.trim().length}/500</span>
+                </div>
+
+                <div className={styles.reportActions}>
+                  <button
+                    type="button"
+                    className={styles.reportCancelButton}
+                    onClick={handleCloseReportModal}
+                    disabled={isReportSubmitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className={styles.reportSubmitButton}
+                    disabled={isReportSubmitting}
+                  >
+                    {isReportSubmitting ? 'Submitting...' : 'Submit Report'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <ServiceDetailsDrawer
         service={activeDetails}
