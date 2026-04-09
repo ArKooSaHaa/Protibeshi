@@ -13,6 +13,7 @@ import { ReliefPage } from '@/features/relief/pages/ReliefPage';
 import { AdminReliefModerationPage } from '@/features/admin-relief';
 import { AdminMarketplaceModerationPage } from '@/features/admin-marketplace';
 import { AdminRentModerationPage } from '@/features/admin-rent';
+import { AdminServicesModerationPage } from '@/features/admin-services';
 import { AccountPage } from '@/features/account';
 import { AdminFeedDashboardPage, AdminUnderConstructionPage } from '@/features/admin-feed';
 import { AdminAuthPage, SignInPage, SignUpPage } from '@/features/auth';
@@ -58,6 +59,16 @@ const RentRoute = () => {
   }
 
   return <RentPage />;
+};
+
+const ServicesRoute = () => {
+  const role = useAuthStore((state) => state.role);
+
+  if (role === 'admin') {
+    return <AdminServicesModerationPage />;
+  }
+
+  return <ServicesPage />;
 };
 
 const ReliefRoute = () => {
@@ -140,7 +151,7 @@ const routes: RouteObject[] = [
       { path: ROUTES.MESSAGES, element: <AdminWorkInProgressRoute><MessagesPage /></AdminWorkInProgressRoute> },
       { path: ROUTES.MARKETPLACE, element: <MarketplaceRoute /> },
       { path: ROUTES.RENT, element: <RentRoute /> },
-      { path: ROUTES.SERVICES, element: <AdminWorkInProgressRoute><ServicesPage /></AdminWorkInProgressRoute> },
+      { path: ROUTES.SERVICES, element: <ServicesRoute /> },
       { path: ROUTES.COMPLAINTS, element: <AdminWorkInProgressRoute><ComplaintsPage /></AdminWorkInProgressRoute> },
       { path: ROUTES.RELIEF, element: <ReliefRoute /> },
       { path: ROUTES.ACCOUNT, element: <AdminWorkInProgressRoute><AccountPage /></AdminWorkInProgressRoute> },
