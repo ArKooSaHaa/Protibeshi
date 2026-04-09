@@ -32,14 +32,6 @@ export const ServiceCard = ({
       whileHover={{ y: -4, scale: 1.01 }}
       transition={{ duration: 0.22 }}
     >
-      {service.coverPhotoUrl && (
-        <img
-          className={styles.coverPhoto}
-          src={service.coverPhotoUrl}
-          alt={service.title}
-        />
-      )}
-
       <div className={styles.topRow}>
         <div className={styles.profileWrap}>
           <img className={styles.avatar} src={service.avatar}

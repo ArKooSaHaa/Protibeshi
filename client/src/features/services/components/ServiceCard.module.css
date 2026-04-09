@@ -1,21 +1,18 @@
 /* src/features/services/components/ServiceCard.module.css */
 .card {
   background: #fff;
-  border-radius: 18px;
+  border-radius: 16px;
   border: 1px solid #e5e7eb;
   box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
-  padding: 14px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.coverPhoto {
+  gap: 7px;
   width: 100%;
-  height: 156px;
-  object-fit: cover;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  max-width: none;
+  justify-self: stretch;
+  height: 338px;
+  overflow: hidden;
 }
 
 .topRow {
@@ -32,8 +29,8 @@
 }
 
 .avatar {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   object-fit: cover;
 }
@@ -42,6 +39,10 @@
   font-size: 14px;
   font-weight: 700;
   color: #0f172a;
+  max-width: 190px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .metaLine {
@@ -90,20 +91,32 @@
 .title {
   margin: 0;
   color: #0f172a;
-  font-size: 17px;
+  font-size: 15px;
+  line-height: 1.35;
+  min-height: 40px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .description {
   margin: 0;
   color: #475569;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.4;
+  min-height: 32px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .tagRow {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
+  overflow: hidden;
 }
 
 .categoryTag,
@@ -128,7 +141,7 @@
   justify-content: space-between;
   align-items: center;
   color: #0f172a;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .responseTime {
@@ -139,20 +152,24 @@
 .metaInfo {
   font-size: 12px;
   color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .actionRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+  margin-top: auto;
 }
 
 .primaryButton,
 .secondaryButton {
   border-radius: 10px;
-  padding: 8px 10px;
+  padding: 6px 9px;
   border: none;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -194,4 +211,8 @@
   font-size: 12px;
   color: #64748b;
   text-decoration: underline dotted;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 145px;
 }

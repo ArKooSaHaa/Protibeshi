@@ -8,6 +8,7 @@ use App\Http\Controllers\AdminListingModerationController;
 use App\Http\Controllers\AdminPostModerationController;
 use App\Http\Controllers\AdminReliefModerationController;
 use App\Http\Controllers\AdminRentModerationController;
+use App\Http\Controllers\AdminServiceModerationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ComplaintController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\RentListingController;
 use App\Http\Controllers\RentListingReportController;
 use App\Http\Controllers\SavedPostController;
 use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\ServiceReportController;
 use App\Http\Controllers\SessionController;
 
 /*
@@ -47,6 +49,13 @@ Route::middleware(['auth:admin_api'])->prefix('admin')->group(function () {
     Route::get('/rent-listings', [AdminRentModerationController::class, 'index']);
     Route::delete('/rent-listings/{id}', [AdminRentModerationController::class, 'destroy']);
     Route::post('/rent-listings/{id}/ban-user', [AdminRentModerationController::class, 'banLandlord']);
+
+    Route::get('/services', [AdminServiceModerationController::class, 'index']);
+    Route::delete('/services/{id}', [AdminServiceModerationController::class, 'destroy']);
+    Route::post('/services/{id}/verify', [AdminServiceModerationController::class, 'verify']);
+    Route::post('/services/{id}/flag', [AdminServiceModerationController::class, 'flag']);
+    Route::post('/services/{id}/ignore-reports', [AdminServiceModerationController::class, 'ignoreReports']);
+    Route::post('/services/{id}/ban-user', [AdminServiceModerationController::class, 'banProvider']);
 
     Route::get('/reliefs', [AdminReliefModerationController::class, 'index']);
     Route::post('/reliefs/{id}/ignore-reports', [AdminReliefModerationController::class, 'ignoreReports']);
@@ -95,6 +104,7 @@ Route::middleware(['auth:api'])->group(function () {
 
     Route::post('/services', [ServiceController::class, 'store'])
         ->middleware('not_banned');
+    Route::post('/services/{id}/report', [ServiceReportController::class, 'report']);
     Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
 
     Route::get('/account/profile', [AccountController::class, 'show']);
