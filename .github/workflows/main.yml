@@ -24,41 +24,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.2"
-          tools: composer:v2
-          extensions: mbstring, dom, fileinfo, sqlite3, pdo_sqlite
-
-      - name: Get Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Composer
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('server/composer.lock', 'server/composer.json') }}
-          restore-keys: |
-            ${{ runner.os }}-composer-
-
-      - name: Install backend dependencies
-        working-directory: server
-        run: composer install --no-interaction --no-progress --prefer-dist
-
-      - name: Prepare backend env
-        working-directory: server
+      - name: Checkout repository (policy-safe)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          if [ ! -f .env ]; then cp .env.example .env; fi
-          php artisan key:generate --force
+          set -euo pipefail
+          rm -rf .git
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: bearer ${GITHUB_TOKEN}" \
+            fetch --no-tags --depth=1 origin "${GITHUB_REF}"
+          git checkout --detach "${GITHUB_SHA}"
 
-      - name: Run backend tests
-        working-directory: server
-        run: vendor/bin/phpunit
+      - name: Run backend tests in PHP 8.2 container
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD/server:/var/www" \
+            -w /var/www \
+            php:8.2-cli bash -lc '
+              set -euo pipefail
+              apt-get update
+              apt-get install -y --no-install-recommends git unzip curl libxml2-dev libsqlite3-dev
+              docker-php-ext-install mbstring dom pdo_sqlite
+              curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+              composer install --no-interaction --no-progress --prefer-dist
+              if [ ! -f .env ]; then cp .env.example .env; fi
+              php artisan key:generate --force
+              vendor/bin/phpunit
+            '
 
 
   frontend-tests:
@@ -66,36 +60,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: client/package-lock.json
-
-      - name: Install dependencies
-        working-directory: client
+      - name: Checkout repository (policy-safe)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+          set -euo pipefail
+          rm -rf .git
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: bearer ${GITHUB_TOKEN}" \
+            fetch --no-tags --depth=1 origin "${GITHUB_REF}"
+          git checkout --detach "${GITHUB_SHA}"
 
-      - name: Lint code
-        working-directory: client
-        run: npm run lint
-
-      - name: Clean build output
-        working-directory: client
-        run: rm -rf dist
-
-      - name: Build production bundle
-        working-directory: client
-        run: npm run build
+      - name: Run frontend lint + build in Node 20 container
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD/client:/app" \
+            -w /app \
+            node:20-bullseye bash -lc '
+              set -euo pipefail
+              if [ -f package-lock.json ]; then
+                npm ci
+              else
+                npm install
+              fi
+              npm run lint
+              rm -rf dist
+              npm run build
+            '
 
 
   security-checks:
@@ -103,44 +96,70 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout repository (policy-safe)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf .git
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: bearer ${GITHUB_TOKEN}" \
+            fetch --no-tags --depth=1 origin "${GITHUB_REF}"
+          git checkout --detach "${GITHUB_SHA}"
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.2"
-          tools: composer:v2
-
-      - name: Install backend deps (no-dev)
-        working-directory: server
-        run: composer install --no-dev --no-interaction --no-progress --prefer-dist
+      - name: Install backend deps (no-dev) in PHP 8.2 container
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD/server:/var/www" \
+            -w /var/www \
+            php:8.2-cli bash -lc '
+              set -euo pipefail
+              apt-get update
+              apt-get install -y --no-install-recommends git unzip curl
+              curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+              composer install --no-dev --no-interaction --no-progress --prefer-dist
+            '
 
       - name: Composer audit (backend)
         continue-on-error: true
-        working-directory: server
-        run: composer audit --no-interaction --no-dev
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: client/package-lock.json
-
-      - name: Install production dependencies (frontend)
-        working-directory: client
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci --omit=dev
-          else
-            npm install --omit=dev
-          fi
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD/server:/var/www" \
+            -w /var/www \
+            php:8.2-cli bash -lc '
+              set -euo pipefail
+              apt-get update
+              apt-get install -y --no-install-recommends curl
+              curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+              composer audit --no-interaction --no-dev
+            '
+
+      - name: Install production dependencies (frontend) in Node 20 container
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD/client:/app" \
+            -w /app \
+            node:20-bullseye bash -lc '
+              set -euo pipefail
+              if [ -f package-lock.json ]; then
+                npm ci --omit=dev
+              else
+                npm install --omit=dev
+              fi
+            '
 
       - name: NPM audit (frontend)
         continue-on-error: true
-        working-directory: client
-        run: npm audit --omit=dev --audit-level=high
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD/client:/app" \
+            -w /app \
+            node:20-bullseye bash -lc 'npm audit --omit=dev --audit-level=high'
 
 
   docker-build:
@@ -149,25 +168,20 @@ jobs:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Checkout repository (policy-safe)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf .git
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: bearer ${GITHUB_TOKEN}" \
+            fetch --no-tags --depth=1 origin "${GITHUB_REF}"
+          git checkout --detach "${GITHUB_SHA}"
 
       - name: Build backend image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./server
-          file: ./server/Dockerfile
-          push: false
-          tags: protibeshi-backend:ci
+        run: docker build -f ./server/Dockerfile -t protibeshi-backend:ci ./server
 
       - name: Build frontend image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./client
-          file: ./client/Dockerfile
-          target: build
-          push: false
-          tags: protibeshi-frontend:ci
+        run: docker build --target build -f ./client/Dockerfile -t protibeshi-frontend:ci ./client
