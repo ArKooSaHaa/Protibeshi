@@ -66,6 +66,7 @@ phpunit.xml.dist
 
 # Build files
 /dist
+/client/dist/
 
 # Misc
 *.sql
