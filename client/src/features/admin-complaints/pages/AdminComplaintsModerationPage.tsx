@@ -67,6 +67,15 @@ type NormalizedComplaint = ComplaintItem & {
   assignedTo?: string | null;
 };
 
+type QueuePagination = {
+  currentPage: number;
+  lastPage: number;
+  perPage: number;
+  total: number;
+  from: number;
+  to: number;
+};
+
 type FeedbackState = {
   variant: 'success' | 'error';
   message: string;
@@ -173,6 +182,102 @@ const toRiskLevel = (score: number): RiskLevel => {
   if (score >= 80) return 'high';
   if (score >= 55) return 'medium';
   return 'low';
+};
+
+const toApiStatusFilter = (value: StatusFilter): string | undefined => {
+  if (value === 'all') {
+    return undefined;
+  }
+
+  return value.toLowerCase().replace(/\s+/g, '_');
+};
+
+const toApiPriorityFilter = (value: PriorityFilter): string | undefined => {
+  if (value === 'all') {
+    return undefined;
+  }
+
+  return value.toLowerCase();
+};
+
+const toApiCategoryFilter = (value: 'all' | ComplaintCategory): string | undefined => {
+  if (value === 'all') {
+    return undefined;
+  }
+
+  return value.toLowerCase();
+};
+
+const toApiVisibilityFilter = (value: VisibilityFilter): string | undefined => {
+  if (value === 'all') {
+    return undefined;
+  }
+
+  return value === 'Only admins' ? 'private' : 'public';
+};
+
+const toApiTab = (value: QueueTab): string | undefined => {
+  if (value === 'all') {
+    return undefined;
+  }
+
+  return value;
+};
+
+const toApiSort = (value: SortMode): string => {
+  if (value === 'risk') {
+    return 'newest';
+  }
+
+  return value;
+};
+
+const parseQueuePagination = (
+  payload: unknown,
+  fallbackPage: number,
+  fallbackPerPage: number,
+  fallbackTotal: number,
+): QueuePagination => {
+  if (!payload || typeof payload !== 'object') {
+    return {
+      currentPage: fallbackPage,
+      lastPage: 1,
+      perPage: fallbackPerPage,
+      total: fallbackTotal,
+      from: fallbackTotal > 0 ? 1 : 0,
+      to: fallbackTotal,
+    };
+  }
+
+  const maybeObject = payload as { pagination?: Record<string, unknown> };
+  const raw = maybeObject.pagination;
+
+  if (!raw || typeof raw !== 'object') {
+    return {
+      currentPage: fallbackPage,
+      lastPage: 1,
+      perPage: fallbackPerPage,
+      total: fallbackTotal,
+      from: fallbackTotal > 0 ? 1 : 0,
+      to: fallbackTotal,
+    };
+  }
+
+  const currentPage = Math.max(1, toSafeNumber(raw.current_page, fallbackPage));
+  const lastPage = Math.max(1, toSafeNumber(raw.last_page, 1));
+  const perPage = Math.max(1, toSafeNumber(raw.per_page, fallbackPerPage));
+  const total = Math.max(0, toSafeNumber(raw.total, fallbackTotal));
+  const from = Math.max(0, toSafeNumber(raw.from, total > 0 ? 1 : 0));
+  const to = Math.max(0, toSafeNumber(raw.to, total));
+
+  return {
+    currentPage,
+    lastPage,
+    perPage,
+    total,
+    from,
+    to,
+  };
 };
 
 const resolvePhotoUrl = (value: unknown): string | null => {
@@ -451,6 +556,17 @@ export const AdminComplaintsModerationPage = () => {
   const [categoryFilter, setCategoryFilter] = useState<'all' | ComplaintCategory>('all');
   const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [serverPage, setServerPage] = useState(1);
+  const [perPage, setPerPage] = useState(12);
+  const [pagination, setPagination] = useState<QueuePagination>({
+    currentPage: 1,
+    lastPage: 1,
+    perPage: 12,
+    total: 0,
+    from: 0,
+    to: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
@@ -483,6 +599,17 @@ export const AdminComplaintsModerationPage = () => {
     ].slice(0, 8));
   }, []);
 
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+      setServerPage(1);
+    }, 320);
+
+    return () => {
+      window.clearTimeout(handle);
+    };
+  }, [searchTerm]);
+
   const fetchQueue = useCallback(async (manualRefresh: boolean) => {
     if (manualRefresh) {
       setIsRefreshing(true);
@@ -493,19 +620,44 @@ export const AdminComplaintsModerationPage = () => {
     setErrorMessage(null);
 
     try {
-      const remote = await getAdminComplaints();
+      const remote = await getAdminComplaints(undefined, {
+        page: serverPage,
+        perPage,
+        search: debouncedSearchTerm || undefined,
+        status: toApiStatusFilter(statusFilter),
+        priority: toApiPriorityFilter(priorityFilter),
+        category: toApiCategoryFilter(categoryFilter),
+        visibility: toApiVisibilityFilter(visibilityFilter),
+        tab: toApiTab(tab),
+        sort: toApiSort(sortMode),
+      });
+
       const remoteComplaints = extractComplaintsFromResponse(remote);
 
       const normalized = dedupeById(remoteComplaints).map(toAdminRecord);
+      const nextPagination = parseQueuePagination(remote, serverPage, perPage, normalized.length);
 
       setComplaints(normalized);
+      setPagination(nextPagination);
+      setSelectedIds((previous) => previous.filter((id) => normalized.some((item) => item.id === id)));
       setLastSyncedAt(new Date().toISOString());
-      addActivity('system', `Synced ${normalized.length} complaints for moderation review.`);
+
+      if (manualRefresh) {
+        addActivity('system', `Synced ${normalized.length} complaints from server page ${nextPagination.currentPage}.`);
+      }
     } catch (error) {
       const fallback = complaintsData.map(toAdminRecord);
       const message = error instanceof Error ? error.message : 'Failed to fetch admin complaints moderation queue.';
 
       setComplaints(fallback);
+      setPagination({
+        currentPage: 1,
+        lastPage: 1,
+        perPage: fallback.length || perPage,
+        total: fallback.length,
+        from: fallback.length > 0 ? 1 : 0,
+        to: fallback.length,
+      });
       setErrorMessage(`${message} Loaded preview moderation dataset.`);
       setLastSyncedAt(new Date().toISOString());
       addActivity('system', 'Admin complaints API unavailable. Loaded local preview moderation dataset.');
@@ -514,7 +666,19 @@ export const AdminComplaintsModerationPage = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [addActivity, showFeedback]);
+  }, [
+    addActivity,
+    categoryFilter,
+    debouncedSearchTerm,
+    perPage,
+    priorityFilter,
+    serverPage,
+    showFeedback,
+    sortMode,
+    statusFilter,
+    tab,
+    visibilityFilter,
+  ]);
 
   const mergeUpdatedComplaints = useCallback((updatedItems: NormalizedComplaint[]) => {
     if (updatedItems.length === 0) {
@@ -570,85 +734,16 @@ export const AdminComplaintsModerationPage = () => {
     void fetchQueue(false);
   }, [fetchQueue]);
 
-  const filteredComplaints = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-
-    return complaints.filter((item) => {
-      if (tab === 'urgent' && item.priority !== 'Urgent') {
-        return false;
-      }
-
-      if (tab === 'private' && item.visibility !== 'Only admins') {
-        return false;
-      }
-
-      if (tab === 'unresolved' && (item.status === 'Resolved' || item.status === 'Rejected')) {
-        return false;
-      }
-
-      if (statusFilter !== 'all' && item.status !== statusFilter) {
-        return false;
-      }
-
-      if (priorityFilter !== 'all' && item.priority !== priorityFilter) {
-        return false;
-      }
-
-      if (categoryFilter !== 'all' && item.category !== categoryFilter) {
-        return false;
-      }
-
-      if (visibilityFilter !== 'all' && item.visibility !== visibilityFilter) {
-        return false;
-      }
-
-      if (!query) {
-        return true;
-      }
-
-      return [
-        item.id,
-        item.title,
-        item.description,
-        item.location,
-        item.reportedBy,
-        item.category,
-      ].join(' ').toLowerCase().includes(query);
-    });
-  }, [
-    categoryFilter,
-    complaints,
-    priorityFilter,
-    searchTerm,
-    statusFilter,
-    tab,
-    visibilityFilter,
-  ]);
-
-  const sortedComplaints = useMemo(() => {
-    const items = [...filteredComplaints];
-
-    if (sortMode === 'oldest') {
-      return items.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  const visibleComplaints = useMemo(() => {
+    if (sortMode !== 'risk') {
+      return complaints;
     }
 
-    if (sortMode === 'priority') {
-      return items.sort((a, b) => PRIORITY_WEIGHT[b.priority] - PRIORITY_WEIGHT[a.priority]);
-    }
-
-    if (sortMode === 'distance') {
-      return items.sort((a, b) => a.distance - b.distance);
-    }
-
-    if (sortMode === 'risk') {
-      return items.sort((a, b) => b.riskScore - a.riskScore);
-    }
-
-    return items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [filteredComplaints, sortMode]);
+    return [...complaints].sort((a, b) => b.riskScore - a.riskScore);
+  }, [complaints, sortMode]);
 
   const stats = useMemo(() => {
-    const total = complaints.length;
+    const total = pagination.total || complaints.length;
     const unresolved = complaints.filter((item) => item.status !== 'Resolved' && item.status !== 'Rejected').length;
     const urgent = complaints.filter((item) => item.priority === 'Urgent').length;
     const privateCases = complaints.filter((item) => item.visibility === 'Only admins').length;
@@ -663,7 +758,7 @@ export const AdminComplaintsModerationPage = () => {
       privateCases,
       avgRisk,
     };
-  }, [complaints]);
+  }, [complaints, pagination.total]);
 
   const activeComplaint = useMemo(() => {
     return complaints.find((item) => item.id === activeComplaintId) ?? null;
@@ -678,7 +773,7 @@ export const AdminComplaintsModerationPage = () => {
   };
 
   const toggleSelectAllVisible = () => {
-    const visibleIds = sortedComplaints.map((item) => item.id);
+    const visibleIds = visibleComplaints.map((item) => item.id);
 
     if (visibleIds.length === 0) {
       return;
@@ -816,8 +911,11 @@ export const AdminComplaintsModerationPage = () => {
     }
   };
 
-  const allVisibleSelected = sortedComplaints.length > 0
-    && sortedComplaints.every((item) => selectedIds.includes(item.id));
+  const allVisibleSelected = visibleComplaints.length > 0
+    && visibleComplaints.every((item) => selectedIds.includes(item.id));
+
+  const hasPreviousPage = pagination.currentPage > 1;
+  const hasNextPage = pagination.currentPage < pagination.lastPage;
 
   return (
     <div className="acp-page">
@@ -902,7 +1000,10 @@ export const AdminComplaintsModerationPage = () => {
               <span>Status</span>
               <select
                 value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value as StatusFilter);
+                  setServerPage(1);
+                }}
               >
                 <option value="all">All</option>
                 {STATUS_OPTIONS.map((status) => (
@@ -915,7 +1016,10 @@ export const AdminComplaintsModerationPage = () => {
               <span>Priority</span>
               <select
                 value={priorityFilter}
-                onChange={(event) => setPriorityFilter(event.target.value as PriorityFilter)}
+                onChange={(event) => {
+                  setPriorityFilter(event.target.value as PriorityFilter);
+                  setServerPage(1);
+                }}
               >
                 <option value="all">All</option>
                 {PRIORITY_OPTIONS.map((priority) => (
@@ -928,7 +1032,10 @@ export const AdminComplaintsModerationPage = () => {
               <span>Category</span>
               <select
                 value={categoryFilter}
-                onChange={(event) => setCategoryFilter(event.target.value as 'all' | ComplaintCategory)}
+                onChange={(event) => {
+                  setCategoryFilter(event.target.value as 'all' | ComplaintCategory);
+                  setServerPage(1);
+                }}
               >
                 <option value="all">All</option>
                 {CATEGORY_OPTIONS.map((category) => (
@@ -941,7 +1048,10 @@ export const AdminComplaintsModerationPage = () => {
               <span>Visibility</span>
               <select
                 value={visibilityFilter}
-                onChange={(event) => setVisibilityFilter(event.target.value as VisibilityFilter)}
+                onChange={(event) => {
+                  setVisibilityFilter(event.target.value as VisibilityFilter);
+                  setServerPage(1);
+                }}
               >
                 <option value="all">All</option>
                 {VISIBILITY_OPTIONS.map((visibility) => (
@@ -954,7 +1064,10 @@ export const AdminComplaintsModerationPage = () => {
               <span>Sort</span>
               <select
                 value={sortMode}
-                onChange={(event) => setSortMode(event.target.value as SortMode)}
+                onChange={(event) => {
+                  setSortMode(event.target.value as SortMode);
+                  setServerPage(1);
+                }}
               >
                 {Object.entries(SORT_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>{label}</option>
@@ -971,7 +1084,10 @@ export const AdminComplaintsModerationPage = () => {
                 key={item}
                 type="button"
                 className={`acp-tab ${tab === item ? 'acp-tab-active' : ''}`}
-                onClick={() => setTab(item)}
+                onClick={() => {
+                  setTab(item);
+                  setServerPage(1);
+                }}
               >
                 {TABS[item]}
               </button>
@@ -1033,7 +1149,7 @@ export const AdminComplaintsModerationPage = () => {
           initial="hidden"
           animate="visible"
         >
-          {sortedComplaints.map((item) => {
+          {visibleComplaints.map((item) => {
             const isSelected = selectedIds.includes(item.id);
 
             return (
@@ -1108,7 +1224,7 @@ export const AdminComplaintsModerationPage = () => {
             );
           })}
 
-          {sortedComplaints.length === 0 ? (
+          {visibleComplaints.length === 0 ? (
             <div className="acp-empty">
               <AlertTriangle size={20} />
               <h3>No complaints match your current filters</h3>
@@ -1117,6 +1233,54 @@ export const AdminComplaintsModerationPage = () => {
           ) : null}
         </motion.section>
       )}
+
+      {!isLoading ? (
+        <section className="acp-pagination">
+          <p>
+            Showing {pagination.from || 0}-{pagination.to || visibleComplaints.length} of {pagination.total || visibleComplaints.length} complaints
+          </p>
+
+          <div className="acp-pagination-controls">
+            <label>
+              <span>Per page</span>
+              <select
+                value={perPage}
+                onChange={(event) => {
+                  const nextPerPage = Number(event.target.value);
+                  setPerPage(nextPerPage);
+                  setServerPage(1);
+                }}
+              >
+                <option value={12}>12</option>
+                <option value={24}>24</option>
+                <option value={36}>36</option>
+              </select>
+            </label>
+
+            <button
+              type="button"
+              className="acp-btn acp-btn-ghost"
+              onClick={() => setServerPage((previous) => Math.max(1, previous - 1))}
+              disabled={!hasPreviousPage || isRefreshing}
+            >
+              Previous
+            </button>
+
+            <span className="acp-page-indicator">
+              Page {pagination.currentPage} of {pagination.lastPage}
+            </span>
+
+            <button
+              type="button"
+              className="acp-btn acp-btn-ghost"
+              onClick={() => setServerPage((previous) => Math.min(pagination.lastPage, previous + 1))}
+              disabled={!hasNextPage || isRefreshing}
+            >
+              Next
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       <section className="acp-activity-panel">
         <h4>Recent moderation activity</h4>

@@ -23,14 +23,26 @@ class AdminComplaintModerationController extends Controller
         ]);
 
         $this->applyFilters($query, $request);
+        $this->applySorting($query, $request);
 
-        $complaints = $query->latest()->get();
+        $perPage = min(max((int) $request->query('per_page', 12), 1), 100);
+        $paginatedComplaints = $query->paginate($perPage);
+
+        $complaints = collect($paginatedComplaints->items())
+            ->map(fn (Complaint $complaint) => $this->formatComplaint($complaint))
+            ->values();
 
         return response()->json([
             'success' => true,
-            'complaints' => $complaints
-                ->map(fn (Complaint $complaint) => $this->formatComplaint($complaint))
-                ->values(),
+            'complaints' => $complaints,
+            'pagination' => [
+                'current_page' => $paginatedComplaints->currentPage(),
+                'last_page' => $paginatedComplaints->lastPage(),
+                'per_page' => $paginatedComplaints->perPage(),
+                'total' => $paginatedComplaints->total(),
+                'from' => $paginatedComplaints->firstItem(),
+                'to' => $paginatedComplaints->lastItem(),
+            ],
         ], 200);
     }
 
@@ -206,6 +218,21 @@ class AdminComplaintModerationController extends Controller
 
     private function applyFilters(Builder $query, Request $request): void
     {
+        if ($request->filled('tab')) {
+            $tab = strtolower(trim((string) $request->query('tab')));
+
+            if ($tab === 'urgent') {
+                $query->where('priority', 'urgent');
+            } elseif ($tab === 'private') {
+                $query->where('visibility', Complaint::VISIBILITY_PRIVATE);
+            } elseif ($tab === 'unresolved') {
+                $query->whereNotIn('status', [
+                    Complaint::STATUS_RESOLVED,
+                    Complaint::STATUS_REJECTED,
+                ]);
+            }
+        }
+
         if ($request->filled('category')) {
             $category = Complaint::normalizeCategory((string) $request->query('category'));
             if (in_array($category, Complaint::ALLOWED_CATEGORIES, true)) {
@@ -254,6 +281,33 @@ class AdminComplaintModerationController extends Controller
                 });
             }
         }
+    }
+
+    private function applySorting(Builder $query, Request $request): void
+    {
+        $sort = strtolower(trim((string) $request->query('sort', 'newest')));
+
+        if ($sort === 'oldest') {
+            $query->orderBy('created_at', 'asc');
+            return;
+        }
+
+        if ($sort === 'priority') {
+            $query
+                ->orderByRaw("FIELD(priority, 'urgent', 'high', 'medium', 'low')")
+                ->orderByDesc('created_at');
+            return;
+        }
+
+        if ($sort === 'distance') {
+            $query
+                ->orderByRaw('distance IS NULL')
+                ->orderBy('distance', 'asc')
+                ->orderByDesc('created_at');
+            return;
+        }
+
+        $query->orderByDesc('created_at');
     }
 
     private function formatComplaint(Complaint $complaint): array

@@ -171,13 +171,67 @@ export const getComplaints = async () => {
   return data;
 };
 
-export const getAdminComplaints = async (token) => {
+const buildAdminComplaintsQuery = (options = {}) => {
+  const params = new URLSearchParams();
+
+  const page = Number(options.page);
+  if (Number.isFinite(page) && page > 0) {
+    params.set('page', String(page));
+  }
+
+  const perPage = Number(options.perPage);
+  if (Number.isFinite(perPage) && perPage > 0) {
+    params.set('per_page', String(perPage));
+  }
+
+  const search = typeof options.search === 'string' ? options.search.trim() : '';
+  if (search) {
+    params.set('search', search);
+  }
+
+  const status = typeof options.status === 'string' ? options.status.trim() : '';
+  if (status) {
+    params.set('status', status);
+  }
+
+  const priority = typeof options.priority === 'string' ? options.priority.trim() : '';
+  if (priority) {
+    params.set('priority', priority);
+  }
+
+  const category = typeof options.category === 'string' ? options.category.trim() : '';
+  if (category) {
+    params.set('category', category);
+  }
+
+  const visibility = typeof options.visibility === 'string' ? options.visibility.trim() : '';
+  if (visibility) {
+    params.set('visibility', visibility);
+  }
+
+  const tab = typeof options.tab === 'string' ? options.tab.trim() : '';
+  if (tab) {
+    params.set('tab', tab);
+  }
+
+  const sort = typeof options.sort === 'string' ? options.sort.trim() : '';
+  if (sort) {
+    params.set('sort', sort);
+  }
+
+  return params.toString();
+};
+
+export const getAdminComplaints = async (token, options = {}) => {
   const authToken = resolveAuthToken(token);
   if (!authToken) {
     throw new Error('Please sign in as admin to continue.');
   }
 
-  const response = await fetch(`${getApiBaseUrl()}/admin/complaints`, {
+  const query = buildAdminComplaintsQuery(options);
+  const url = `${getApiBaseUrl()}/admin/complaints${query ? `?${query}` : ''}`;
+
+  const response = await fetch(url, {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${authToken}`,
