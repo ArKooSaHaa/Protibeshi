@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\AdminListingModerationController;
+use App\Http\Controllers\AdminComplaintModerationController;
 use App\Http\Controllers\AdminPostModerationController;
 use App\Http\Controllers\AdminReliefModerationController;
 use App\Http\Controllers\AdminRentModerationController;
@@ -37,6 +38,11 @@ Route::post('/signin', [AuthController::class, 'signin']);
 Route::post('/admin/signin', [AdminAuthController::class, 'signin']);
 
 Route::middleware(['auth:admin_api'])->prefix('admin')->group(function () {
+    Route::get('/complaints', [AdminComplaintModerationController::class, 'index']);
+    Route::patch('/complaints/status/bulk', [AdminComplaintModerationController::class, 'bulkUpdateStatus']);
+    Route::get('/complaints/{id}', [AdminComplaintModerationController::class, 'show']);
+    Route::patch('/complaints/{id}/status', [AdminComplaintModerationController::class, 'updateStatus']);
+
     Route::get('/posts', [AdminPostModerationController::class, 'index']);
     Route::post('/posts/{id}/verify', [AdminPostModerationController::class, 'verify']);
     Route::post('/posts/{id}/ignore-reports', [AdminPostModerationController::class, 'ignoreReports']);

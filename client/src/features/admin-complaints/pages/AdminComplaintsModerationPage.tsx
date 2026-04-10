@@ -24,7 +24,12 @@ import type {
   ComplaintStatus,
   ComplaintVisibility,
 } from '@/features/complaints/types/complaint.types';
-import { getComplaints } from '@/services/complaintService';
+import {
+  bulkUpdateAdminComplaintStatus,
+  getAdminComplaintDetails,
+  getAdminComplaints,
+  updateAdminComplaintStatus,
+} from '@/services/complaintService';
 import '../styles/AdminComplaintsModerationPage.css';
 
 type RiskLevel = 'high' | 'medium' | 'low';
@@ -55,6 +60,11 @@ type ActivityLog = {
   type: ActivityType;
   label: string;
   timestamp: string;
+};
+
+type NormalizedComplaint = ComplaintItem & {
+  internalNotes?: string[];
+  assignedTo?: string | null;
 };
 
 type FeedbackState = {
@@ -226,12 +236,45 @@ const normalizeVisibility = (value: unknown): ComplaintVisibility => {
   return 'Public';
 };
 
-const normalizeComplaint = (raw: Record<string, unknown>, index: number): ComplaintItem => {
+const normalizeComplaint = (raw: Record<string, unknown>, index: number): NormalizedComplaint => {
   const complaintCode = String(raw.complaint_code || raw.id || `CMP-${Date.now()}-${index + 1}`);
   const createdAt = typeof raw.created_at === 'string' && raw.created_at
     ? raw.created_at
     : new Date().toISOString();
   const user = raw.user && typeof raw.user === 'object' ? raw.user as Record<string, unknown> : null;
+  const rawUpdates = Array.isArray(raw.updates) ? raw.updates : [];
+  const normalizedUpdates: ComplaintItem['updates'] = [];
+
+  rawUpdates.forEach((entry) => {
+    if (!entry || typeof entry !== 'object') {
+      return;
+    }
+
+    const candidate = entry as Record<string, unknown>;
+    const stage = typeof candidate.stage === 'string' && candidate.stage.trim()
+      ? candidate.stage.trim()
+      : 'Status update';
+    const date = typeof candidate.date === 'string' && candidate.date.trim()
+      ? candidate.date.trim()
+      : createdAt;
+    const note = typeof candidate.note === 'string' && candidate.note.trim()
+      ? candidate.note.trim()
+      : undefined;
+
+    normalizedUpdates.push(note ? { stage, date, note } : { stage, date });
+  });
+
+  const rawInternalNotes = Array.isArray(raw.internal_notes)
+    ? raw.internal_notes
+    : (Array.isArray(raw.internalNotes) ? raw.internalNotes : []);
+
+  const internalNotes = rawInternalNotes
+    .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    .map((entry) => entry.trim());
+
+  const assignedTo = typeof raw.assigned_to === 'string' && raw.assigned_to.trim()
+    ? raw.assigned_to.trim()
+    : (typeof raw.assignedTo === 'string' && raw.assignedTo.trim() ? raw.assignedTo.trim() : null);
 
   return {
     id: complaintCode,
@@ -252,17 +295,19 @@ const normalizeComplaint = (raw: Record<string, unknown>, index: number): Compla
     location: String(raw.location || 'Not specified'),
     photoUrl: resolvePhotoUrl(raw.photo),
     photoPath: typeof raw.photo === 'string' ? raw.photo : null,
-    updates: [
+    updates: normalizedUpdates.length > 0 ? normalizedUpdates : [
       {
         stage: 'Reported',
         date: createdAt,
       },
     ],
     attachments: [],
+    internalNotes,
+    assignedTo,
   };
 };
 
-const extractComplaintsFromResponse = (payload: unknown): ComplaintItem[] => {
+const extractComplaintsFromResponse = (payload: unknown): NormalizedComplaint[] => {
   if (Array.isArray(payload)) {
     return payload.map((item, index) => normalizeComplaint(item as Record<string, unknown>, index));
   }
@@ -278,8 +323,21 @@ const extractComplaintsFromResponse = (payload: unknown): ComplaintItem[] => {
   return [];
 };
 
-const dedupeById = (items: ComplaintItem[]): ComplaintItem[] => {
-  const map = new Map<string, ComplaintItem>();
+const extractComplaintFromResponse = (payload: unknown): NormalizedComplaint | null => {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  const maybeObject = payload as { complaint?: unknown };
+  if (!maybeObject.complaint || typeof maybeObject.complaint !== 'object') {
+    return null;
+  }
+
+  return normalizeComplaint(maybeObject.complaint as Record<string, unknown>, 0);
+};
+
+const dedupeById = (items: NormalizedComplaint[]): NormalizedComplaint[] => {
+  const map = new Map<string, NormalizedComplaint>();
 
   items.forEach((item) => {
     if (!map.has(item.id)) {
@@ -300,6 +358,8 @@ const dedupeById = (items: ComplaintItem[]): ComplaintItem[] => {
       updates: item.updates.length ? item.updates : existing.updates,
       attachments: item.attachments && item.attachments.length ? item.attachments : existing.attachments,
       photoUrl: item.photoUrl || existing.photoUrl,
+      internalNotes: item.internalNotes && item.internalNotes.length ? item.internalNotes : existing.internalNotes,
+      assignedTo: item.assignedTo || existing.assignedTo,
     });
   });
 
@@ -348,7 +408,7 @@ const computeRisk = (item: ComplaintItem): { score: number; level: RiskLevel; si
   };
 };
 
-const toAdminRecord = (item: ComplaintItem, index: number): AdminComplaintRecord => {
+const toAdminRecord = (item: ComplaintItem & { internalNotes?: string[]; assignedTo?: string | null }, index: number): AdminComplaintRecord => {
   const risk = computeRisk(item);
 
   return {
@@ -358,42 +418,8 @@ const toAdminRecord = (item: ComplaintItem, index: number): AdminComplaintRecord
     riskLevel: risk.level,
     riskSignals: risk.signals,
     flagged: item.priority === 'Urgent' || item.visibility === 'Only admins',
-    internalNotes: [],
-    assignedTo: null,
-  };
-};
-
-const updateRecordStatus = (
-  item: AdminComplaintRecord,
-  nextStatus: ComplaintStatus,
-  note: string,
-): AdminComplaintRecord => {
-  const nextUpdates = [
-    {
-      stage: nextStatus,
-      date: new Date().toISOString(),
-      note: note || undefined,
-    },
-    ...item.updates,
-  ];
-
-  const next: ComplaintItem = {
-    ...item,
-    status: nextStatus,
-    updates: nextUpdates,
-    resolutionSummary: nextStatus === 'Resolved' ? (note || 'Resolved by moderation team') : item.resolutionSummary,
-  };
-
-  const risk = computeRisk(next);
-
-  return {
-    ...item,
-    ...next,
-    riskScore: risk.score,
-    riskLevel: risk.level,
-    riskSignals: risk.signals,
-    internalNotes: note ? [note, ...item.internalNotes].slice(0, 8) : item.internalNotes,
-    assignedTo: item.assignedTo || 'Moderation desk',
+    internalNotes: item.internalNotes ?? [],
+    assignedTo: item.assignedTo ?? null,
   };
 };
 
@@ -427,6 +453,7 @@ export const AdminComplaintsModerationPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [activeComplaintId, setActiveComplaintId] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [actionNote, setActionNote] = useState('');
@@ -466,31 +493,78 @@ export const AdminComplaintsModerationPage = () => {
     setErrorMessage(null);
 
     try {
-      const remote = await getComplaints();
+      const remote = await getAdminComplaints();
       const remoteComplaints = extractComplaintsFromResponse(remote);
 
-      const merged = dedupeById([
-        ...remoteComplaints,
-        ...complaintsData,
-      ]).map(toAdminRecord);
+      const normalized = dedupeById(remoteComplaints).map(toAdminRecord);
 
-      setComplaints(merged);
+      setComplaints(normalized);
       setLastSyncedAt(new Date().toISOString());
-      addActivity('system', `Synced ${merged.length} complaints for moderation review.`);
+      addActivity('system', `Synced ${normalized.length} complaints for moderation review.`);
     } catch (error) {
       const fallback = complaintsData.map(toAdminRecord);
-      const message = error instanceof Error ? error.message : 'Failed to fetch complaints moderation queue.';
+      const message = error instanceof Error ? error.message : 'Failed to fetch admin complaints moderation queue.';
 
       setComplaints(fallback);
       setErrorMessage(`${message} Loaded preview moderation dataset.`);
       setLastSyncedAt(new Date().toISOString());
-      addActivity('system', 'API unavailable. Loaded local complaints preview for admin moderation UI.');
+      addActivity('system', 'Admin complaints API unavailable. Loaded local preview moderation dataset.');
       showFeedback('error', message);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
   }, [addActivity, showFeedback]);
+
+  const mergeUpdatedComplaints = useCallback((updatedItems: NormalizedComplaint[]) => {
+    if (updatedItems.length === 0) {
+      return;
+    }
+
+    const updatedByRecordId = new Map<number, AdminComplaintRecord>();
+    updatedItems.forEach((item, index) => {
+      if (Number.isFinite(item.recordId)) {
+        updatedByRecordId.set(Number(item.recordId), toAdminRecord(item, index));
+      }
+    });
+
+    if (updatedByRecordId.size === 0) {
+      return;
+    }
+
+    setComplaints((previous) => previous.map((item) => {
+      if (!Number.isFinite(item.recordId)) {
+        return item;
+      }
+
+      const updated = updatedByRecordId.get(Number(item.recordId));
+      return updated ? { ...item, ...updated } : item;
+    }));
+  }, []);
+
+  const openComplaintDetails = useCallback(async (item: AdminComplaintRecord) => {
+    setActiveComplaintId(item.id);
+
+    if (!Number.isFinite(item.recordId)) {
+      return;
+    }
+
+    setIsDetailsLoading(true);
+
+    try {
+      const response = await getAdminComplaintDetails(Number(item.recordId));
+      const detailedComplaint = extractComplaintFromResponse(response);
+
+      if (detailedComplaint) {
+        mergeUpdatedComplaints([detailedComplaint]);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to fetch complaint details.';
+      showFeedback('error', message);
+    } finally {
+      setIsDetailsLoading(false);
+    }
+  }, [mergeUpdatedComplaints, showFeedback]);
 
   useEffect(() => {
     void fetchQueue(false);
@@ -647,6 +721,14 @@ export const AdminComplaintsModerationPage = () => {
     return 'Rejected';
   };
 
+  const resolveActionApiStatus = (kind: ActionKind): string => {
+    if (kind === 'underReview') return 'under_review';
+    if (kind === 'inProgress') return 'in_progress';
+    if (kind === 'resolved' || kind === 'bulkResolved') return 'resolved';
+
+    return 'rejected';
+  };
+
   const confirmAction = async () => {
     if (!pendingAction) {
       return;
@@ -664,44 +746,74 @@ export const AdminComplaintsModerationPage = () => {
     }
 
     const nextStatus = resolveActionStatus(pendingAction.kind);
+    const nextApiStatus = resolveActionApiStatus(pendingAction.kind);
     const targetIds = pendingAction.targetIds;
+    const targetRecordIds = complaints
+      .filter((item) => targetIds.includes(item.id))
+      .map((item) => Number(item.recordId))
+      .filter((value) => Number.isFinite(value) && value > 0);
+
+    if (targetRecordIds.length === 0) {
+      showFeedback('error', 'Unable to map selected complaints to backend records. Please refresh and try again.');
+      return;
+    }
 
     setIsActionSubmitting(true);
 
-    await new Promise((resolve) => {
-      window.setTimeout(resolve, 260);
-    });
+    try {
+      if (targetRecordIds.length > 1) {
+        const bulkResult = await bulkUpdateAdminComplaintStatus(
+          targetRecordIds,
+          {
+            status: nextApiStatus,
+            note,
+          },
+        );
 
-    setComplaints((previous) => {
-      const targetSet = new Set(targetIds);
+        const updatedComplaints = extractComplaintsFromResponse(bulkResult);
 
-      return previous.map((item) => {
-        if (!targetSet.has(item.id)) {
-          return item;
+        if (updatedComplaints.length > 0) {
+          mergeUpdatedComplaints(updatedComplaints);
         }
+      } else {
+        const singleResult = await updateAdminComplaintStatus(
+          targetRecordIds[0],
+          {
+            status: nextApiStatus,
+            note,
+          },
+        );
 
-        return updateRecordStatus(item, nextStatus, note);
-      });
-    });
+        const updatedComplaint = extractComplaintFromResponse(singleResult);
 
-    setSelectedIds((previous) => previous.filter((id) => !targetIds.includes(id)));
+        if (updatedComplaint) {
+          mergeUpdatedComplaints([updatedComplaint]);
+        }
+      }
 
-    const count = targetIds.length;
+      setSelectedIds((previous) => previous.filter((id) => !targetIds.includes(id)));
 
-    if (nextStatus === 'Resolved') {
-      addActivity(count > 1 ? 'bulk' : 'resolve', `Resolved ${count} complaint case(s).`);
-      showFeedback('success', `${count} complaint case(s) resolved.`);
-    } else if (nextStatus === 'Rejected') {
-      addActivity(count > 1 ? 'bulk' : 'reject', `Rejected ${count} complaint case(s).`);
-      showFeedback('success', `${count} complaint case(s) rejected.`);
-    } else {
-      addActivity('status', `Moved ${count} complaint case(s) to ${nextStatus}.`);
-      showFeedback('success', `${count} complaint case(s) moved to ${nextStatus}.`);
+      const count = targetIds.length;
+
+      if (nextStatus === 'Resolved') {
+        addActivity(count > 1 ? 'bulk' : 'resolve', `Resolved ${count} complaint case(s).`);
+        showFeedback('success', `${count} complaint case(s) resolved.`);
+      } else if (nextStatus === 'Rejected') {
+        addActivity(count > 1 ? 'bulk' : 'reject', `Rejected ${count} complaint case(s).`);
+        showFeedback('success', `${count} complaint case(s) rejected.`);
+      } else {
+        addActivity('status', `Moved ${count} complaint case(s) to ${nextStatus}.`);
+        showFeedback('success', `${count} complaint case(s) moved to ${nextStatus}.`);
+      }
+
+      setPendingAction(null);
+      setActionNote('');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update complaint moderation status.';
+      showFeedback('error', message);
+    } finally {
+      setIsActionSubmitting(false);
     }
-
-    setPendingAction(null);
-    setActionNote('');
-    setIsActionSubmitting(false);
   };
 
   const allVisibleSelected = sortedComplaints.length > 0
@@ -971,7 +1083,9 @@ export const AdminComplaintsModerationPage = () => {
                   <button
                     type="button"
                     className="acp-btn acp-btn-ghost"
-                    onClick={() => setActiveComplaintId(item.id)}
+                    onClick={() => {
+                      void openComplaintDetails(item);
+                    }}
                   >
                     <Eye size={14} /> Details
                   </button>
@@ -1048,6 +1162,8 @@ export const AdminComplaintsModerationPage = () => {
               </header>
 
               <div className="acp-drawer-scroll">
+                {isDetailsLoading ? <p className="acp-detail-loading">Refreshing latest complaint details...</p> : null}
+
                 {activeComplaint.photoUrl ? (
                   <img src={activeComplaint.photoUrl} alt={activeComplaint.title} className="acp-drawer-photo" />
                 ) : null}

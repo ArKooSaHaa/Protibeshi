@@ -763,6 +763,17 @@
   gap: 0.72rem;
 }
 
+.acp-detail-loading {
+  margin: 0;
+  border: 1px solid #b7d8df;
+  border-radius: 10px;
+  padding: 0.54rem 0.62rem;
+  color: #1f4b63;
+  background: #edf9fc;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .acp-drawer-photo {
   width: 100%;
   border-radius: 12px;
