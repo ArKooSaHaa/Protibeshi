@@ -18,8 +18,6 @@ export const ROUTES = {
   SIGNIN: '/signin',
   SIGNUP: '/signup',
   REGISTER: '/auth/register',
-  SESSIONS: '/sessions',
-  SESSION_DETAIL: '/sessions/:id',
   DASHBOARD: '/dashboard',
   RELIEF: '/relief',
   ACCOUNT: '/account',

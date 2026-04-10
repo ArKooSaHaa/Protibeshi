@@ -25,7 +25,6 @@ use App\Http\Controllers\RentListingReportController;
 use App\Http\Controllers\SavedPostController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ServiceReportController;
-use App\Http\Controllers\SessionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -102,6 +101,7 @@ Route::middleware(['auth:api'])->group(function () {
 
     Route::post('/listings', [ListingController::class, 'store'])
         ->middleware('not_banned');
+    Route::delete('/listings/{id}', [ListingController::class, 'destroy']);
     Route::post('/listings/{id}/report', [ListingReportController::class, 'report']);
     Route::post('/rent-listings', [RentListingController::class, 'store'])
         ->middleware('not_banned');
@@ -122,19 +122,6 @@ Route::middleware(['auth:api'])->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
-
-    Route::get('/session', [SessionController::class, 'getSession']);
-
-    Route::post('/session', [SessionController::class, 'createSession'])
-        ->middleware('check.admin');
-
-    Route::put('/session', [SessionController::class, 'updateSession'])
-        ->middleware('check.admin');
-
-    Route::post('/sessions', [SessionController::class, 'viewSessions'])
-        ->middleware('check.admin');
-
-    Route::post('/attendance', [SessionController::class, 'submitAttendance']);
 
     Route::post('/posts', [PostController::class, 'createPost']);
     Route::delete('/posts/{id}', [PostController::class, 'deletePost']);

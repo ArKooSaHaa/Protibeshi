@@ -88,6 +88,10 @@ yarn-debug.log*
 .idea/
 .vscode/
 
+# TLS cert material for Dockerized Nginx
+nginx/certs/
+nginx/acme-challenge/
+
 # Allow lockfiles (recommended for reproducible CI)
 !composer.lock
 !**/composer.lock

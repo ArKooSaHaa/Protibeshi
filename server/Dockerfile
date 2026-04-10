@@ -30,8 +30,8 @@ RUN mkdir -p \
     storage/logs \
     bootstrap/cache
 
-# Install dependencies
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+# Install runtime dependencies only
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
 # Set permissions (Important for the webserver to write logs/cache)
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache \

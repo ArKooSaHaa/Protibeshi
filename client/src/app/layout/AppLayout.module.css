@@ -19,7 +19,7 @@
   flex: 1;
   margin-left: 260px;
   height: calc(100vh - 72px);
-  padding: 24px;
+  padding: 24px 24px 24px 12px;
   overflow-y: auto;
   overflow-x: hidden;
 }

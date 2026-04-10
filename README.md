@@ -186,3 +186,73 @@ Database:
 
 Protibeshi is an AI-assisted hyper-local community platform focused on trust, safety, and usability.
 By combining modern UI design, secure neighborhood-based interaction, and intelligent AI features, Protibeshi creates a reliable digital environment for local communities.
+
+## Docker Deployment
+
+The repository includes a production-ready container stack in `docker-compose.prod.yml`.
+
+### 1) Prepare environment
+
+Copy the deployment environment template and set values for your server/domain:
+
+```bash
+cp .env.docker.example .env.docker
+```
+
+Important values to set in `.env.docker`:
+
+- `APP_URL`
+- `FRONTEND_URL`
+- `VITE_API_URL` (public backend base URL used at frontend build time)
+- `VITE_WS_HOST`
+- `VITE_WS_PORT`
+- `TLS_CERTS_PATH` (folder containing `fullchain.pem` and `privkey.pem`)
+- `TLS_ACME_PATH` (optional ACME challenge folder)
+- DB credentials (`MYSQL_*`, `DB_*`)
+
+### HTTPS certificate mount points
+
+Create local mount directories before first run:
+
+```bash
+mkdir -p nginx/certs nginx/acme-challenge
+```
+
+Place certificates in the path configured by `TLS_CERTS_PATH`:
+
+- `fullchain.pem`
+- `privkey.pem`
+
+Nginx in production compose is configured to:
+
+- Redirect HTTP (80) to HTTPS (443)
+- Serve TLS traffic on 443
+- Proxy `/api` to backend
+- Proxy websocket paths (`/app`, `/apps`, `/laravel-websockets`) over TLS
+
+### 2) Build and start all services
+
+```bash
+docker compose --env-file .env.docker -f docker-compose.prod.yml up -d --build
+```
+
+This starts fully dockerized services:
+
+- MySQL
+- Laravel API backend
+- Laravel queue worker
+- Laravel websocket server
+- Nginx (serves built frontend + reverse proxies `/api` and websocket paths)
+
+### 3) Check service status and logs
+
+```bash
+docker compose --env-file .env.docker -f docker-compose.prod.yml ps
+docker compose --env-file .env.docker -f docker-compose.prod.yml logs -f
+```
+
+### 4) Stop the deployment stack
+
+```bash
+docker compose --env-file .env.docker -f docker-compose.prod.yml down
+```
