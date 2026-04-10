@@ -328,6 +328,16 @@
   background: var(--emerald-50);
 }
 
+.likeActive {
+  border-color: #86efac;
+  color: #15803d;
+  background: #dcfce7;
+}
+
+.likeIconActive {
+  color: #22c55e;
+}
+
 .feedback {
   margin: 8px 0 0;
   font-size: 12px;

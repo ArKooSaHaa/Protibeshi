@@ -53,21 +53,32 @@ class PostController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Post submitted for admin verification',
-            'post' => $this->formatPost($post),
+            'post' => $this->formatPost($post, (int) Auth::id()),
             'requires_verification' => true,
         ], 201);
     }
 
     public function index()
     {
-        $posts = Post::with('user')
+        $viewerUserId = Auth::guard('api')->id();
+
+        $postsQuery = Post::with('user')
             ->where('is_active', true)
             ->where('moderation_status', 'verified')
-            ->latest()
-            ->paginate(10);
+            ->latest();
+
+        if ($viewerUserId) {
+            $postsQuery->withCount([
+                'likes as liked_by_current_user' => function ($query) use ($viewerUserId) {
+                    $query->where('user_id', (int) $viewerUserId);
+                },
+            ]);
+        }
+
+        $posts = $postsQuery->paginate(10);
 
         $formattedPosts = array_map(
-            fn (Post $post) => $this->formatPost($post),
+            fn (Post $post) => $this->formatPost($post, $viewerUserId ? (int) $viewerUserId : null),
             $posts->items()
         );
 
@@ -90,13 +101,18 @@ class PostController extends Controller
         $authId = (int) Auth::id();
 
         $posts = Post::with('user')
+            ->withCount([
+                'likes as liked_by_current_user' => function ($query) use ($authId) {
+                    $query->where('user_id', $authId);
+                },
+            ])
             ->where('user_id', $authId)
             ->where('is_active', true)
             ->latest()
             ->paginate(30);
 
         $formattedPosts = array_map(
-            fn (Post $post) => $this->formatPost($post),
+            fn (Post $post) => $this->formatPost($post, $authId),
             $posts->items()
         );
 
@@ -116,9 +132,20 @@ class PostController extends Controller
 
     public function show($id)
     {
-        $post = Post::with(['user', 'comments.user'])
-            ->withCount(['likes as likes_relation_count'])
-            ->find($id);
+        $viewerUserId = Auth::guard('api')->id();
+
+        $postQuery = Post::with(['user', 'comments.user'])
+            ->withCount(['likes as likes_relation_count']);
+
+        if ($viewerUserId) {
+            $postQuery->withCount([
+                'likes as liked_by_current_user' => function ($query) use ($viewerUserId) {
+                    $query->where('user_id', (int) $viewerUserId);
+                },
+            ]);
+        }
+
+        $post = $postQuery->find($id);
 
         if (!$post || !$post->is_active || $post->moderation_status !== 'verified') {
             return response()->json([
@@ -127,7 +154,7 @@ class PostController extends Controller
             ], 404);
         }
 
-        $formatted = $this->formatPost($post);
+        $formatted = $this->formatPost($post, $viewerUserId ? (int) $viewerUserId : null);
         $formatted['likes_count'] = (int) $post->likes_count;
         $formatted['likes_relation_count'] = (int) $post->likes_relation_count;
         $formatted['comments'] = $post->comments->map(function ($comment) {
@@ -181,8 +208,14 @@ class PostController extends Controller
         ], 200);
     }
 
-    private function formatPost(Post $post): array
+    private function formatPost(Post $post, ?int $viewerUserId = null): array
     {
+        $liked = false;
+
+        if ($viewerUserId !== null && $viewerUserId > 0) {
+            $liked = (int) ($post->liked_by_current_user ?? 0) > 0;
+        }
+
         return [
             'id' => $post->id,
             'title' => $post->title,
@@ -193,6 +226,7 @@ class PostController extends Controller
             'post_type' => $post->post_type,
             'visibility' => $post->visibility,
             'likes_count' => (int) $post->likes_count,
+            'liked' => $liked,
             'comments_count' => (int) $post->comments_count,
             'shares_count' => (int) $post->shares_count,
             'is_active' => (bool) $post->is_active,

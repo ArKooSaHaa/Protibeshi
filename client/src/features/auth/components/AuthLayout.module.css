@@ -20,13 +20,31 @@
   overflow: hidden;
 }
 
+.splashVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  filter: saturate(1.06) contrast(1.02);
+}
+
+.splashOverlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(2, 6, 23, 0.38), rgba(2, 6, 23, 0.22)),
+    radial-gradient(circle at 24% 18%, rgba(16, 185, 129, 0.14), transparent 40%);
+}
+
 .gradientBase {
   position: absolute;
   inset: 0;
   background:
     radial-gradient(circle at 14% 18%, rgba(16, 185, 129, 0.2), transparent 33%),
-    radial-gradient(circle at 82% 72%, rgba(14, 116, 144, 0.18), transparent 36%),
-    linear-gradient(135deg, #f8fafc 0%, #edf7f2 42%, #e2e8f0 100%);
+    radial-gradient(circle at 82% 72%, rgba(14, 116, 144, 0.16), transparent 36%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.58) 0%, rgba(15, 23, 42, 0.48) 42%, rgba(2, 6, 23, 0.54) 100%);
 }
 
 .blobA,

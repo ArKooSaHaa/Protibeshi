@@ -398,11 +398,19 @@ export const PostCard = ({
         <div className={styles.actions}>
           <button
             type="button"
-            className={`${styles.actionButton} ${post.liked ? styles.actionActive : ''}`}
+            className={`${styles.actionButton} ${post.liked ? styles.likeActive : ''}`}
             onClick={() => onLike(post.id)}
             disabled={likePending}
           >
-            {likePending ? <Loader2 className={styles.spin} size={15} /> : <Heart size={15} />}
+            {likePending ? (
+              <Loader2 className={styles.spin} size={15} />
+            ) : (
+              <Heart
+                size={15}
+                className={post.liked ? styles.likeIconActive : undefined}
+                fill={post.liked ? 'currentColor' : 'none'}
+              />
+            )}
             Like
           </button>
 
