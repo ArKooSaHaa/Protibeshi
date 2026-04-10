@@ -1,6 +1,7 @@
 //client/src/app/Router.tsx
+import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { Navigate, createBrowserRouter, RouteObject } from 'react-router-dom';
+import { Navigate, createBrowserRouter, RouteObject, useLocation } from 'react-router-dom';
 import { RootLayout } from './layout/RootLayout';
 import { ROUTES } from '@/config/routes.config';
 import { FeedPage } from '@/features/feed/pages/FeedPage';
@@ -18,7 +19,10 @@ import { AdminServicesModerationPage } from '@/features/admin-services';
 import { AccountPage } from '@/features/account';
 import { AdminFeedDashboardPage, AdminUnderConstructionPage } from '@/features/admin-feed';
 import { AdminAuthPage, SignInPage, SignUpPage } from '@/features/auth';
+import { LandingPage } from '@/features/landing/pages/LandingPage';
 import { useAuthStore } from '@/features/auth/store/authStore';
+
+const SPLASH_FADE_DURATION_MS = 720;
 
 const getPostAuthRoute = (isAdmin: boolean) => (isAdmin ? ROUTES.ADMIN_FEED : ROUTES.HOME);
 
@@ -127,8 +131,63 @@ const PublicAdminAuthRoute = () => {
 
 const ProtectedRootLayout = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const location = useLocation();
+  const isRootPath = location.pathname === ROUTES.HOME;
+  const [isSplashCompleted, setIsSplashCompleted] = useState(() => isAuthenticated || !isRootPath);
+  const [isSplashFading, setIsSplashFading] = useState(false);
+  const splashFadeTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (splashFadeTimerRef.current !== null) {
+        window.clearTimeout(splashFadeTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleSplashFinished = () => {
+    if (isSplashCompleted || isSplashFading) {
+      return;
+    }
+
+    setIsSplashFading(true);
+    splashFadeTimerRef.current = window.setTimeout(() => {
+      setIsSplashCompleted(true);
+    }, SPLASH_FADE_DURATION_MS);
+  };
+
+  const isLandingVisible = isSplashFading || isSplashCompleted;
 
   if (!isAuthenticated) {
+    if (isRootPath) {
+      return (
+        <div className={`relative bg-slate-950 ${isLandingVisible ? 'min-h-screen' : 'h-screen overflow-hidden'}`}>
+          <div
+            className={`absolute inset-0 z-20 transform-gpu transition-all duration-700 ease-out ${isLandingVisible ? 'pointer-events-none opacity-0 scale-105' : 'opacity-100 scale-100'}`}
+          >
+            <video
+              className="absolute inset-0 h-full w-full object-cover object-[center_42%] brightness-110 saturate-125"
+              autoPlay
+              muted
+              playsInline
+              preload="auto"
+              onEnded={handleSplashFinished}
+              onError={handleSplashFinished}
+            >
+              <source src="/splash.mp4" type="video/mp4" />
+            </video>
+            <div className="absolute inset-0 bg-linear-to-br from-slate-900/20 via-slate-900/10 to-emerald-900/22" />
+          </div>
+
+          <div
+            className={`z-10 transform-gpu transition-opacity duration-700 ease-out ${isLandingVisible ? 'relative opacity-100' : 'absolute inset-0 pointer-events-none overflow-hidden opacity-0'}`}
+          >
+            <LandingPage />
+          </div>
+        </div>
+      );
+    }
+
     return <Navigate to={ROUTES.LOGIN} replace />;
   }
 

@@ -56,6 +56,17 @@ export const AuthLayout = ({ children, hasError = false, variant = 'signin' }: A
   return (
     <section className={`${styles.wrapper} ${isSignup ? styles.signupWrapper : ''}`} aria-label="Authentication section">
       <div className={styles.backdrop} aria-hidden="true">
+        <video
+          className={styles.splashVideo}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+        >
+          <source src="/splash.mp4" type="video/mp4" />
+        </video>
+        <div className={styles.splashOverlay} />
         <div className={styles.gradientBase} />
         <div className={styles.blobA} />
         <div className={styles.blobB} />
