@@ -86,10 +86,9 @@ export const LandingPage = () => {
                 </p>
               </div>
 
-              <aside className={styles.photoFrame} aria-label="Photo frame placeholder">
+              <aside className={styles.photoFrame} aria-label="Protibeshi logo">
                 <div className={styles.photoFrameInner}>
-                  <span className={styles.photoFrameTitle}>Photo Frame</span>
-                  <span className={styles.photoFrameHint}>You can insert an image here later</span>
+                  <img src="/dp.png" alt="Protibeshi logo" className={styles.photoFrameImage} />
                 </div>
               </aside>
             </m.div>
