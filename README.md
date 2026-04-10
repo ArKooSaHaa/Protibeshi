@@ -256,3 +256,38 @@ docker compose --env-file .env.docker -f docker-compose.prod.yml logs -f
 ```bash
 docker compose --env-file .env.docker -f docker-compose.prod.yml down
 ```
+
+## Free Deployment (Vercel + Railway)
+
+If you deploy frontend on Vercel and backend on Railway, use the configs already included in this repo:
+
+- Frontend: `client/vercel.json`
+- Backend: `server/railway.json`, `server/start.railway.sh`
+
+### Frontend on Vercel (from `client/`)
+
+1. Import repository to Vercel.
+2. Set Root Directory to `client`.
+3. Set environment variables:
+	- `VITE_API_URL=https://<your-backend>.up.railway.app`
+	- `VITE_WS_HOST=<your-websocket-host>`
+	- `VITE_WS_PORT=443`
+	- `VITE_WSS_PORT=443`
+	- `VITE_WS_SCHEME=wss`
+4. Deploy.
+
+### Backend on Railway (from `server/`)
+
+1. Create a Railway service from this repo with Root Directory `server`.
+2. Attach/create MySQL in Railway (or use external DB) and set DB env vars.
+3. Set backend env vars (see `server/.env.railway.example`), especially:
+	- `APP_URL`
+	- `FRONTEND_URL`
+	- `CORS_ALLOWED_ORIGINS` (your Vercel URL)
+	- `DB_*`
+	- `APP_KEY` and `JWT_SECRET` (or allow startup script to generate them)
+4. Deploy.
+
+### Important note about realtime/websocket
+
+For realtime features, run websocket on a separate Railway service (same codebase, start command `php artisan websockets:serve --host=0.0.0.0 --port=$PORT`) and point frontend/backend websocket env values to that domain.
