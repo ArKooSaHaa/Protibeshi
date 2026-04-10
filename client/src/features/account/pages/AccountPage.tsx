@@ -141,6 +141,7 @@ export const AccountPage = () => {
   const [deleteTarget, setDeleteTarget] = useState<UserPost | null>(null);
   const [editingPost, setEditingPost] = useState<UserPost | null>(null);
   const [isUpdatingPost, setIsUpdatingPost] = useState(false);
+  const [isDeletingPost, setIsDeletingPost] = useState(false);
   const {
     profile,
     activeTab,
@@ -247,10 +248,19 @@ export const AccountPage = () => {
       return;
     }
 
-    await deletePost(deleteTarget.tab, deleteTarget.id);
-    setDeleteTarget(null);
-    if (previewPost?.id === deleteTarget.id) {
-      setPreviewPost(null);
+    setIsDeletingPost(true);
+
+    try {
+      await deletePost(deleteTarget.tab, deleteTarget.id);
+      setDeleteTarget(null);
+
+      if (previewPost?.id === deleteTarget.id) {
+        setPreviewPost(null);
+      }
+    } catch {
+      // Keep the confirmation modal open when delete fails.
+    } finally {
+      setIsDeletingPost(false);
     }
   };
 
@@ -791,6 +801,7 @@ export const AccountPage = () => {
           {deleteTarget ? (
             <ConfirmDeleteModal
               post={deleteTarget}
+              isDeleting={isDeletingPost}
               onClose={() => setDeleteTarget(null)}
               onConfirm={handleDeletePost}
             />
@@ -1041,10 +1052,12 @@ const PostEditorModal = ({
 
 const ConfirmDeleteModal = ({
   post,
+  isDeleting,
   onClose,
   onConfirm,
 }: {
   post: UserPost;
+  isDeleting: boolean;
   onClose: () => void;
   onConfirm: () => Promise<void>;
 }) => (
@@ -1061,8 +1074,14 @@ const ConfirmDeleteModal = ({
         <button type="button" onClick={onClose} className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
           Cancel
         </button>
-        <button type="button" onClick={() => void onConfirm()} className="rounded-full bg-rose-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-rose-700">
-          Delete
+        <button
+          type="button"
+          onClick={() => void onConfirm()}
+          disabled={isDeleting}
+          className="inline-flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {isDeleting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
+          {isDeleting ? 'Deleting...' : 'Delete'}
         </button>
       </div>
     </div>

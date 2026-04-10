@@ -180,6 +180,49 @@ export const getListings = async () => {
   return data?.listings ?? [];
 };
 
+export const deleteListing = async (listingId, token) => {
+  const resolvedListingId = Number(listingId);
+  if (!Number.isFinite(resolvedListingId) || resolvedListingId <= 0) {
+    throw new Error('Invalid listing selected for deletion.');
+  }
+
+  const authToken = resolveAuthToken(token);
+  if (!authToken) {
+    throw new Error('Please sign in again to continue.');
+  }
+
+  const response = await fetch(`${getApiBaseUrl()}/listings/${resolvedListingId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      Accept: 'application/json',
+    },
+  });
+
+  const data = await parseJsonSafely(response);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Your session has expired. Please sign in again.');
+    }
+
+    if (response.status === 403) {
+      throw new Error('You are not authorized to delete this listing.');
+    }
+
+    if (response.status === 404) {
+      throw new Error('Listing not found.');
+    }
+
+    throw new Error(extractApiErrorMessage(data, 'Failed to delete listing'));
+  }
+
+  return {
+    message: data?.message || 'Listing deleted successfully',
+    listing: data?.listing || null,
+  };
+};
+
 export const getAdminListings = async (token) => {
   const authToken = resolveAuthToken(token);
   if (!authToken) {

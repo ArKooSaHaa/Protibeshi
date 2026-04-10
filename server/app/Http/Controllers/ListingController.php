@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Listing;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -65,5 +66,32 @@ class ListingController extends Controller
             ->values();
 
         return response()->json($listings);
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $listing = Listing::findOrFail($id);
+        } catch (ModelNotFoundException $exception) {
+            return response()->json([
+                'message' => 'Listing not found',
+            ], 404);
+        }
+
+        if ((int) $listing->user_id !== (int) Auth::id()) {
+            return response()->json([
+                'message' => 'You are not authorized to delete this listing',
+            ], 403);
+        }
+
+        if ((bool) $listing->is_active) {
+            $listing->is_active = false;
+            $listing->save();
+        }
+
+        return response()->json([
+            'message' => 'Listing deleted successfully',
+            'listing' => $listing->fresh(['user']),
+        ], 200);
     }
 }

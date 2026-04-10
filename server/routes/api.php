@@ -102,6 +102,7 @@ Route::middleware(['auth:api'])->group(function () {
 
     Route::post('/listings', [ListingController::class, 'store'])
         ->middleware('not_banned');
+    Route::delete('/listings/{id}', [ListingController::class, 'destroy']);
     Route::post('/listings/{id}/report', [ListingReportController::class, 'report']);
     Route::post('/rent-listings', [RentListingController::class, 'store'])
         ->middleware('not_banned');

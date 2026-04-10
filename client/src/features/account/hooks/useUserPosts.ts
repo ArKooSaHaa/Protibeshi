@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { getMyPosts, type FeedPost } from '@/api/feedApi';
-import { getListings } from '@/services/listingService';
-import { getRentListings } from '@/services/rentService';
-import { getServices } from '@/services/serviceService';
-import { getComplaints } from '@/services/complaintService';
+import { deletePost as deleteFeedPost, getMyPosts, type FeedPost } from '@/api/feedApi';
+import { deleteRelief, getReliefs } from '@/api/relief';
+import { deleteListing, getListings } from '@/services/listingService';
+import { deleteRentListing, getRentListings } from '@/services/rentService';
+import { deleteService, getServices } from '@/services/serviceService';
+import { deleteComplaint, getComplaints } from '@/services/complaintService';
+import { getStoredToken } from '@/features/auth/utils/tokenStorage';
 import {
   fetchAccountProfile,
   getAccountErrorMessage,
@@ -163,6 +165,37 @@ const looksLikeReliefPost = (post: FeedPost): boolean => {
     || type.includes('relief');
 };
 
+const parsePostIdentifier = (postId: string): { prefix: string | null; sourceId: string } => {
+  const normalizedId = typeof postId === 'string' ? postId.trim() : '';
+  const separatorIndex = normalizedId.indexOf('-');
+
+  if (separatorIndex <= 0 || separatorIndex >= normalizedId.length - 1) {
+    return {
+      prefix: null,
+      sourceId: normalizedId,
+    };
+  }
+
+  return {
+    prefix: normalizedId.slice(0, separatorIndex),
+    sourceId: normalizedId.slice(separatorIndex + 1),
+  };
+};
+
+const mapReliefStatusToPostStatus = (status: unknown): PostStatus => {
+  const normalizedStatus = String(status || '').toLowerCase();
+
+  if (normalizedStatus === 'completed' || normalizedStatus === 'closed') {
+    return 'expired';
+  }
+
+  if (normalizedStatus === 'assigned' || normalizedStatus === 'in_progress') {
+    return 'active';
+  }
+
+  return 'open';
+};
+
 export const useUserPosts = (): UserPostsResult => {
   const [profile, setProfile] = useState<UserProfile>(initialProfile);
   const [activeTab, setActiveTab] = useState<AccountPostTab>('feed');
@@ -214,12 +247,13 @@ export const useUserPosts = (): UserPostsResult => {
 
     setIsLoadingPosts(true);
 
-    const [feedResult, listingsResult, rentResult, servicesResult, complaintsResult] = await Promise.allSettled([
+    const [feedResult, listingsResult, rentResult, servicesResult, complaintsResult, reliefResult] = await Promise.allSettled([
       getMyPosts(),
       getListings(),
       getRentListings(),
       getServices(),
       getComplaints(),
+      getReliefs(),
     ]);
 
     const mapped: UserPost[] = [];
@@ -327,6 +361,26 @@ export const useUserPosts = (): UserPostsResult => {
           location: item.location || 'Not specified',
           status,
           priority: item.priority || undefined,
+        });
+      });
+    }
+
+    if (reliefResult.status === 'fulfilled') {
+      const ownReliefs = reliefResult.value.filter(
+        (item) => toNumberId(item?.user?.id ?? item?.user_id) === currentUserId,
+      );
+
+      ownReliefs.forEach((item) => {
+        mapped.push({
+          id: `relief-${item.id}`,
+          authorId: profileId,
+          tab: 'relief',
+          title: item.title || 'Untitled relief request',
+          description: item.description || '',
+          datePosted: formatDatePosted(item.created_at),
+          location: item.location || 'Not specified',
+          status: mapReliefStatusToPostStatus(item.status),
+          reliefType: 'request',
         });
       });
     }
@@ -462,11 +516,55 @@ export const useUserPosts = (): UserPostsResult => {
       return;
     }
 
-    await new Promise<void>((resolve) => {
-      window.setTimeout(() => resolve(), 200);
-    });
+    const { prefix, sourceId } = parsePostIdentifier(postId);
 
-    setPostsState((prev) => prev.filter((post) => post.id !== postId));
+    if (!sourceId) {
+      toast.error('Invalid post selected for deletion.');
+      return;
+    }
+
+    const requireToken = () => {
+      const token = getStoredToken();
+
+      if (!token) {
+        throw new Error('Your session has expired. Please sign in again.');
+      }
+
+      return token;
+    };
+
+    try {
+      if (tab === 'feed') {
+        await deleteFeedPost(sourceId);
+      } else if (tab === 'marketplace') {
+        await deleteListing(sourceId, requireToken());
+      } else if (tab === 'rent') {
+        await deleteRentListing(sourceId, requireToken());
+      } else if (tab === 'services') {
+        await deleteService(sourceId, requireToken());
+      } else if (tab === 'complaints') {
+        const complaintId = Number(sourceId);
+
+        if (!Number.isFinite(complaintId) || complaintId <= 0) {
+          throw new Error('Invalid complaint selected for deletion.');
+        }
+
+        await deleteComplaint(complaintId, requireToken());
+      } else {
+        if (prefix === 'relief') {
+          await deleteRelief(sourceId);
+        } else {
+          await deleteFeedPost(sourceId);
+        }
+      }
+
+      setPostsState((prev) => prev.filter((post) => post.id !== postId));
+      toast.success('Post deleted successfully.');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to delete post.';
+      toast.error(message);
+      throw error;
+    }
   }, [postsState, profile.id]);
 
   return {

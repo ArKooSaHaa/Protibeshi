@@ -5,6 +5,14 @@ export function createListing(formData: FormData, token: string): Promise<{
 
 export function getListings(): Promise<any[]>;
 
+export function deleteListing(
+  listingId: number | string,
+  token?: string,
+): Promise<{
+  message: string;
+  listing: unknown;
+}>;
+
 export function getAdminListings(token?: string): Promise<any[]>;
 
 export function deleteAdminListing(
