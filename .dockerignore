@@ -1,0 +1,13 @@
+.git
+.gitignore
+node_modules
+**/node_modules
+**/dist
+server/vendor
+server/public/assets
+server/storage/logs
+server/storage/framework/cache
+server/storage/framework/sessions
+server/storage/framework/views
+server/.env
+client/.env

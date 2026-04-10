@@ -1,0 +1,152 @@
+services:
+  mysql:
+    image: mysql:8
+    container_name: protibeshi_mysql
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-protibeshi_db}
+      MYSQL_USER: ${MYSQL_USER:-protibeshi}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-protibeshi}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - protibeshi
+
+  backend:
+    image: protibeshi_backend_image
+    build:
+      context: ./server
+    container_name: protibeshi_backend
+    restart: unless-stopped
+    working_dir: /var/www
+    command: sh /var/www/docker/entrypoint.prod.sh
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_URL: ${APP_URL:-http://localhost}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      LOG_LEVEL: ${LOG_LEVEL:-warning}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-database}
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-protibeshi_db}
+      DB_USERNAME: ${DB_USERNAME:-protibeshi}
+      DB_PASSWORD: ${DB_PASSWORD:-protibeshi}
+      BROADCAST_DRIVER: ${BROADCAST_DRIVER:-pusher}
+      PUSHER_APP_ID: ${PUSHER_APP_ID:-local}
+      PUSHER_APP_KEY: ${PUSHER_APP_KEY:-localkey}
+      PUSHER_APP_SECRET: ${PUSHER_APP_SECRET:-localsecret}
+      PUSHER_APP_CLUSTER: ${PUSHER_APP_CLUSTER:-mt1}
+      PUSHER_HOST: websocket
+      PUSHER_PORT: 6001
+      PUSHER_SCHEME: http
+      RUN_DB_SEED: ${RUN_DB_SEED:-false}
+      DB_WAIT_MAX_TRIES: ${DB_WAIT_MAX_TRIES:-60}
+    expose:
+      - "8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - protibeshi
+
+  websocket:
+    image: protibeshi_backend_image
+    container_name: protibeshi_websocket
+    restart: unless-stopped
+    working_dir: /var/www
+    command: php artisan websockets:serve --host=0.0.0.0 --port=6001
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_URL: ${APP_URL:-http://localhost}
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-protibeshi_db}
+      DB_USERNAME: ${DB_USERNAME:-protibeshi}
+      DB_PASSWORD: ${DB_PASSWORD:-protibeshi}
+      BROADCAST_DRIVER: ${BROADCAST_DRIVER:-pusher}
+      PUSHER_APP_ID: ${PUSHER_APP_ID:-local}
+      PUSHER_APP_KEY: ${PUSHER_APP_KEY:-localkey}
+      PUSHER_APP_SECRET: ${PUSHER_APP_SECRET:-localsecret}
+      PUSHER_APP_CLUSTER: ${PUSHER_APP_CLUSTER:-mt1}
+      PUSHER_HOST: websocket
+      PUSHER_PORT: 6001
+      PUSHER_SCHEME: http
+    expose:
+      - "6001"
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - protibeshi
+
+  queue:
+    image: protibeshi_backend_image
+    container_name: protibeshi_queue
+    restart: unless-stopped
+    working_dir: /var/www
+    command: php artisan queue:work --tries=3 --timeout=90
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-protibeshi_db}
+      DB_USERNAME: ${DB_USERNAME:-protibeshi}
+      DB_PASSWORD: ${DB_PASSWORD:-protibeshi}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-database}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    networks:
+      - protibeshi
+
+  nginx:
+    image: protibeshi_nginx_image
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost}
+        VITE_WS_HOST: ${VITE_WS_HOST:-localhost}
+        VITE_WS_PORT: ${VITE_WS_PORT:-443}
+        VITE_WSS_PORT: ${VITE_WSS_PORT:-443}
+        VITE_WS_SCHEME: ${VITE_WS_SCHEME:-wss}
+        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
+        VITE_OPENWEATHER_API_KEY: ${VITE_OPENWEATHER_API_KEY:-}
+        VITE_GEMINI_API_KEY: ${VITE_GEMINI_API_KEY:-}
+    container_name: protibeshi_nginx
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ${TLS_CERTS_PATH:-./nginx/certs}:/etc/nginx/certs:ro
+      - ${TLS_ACME_PATH:-./nginx/acme-challenge}:/var/www/certbot:ro
+    depends_on:
+      backend:
+        condition: service_started
+      websocket:
+        condition: service_started
+    networks:
+      - protibeshi
+
+volumes:
+  mysql_data:
+
+networks:
+  protibeshi:
+    driver: bridge

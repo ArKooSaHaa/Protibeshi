@@ -20,7 +20,6 @@ export const TIMING = {
 } as const;
 
 export const API_ENDPOINTS = {
-  SESSIONS: '/api/sessions',
   USERS: '/api/users',
   AUTH: '/api/auth',
 } as const;

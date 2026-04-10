@@ -3,4 +3,3 @@
  */
 
 export * from './api/client';
-export * from './sessions.service';
