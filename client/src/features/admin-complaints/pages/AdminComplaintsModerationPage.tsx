@@ -24,7 +24,12 @@ import type {
   ComplaintStatus,
   ComplaintVisibility,
 } from '@/features/complaints/types/complaint.types';
-import { getComplaints } from '@/services/complaintService';
+import {
+  bulkUpdateAdminComplaintStatus,
+  getAdminComplaintDetails,
+  getAdminComplaints,
+  updateAdminComplaintStatus,
+} from '@/services/complaintService';
 import '../styles/AdminComplaintsModerationPage.css';
 
 type RiskLevel = 'high' | 'medium' | 'low';
@@ -55,6 +60,20 @@ type ActivityLog = {
   type: ActivityType;
   label: string;
   timestamp: string;
+};
+
+type NormalizedComplaint = ComplaintItem & {
+  internalNotes?: string[];
+  assignedTo?: string | null;
+};
+
+type QueuePagination = {
+  currentPage: number;
+  lastPage: number;
+  perPage: number;
+  total: number;
+  from: number;
+  to: number;
 };
 
 type FeedbackState = {
@@ -165,6 +184,102 @@ const toRiskLevel = (score: number): RiskLevel => {
   return 'low';
 };
 
+const toApiStatusFilter = (value: StatusFilter): string | undefined => {
+  if (value === 'all') {
+    return undefined;
+  }
+
+  return value.toLowerCase().replace(/\s+/g, '_');
+};
+
+const toApiPriorityFilter = (value: PriorityFilter): string | undefined => {
+  if (value === 'all') {
+    return undefined;
+  }
+
+  return value.toLowerCase();
+};
+
+const toApiCategoryFilter = (value: 'all' | ComplaintCategory): string | undefined => {
+  if (value === 'all') {
+    return undefined;
+  }
+
+  return value.toLowerCase();
+};
+
+const toApiVisibilityFilter = (value: VisibilityFilter): string | undefined => {
+  if (value === 'all') {
+    return undefined;
+  }
+
+  return value === 'Only admins' ? 'private' : 'public';
+};
+
+const toApiTab = (value: QueueTab): string | undefined => {
+  if (value === 'all') {
+    return undefined;
+  }
+
+  return value;
+};
+
+const toApiSort = (value: SortMode): string => {
+  if (value === 'risk') {
+    return 'newest';
+  }
+
+  return value;
+};
+
+const parseQueuePagination = (
+  payload: unknown,
+  fallbackPage: number,
+  fallbackPerPage: number,
+  fallbackTotal: number,
+): QueuePagination => {
+  if (!payload || typeof payload !== 'object') {
+    return {
+      currentPage: fallbackPage,
+      lastPage: 1,
+      perPage: fallbackPerPage,
+      total: fallbackTotal,
+      from: fallbackTotal > 0 ? 1 : 0,
+      to: fallbackTotal,
+    };
+  }
+
+  const maybeObject = payload as { pagination?: Record<string, unknown> };
+  const raw = maybeObject.pagination;
+
+  if (!raw || typeof raw !== 'object') {
+    return {
+      currentPage: fallbackPage,
+      lastPage: 1,
+      perPage: fallbackPerPage,
+      total: fallbackTotal,
+      from: fallbackTotal > 0 ? 1 : 0,
+      to: fallbackTotal,
+    };
+  }
+
+  const currentPage = Math.max(1, toSafeNumber(raw.current_page, fallbackPage));
+  const lastPage = Math.max(1, toSafeNumber(raw.last_page, 1));
+  const perPage = Math.max(1, toSafeNumber(raw.per_page, fallbackPerPage));
+  const total = Math.max(0, toSafeNumber(raw.total, fallbackTotal));
+  const from = Math.max(0, toSafeNumber(raw.from, total > 0 ? 1 : 0));
+  const to = Math.max(0, toSafeNumber(raw.to, total));
+
+  return {
+    currentPage,
+    lastPage,
+    perPage,
+    total,
+    from,
+    to,
+  };
+};
+
 const resolvePhotoUrl = (value: unknown): string | null => {
   if (typeof value !== 'string' || !value.trim()) {
     return null;
@@ -226,12 +341,45 @@ const normalizeVisibility = (value: unknown): ComplaintVisibility => {
   return 'Public';
 };
 
-const normalizeComplaint = (raw: Record<string, unknown>, index: number): ComplaintItem => {
+const normalizeComplaint = (raw: Record<string, unknown>, index: number): NormalizedComplaint => {
   const complaintCode = String(raw.complaint_code || raw.id || `CMP-${Date.now()}-${index + 1}`);
   const createdAt = typeof raw.created_at === 'string' && raw.created_at
     ? raw.created_at
     : new Date().toISOString();
   const user = raw.user && typeof raw.user === 'object' ? raw.user as Record<string, unknown> : null;
+  const rawUpdates = Array.isArray(raw.updates) ? raw.updates : [];
+  const normalizedUpdates: ComplaintItem['updates'] = [];
+
+  rawUpdates.forEach((entry) => {
+    if (!entry || typeof entry !== 'object') {
+      return;
+    }
+
+    const candidate = entry as Record<string, unknown>;
+    const stage = typeof candidate.stage === 'string' && candidate.stage.trim()
+      ? candidate.stage.trim()
+      : 'Status update';
+    const date = typeof candidate.date === 'string' && candidate.date.trim()
+      ? candidate.date.trim()
+      : createdAt;
+    const note = typeof candidate.note === 'string' && candidate.note.trim()
+      ? candidate.note.trim()
+      : undefined;
+
+    normalizedUpdates.push(note ? { stage, date, note } : { stage, date });
+  });
+
+  const rawInternalNotes = Array.isArray(raw.internal_notes)
+    ? raw.internal_notes
+    : (Array.isArray(raw.internalNotes) ? raw.internalNotes : []);
+
+  const internalNotes = rawInternalNotes
+    .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    .map((entry) => entry.trim());
+
+  const assignedTo = typeof raw.assigned_to === 'string' && raw.assigned_to.trim()
+    ? raw.assigned_to.trim()
+    : (typeof raw.assignedTo === 'string' && raw.assignedTo.trim() ? raw.assignedTo.trim() : null);
 
   return {
     id: complaintCode,
@@ -252,17 +400,19 @@ const normalizeComplaint = (raw: Record<string, unknown>, index: number): Compla
     location: String(raw.location || 'Not specified'),
     photoUrl: resolvePhotoUrl(raw.photo),
     photoPath: typeof raw.photo === 'string' ? raw.photo : null,
-    updates: [
+    updates: normalizedUpdates.length > 0 ? normalizedUpdates : [
       {
         stage: 'Reported',
         date: createdAt,
       },
     ],
     attachments: [],
+    internalNotes,
+    assignedTo,
   };
 };
 
-const extractComplaintsFromResponse = (payload: unknown): ComplaintItem[] => {
+const extractComplaintsFromResponse = (payload: unknown): NormalizedComplaint[] => {
   if (Array.isArray(payload)) {
     return payload.map((item, index) => normalizeComplaint(item as Record<string, unknown>, index));
   }
@@ -278,8 +428,21 @@ const extractComplaintsFromResponse = (payload: unknown): ComplaintItem[] => {
   return [];
 };
 
-const dedupeById = (items: ComplaintItem[]): ComplaintItem[] => {
-  const map = new Map<string, ComplaintItem>();
+const extractComplaintFromResponse = (payload: unknown): NormalizedComplaint | null => {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  const maybeObject = payload as { complaint?: unknown };
+  if (!maybeObject.complaint || typeof maybeObject.complaint !== 'object') {
+    return null;
+  }
+
+  return normalizeComplaint(maybeObject.complaint as Record<string, unknown>, 0);
+};
+
+const dedupeById = (items: NormalizedComplaint[]): NormalizedComplaint[] => {
+  const map = new Map<string, NormalizedComplaint>();
 
   items.forEach((item) => {
     if (!map.has(item.id)) {
@@ -300,6 +463,8 @@ const dedupeById = (items: ComplaintItem[]): ComplaintItem[] => {
       updates: item.updates.length ? item.updates : existing.updates,
       attachments: item.attachments && item.attachments.length ? item.attachments : existing.attachments,
       photoUrl: item.photoUrl || existing.photoUrl,
+      internalNotes: item.internalNotes && item.internalNotes.length ? item.internalNotes : existing.internalNotes,
+      assignedTo: item.assignedTo || existing.assignedTo,
     });
   });
 
@@ -348,7 +513,7 @@ const computeRisk = (item: ComplaintItem): { score: number; level: RiskLevel; si
   };
 };
 
-const toAdminRecord = (item: ComplaintItem, index: number): AdminComplaintRecord => {
+const toAdminRecord = (item: ComplaintItem & { internalNotes?: string[]; assignedTo?: string | null }, index: number): AdminComplaintRecord => {
   const risk = computeRisk(item);
 
   return {
@@ -358,42 +523,8 @@ const toAdminRecord = (item: ComplaintItem, index: number): AdminComplaintRecord
     riskLevel: risk.level,
     riskSignals: risk.signals,
     flagged: item.priority === 'Urgent' || item.visibility === 'Only admins',
-    internalNotes: [],
-    assignedTo: null,
-  };
-};
-
-const updateRecordStatus = (
-  item: AdminComplaintRecord,
-  nextStatus: ComplaintStatus,
-  note: string,
-): AdminComplaintRecord => {
-  const nextUpdates = [
-    {
-      stage: nextStatus,
-      date: new Date().toISOString(),
-      note: note || undefined,
-    },
-    ...item.updates,
-  ];
-
-  const next: ComplaintItem = {
-    ...item,
-    status: nextStatus,
-    updates: nextUpdates,
-    resolutionSummary: nextStatus === 'Resolved' ? (note || 'Resolved by moderation team') : item.resolutionSummary,
-  };
-
-  const risk = computeRisk(next);
-
-  return {
-    ...item,
-    ...next,
-    riskScore: risk.score,
-    riskLevel: risk.level,
-    riskSignals: risk.signals,
-    internalNotes: note ? [note, ...item.internalNotes].slice(0, 8) : item.internalNotes,
-    assignedTo: item.assignedTo || 'Moderation desk',
+    internalNotes: item.internalNotes ?? [],
+    assignedTo: item.assignedTo ?? null,
   };
 };
 
@@ -425,8 +556,20 @@ export const AdminComplaintsModerationPage = () => {
   const [categoryFilter, setCategoryFilter] = useState<'all' | ComplaintCategory>('all');
   const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [serverPage, setServerPage] = useState(1);
+  const [perPage, setPerPage] = useState(12);
+  const [pagination, setPagination] = useState<QueuePagination>({
+    currentPage: 1,
+    lastPage: 1,
+    perPage: 12,
+    total: 0,
+    from: 0,
+    to: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [activeComplaintId, setActiveComplaintId] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [actionNote, setActionNote] = useState('');
@@ -456,6 +599,17 @@ export const AdminComplaintsModerationPage = () => {
     ].slice(0, 8));
   }, []);
 
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+      setServerPage(1);
+    }, 320);
+
+    return () => {
+      window.clearTimeout(handle);
+    };
+  }, [searchTerm]);
+
   const fetchQueue = useCallback(async (manualRefresh: boolean) => {
     if (manualRefresh) {
       setIsRefreshing(true);
@@ -466,115 +620,130 @@ export const AdminComplaintsModerationPage = () => {
     setErrorMessage(null);
 
     try {
-      const remote = await getComplaints();
+      const remote = await getAdminComplaints(undefined, {
+        page: serverPage,
+        perPage,
+        search: debouncedSearchTerm || undefined,
+        status: toApiStatusFilter(statusFilter),
+        priority: toApiPriorityFilter(priorityFilter),
+        category: toApiCategoryFilter(categoryFilter),
+        visibility: toApiVisibilityFilter(visibilityFilter),
+        tab: toApiTab(tab),
+        sort: toApiSort(sortMode),
+      });
+
       const remoteComplaints = extractComplaintsFromResponse(remote);
 
-      const merged = dedupeById([
-        ...remoteComplaints,
-        ...complaintsData,
-      ]).map(toAdminRecord);
+      const normalized = dedupeById(remoteComplaints).map(toAdminRecord);
+      const nextPagination = parseQueuePagination(remote, serverPage, perPage, normalized.length);
 
-      setComplaints(merged);
+      setComplaints(normalized);
+      setPagination(nextPagination);
+      setSelectedIds((previous) => previous.filter((id) => normalized.some((item) => item.id === id)));
       setLastSyncedAt(new Date().toISOString());
-      addActivity('system', `Synced ${merged.length} complaints for moderation review.`);
+
+      if (manualRefresh) {
+        addActivity('system', `Synced ${normalized.length} complaints from server page ${nextPagination.currentPage}.`);
+      }
     } catch (error) {
       const fallback = complaintsData.map(toAdminRecord);
-      const message = error instanceof Error ? error.message : 'Failed to fetch complaints moderation queue.';
+      const message = error instanceof Error ? error.message : 'Failed to fetch admin complaints moderation queue.';
 
       setComplaints(fallback);
+      setPagination({
+        currentPage: 1,
+        lastPage: 1,
+        perPage: fallback.length || perPage,
+        total: fallback.length,
+        from: fallback.length > 0 ? 1 : 0,
+        to: fallback.length,
+      });
       setErrorMessage(`${message} Loaded preview moderation dataset.`);
       setLastSyncedAt(new Date().toISOString());
-      addActivity('system', 'API unavailable. Loaded local complaints preview for admin moderation UI.');
+      addActivity('system', 'Admin complaints API unavailable. Loaded local preview moderation dataset.');
       showFeedback('error', message);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [addActivity, showFeedback]);
-
-  useEffect(() => {
-    void fetchQueue(false);
-  }, [fetchQueue]);
-
-  const filteredComplaints = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-
-    return complaints.filter((item) => {
-      if (tab === 'urgent' && item.priority !== 'Urgent') {
-        return false;
-      }
-
-      if (tab === 'private' && item.visibility !== 'Only admins') {
-        return false;
-      }
-
-      if (tab === 'unresolved' && (item.status === 'Resolved' || item.status === 'Rejected')) {
-        return false;
-      }
-
-      if (statusFilter !== 'all' && item.status !== statusFilter) {
-        return false;
-      }
-
-      if (priorityFilter !== 'all' && item.priority !== priorityFilter) {
-        return false;
-      }
-
-      if (categoryFilter !== 'all' && item.category !== categoryFilter) {
-        return false;
-      }
-
-      if (visibilityFilter !== 'all' && item.visibility !== visibilityFilter) {
-        return false;
-      }
-
-      if (!query) {
-        return true;
-      }
-
-      return [
-        item.id,
-        item.title,
-        item.description,
-        item.location,
-        item.reportedBy,
-        item.category,
-      ].join(' ').toLowerCase().includes(query);
-    });
   }, [
+    addActivity,
     categoryFilter,
-    complaints,
+    debouncedSearchTerm,
+    perPage,
     priorityFilter,
-    searchTerm,
+    serverPage,
+    showFeedback,
+    sortMode,
     statusFilter,
     tab,
     visibilityFilter,
   ]);
 
-  const sortedComplaints = useMemo(() => {
-    const items = [...filteredComplaints];
-
-    if (sortMode === 'oldest') {
-      return items.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  const mergeUpdatedComplaints = useCallback((updatedItems: NormalizedComplaint[]) => {
+    if (updatedItems.length === 0) {
+      return;
     }
 
-    if (sortMode === 'priority') {
-      return items.sort((a, b) => PRIORITY_WEIGHT[b.priority] - PRIORITY_WEIGHT[a.priority]);
+    const updatedByRecordId = new Map<number, AdminComplaintRecord>();
+    updatedItems.forEach((item, index) => {
+      if (Number.isFinite(item.recordId)) {
+        updatedByRecordId.set(Number(item.recordId), toAdminRecord(item, index));
+      }
+    });
+
+    if (updatedByRecordId.size === 0) {
+      return;
     }
 
-    if (sortMode === 'distance') {
-      return items.sort((a, b) => a.distance - b.distance);
+    setComplaints((previous) => previous.map((item) => {
+      if (!Number.isFinite(item.recordId)) {
+        return item;
+      }
+
+      const updated = updatedByRecordId.get(Number(item.recordId));
+      return updated ? { ...item, ...updated } : item;
+    }));
+  }, []);
+
+  const openComplaintDetails = useCallback(async (item: AdminComplaintRecord) => {
+    setActiveComplaintId(item.id);
+
+    if (!Number.isFinite(item.recordId)) {
+      return;
     }
 
-    if (sortMode === 'risk') {
-      return items.sort((a, b) => b.riskScore - a.riskScore);
+    setIsDetailsLoading(true);
+
+    try {
+      const response = await getAdminComplaintDetails(Number(item.recordId));
+      const detailedComplaint = extractComplaintFromResponse(response);
+
+      if (detailedComplaint) {
+        mergeUpdatedComplaints([detailedComplaint]);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to fetch complaint details.';
+      showFeedback('error', message);
+    } finally {
+      setIsDetailsLoading(false);
+    }
+  }, [mergeUpdatedComplaints, showFeedback]);
+
+  useEffect(() => {
+    void fetchQueue(false);
+  }, [fetchQueue]);
+
+  const visibleComplaints = useMemo(() => {
+    if (sortMode !== 'risk') {
+      return complaints;
     }
 
-    return items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [filteredComplaints, sortMode]);
+    return [...complaints].sort((a, b) => b.riskScore - a.riskScore);
+  }, [complaints, sortMode]);
 
   const stats = useMemo(() => {
-    const total = complaints.length;
+    const total = pagination.total || complaints.length;
     const unresolved = complaints.filter((item) => item.status !== 'Resolved' && item.status !== 'Rejected').length;
     const urgent = complaints.filter((item) => item.priority === 'Urgent').length;
     const privateCases = complaints.filter((item) => item.visibility === 'Only admins').length;
@@ -589,7 +758,7 @@ export const AdminComplaintsModerationPage = () => {
       privateCases,
       avgRisk,
     };
-  }, [complaints]);
+  }, [complaints, pagination.total]);
 
   const activeComplaint = useMemo(() => {
     return complaints.find((item) => item.id === activeComplaintId) ?? null;
@@ -604,7 +773,7 @@ export const AdminComplaintsModerationPage = () => {
   };
 
   const toggleSelectAllVisible = () => {
-    const visibleIds = sortedComplaints.map((item) => item.id);
+    const visibleIds = visibleComplaints.map((item) => item.id);
 
     if (visibleIds.length === 0) {
       return;
@@ -647,6 +816,14 @@ export const AdminComplaintsModerationPage = () => {
     return 'Rejected';
   };
 
+  const resolveActionApiStatus = (kind: ActionKind): string => {
+    if (kind === 'underReview') return 'under_review';
+    if (kind === 'inProgress') return 'in_progress';
+    if (kind === 'resolved' || kind === 'bulkResolved') return 'resolved';
+
+    return 'rejected';
+  };
+
   const confirmAction = async () => {
     if (!pendingAction) {
       return;
@@ -664,48 +841,81 @@ export const AdminComplaintsModerationPage = () => {
     }
 
     const nextStatus = resolveActionStatus(pendingAction.kind);
+    const nextApiStatus = resolveActionApiStatus(pendingAction.kind);
     const targetIds = pendingAction.targetIds;
+    const targetRecordIds = complaints
+      .filter((item) => targetIds.includes(item.id))
+      .map((item) => Number(item.recordId))
+      .filter((value) => Number.isFinite(value) && value > 0);
+
+    if (targetRecordIds.length === 0) {
+      showFeedback('error', 'Unable to map selected complaints to backend records. Please refresh and try again.');
+      return;
+    }
 
     setIsActionSubmitting(true);
 
-    await new Promise((resolve) => {
-      window.setTimeout(resolve, 260);
-    });
+    try {
+      if (targetRecordIds.length > 1) {
+        const bulkResult = await bulkUpdateAdminComplaintStatus(
+          targetRecordIds,
+          {
+            status: nextApiStatus,
+            note,
+          },
+        );
 
-    setComplaints((previous) => {
-      const targetSet = new Set(targetIds);
+        const updatedComplaints = extractComplaintsFromResponse(bulkResult);
 
-      return previous.map((item) => {
-        if (!targetSet.has(item.id)) {
-          return item;
+        if (updatedComplaints.length > 0) {
+          mergeUpdatedComplaints(updatedComplaints);
         }
+      } else {
+        const singleResult = await updateAdminComplaintStatus(
+          targetRecordIds[0],
+          {
+            status: nextApiStatus,
+            note,
+          },
+        );
 
-        return updateRecordStatus(item, nextStatus, note);
-      });
-    });
+        const updatedComplaint = extractComplaintFromResponse(singleResult);
 
-    setSelectedIds((previous) => previous.filter((id) => !targetIds.includes(id)));
+        if (updatedComplaint) {
+          mergeUpdatedComplaints([updatedComplaint]);
+        }
+      }
 
-    const count = targetIds.length;
+      setSelectedIds((previous) => previous.filter((id) => !targetIds.includes(id)));
 
-    if (nextStatus === 'Resolved') {
-      addActivity(count > 1 ? 'bulk' : 'resolve', `Resolved ${count} complaint case(s).`);
-      showFeedback('success', `${count} complaint case(s) resolved.`);
-    } else if (nextStatus === 'Rejected') {
-      addActivity(count > 1 ? 'bulk' : 'reject', `Rejected ${count} complaint case(s).`);
-      showFeedback('success', `${count} complaint case(s) rejected.`);
-    } else {
-      addActivity('status', `Moved ${count} complaint case(s) to ${nextStatus}.`);
-      showFeedback('success', `${count} complaint case(s) moved to ${nextStatus}.`);
+      const count = targetIds.length;
+
+      if (nextStatus === 'Resolved') {
+        addActivity(count > 1 ? 'bulk' : 'resolve', `Resolved ${count} complaint case(s).`);
+        showFeedback('success', `${count} complaint case(s) resolved.`);
+      } else if (nextStatus === 'Rejected') {
+        addActivity(count > 1 ? 'bulk' : 'reject', `Rejected ${count} complaint case(s).`);
+        showFeedback('success', `${count} complaint case(s) rejected.`);
+      } else {
+        addActivity('status', `Moved ${count} complaint case(s) to ${nextStatus}.`);
+        showFeedback('success', `${count} complaint case(s) moved to ${nextStatus}.`);
+      }
+
+      setPendingAction(null);
+      setActionNote('');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update complaint moderation status.';
+      showFeedback('error', message);
+    } finally {
+      setIsActionSubmitting(false);
     }
-
-    setPendingAction(null);
-    setActionNote('');
-    setIsActionSubmitting(false);
   };
 
-  const allVisibleSelected = sortedComplaints.length > 0
-    && sortedComplaints.every((item) => selectedIds.includes(item.id));
+  const allVisibleSelected = visibleComplaints.length > 0
+    && visibleComplaints.every((item) => selectedIds.includes(item.id));
+
+  const hasPreviousPage = pagination.currentPage > 1;
+  const hasNextPage = pagination.currentPage < pagination.lastPage;
 
   return (
     <div className="acp-page">
@@ -790,7 +1000,10 @@ export const AdminComplaintsModerationPage = () => {
               <span>Status</span>
               <select
                 value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value as StatusFilter);
+                  setServerPage(1);
+                }}
               >
                 <option value="all">All</option>
                 {STATUS_OPTIONS.map((status) => (
@@ -803,7 +1016,10 @@ export const AdminComplaintsModerationPage = () => {
               <span>Priority</span>
               <select
                 value={priorityFilter}
-                onChange={(event) => setPriorityFilter(event.target.value as PriorityFilter)}
+                onChange={(event) => {
+                  setPriorityFilter(event.target.value as PriorityFilter);
+                  setServerPage(1);
+                }}
               >
                 <option value="all">All</option>
                 {PRIORITY_OPTIONS.map((priority) => (
@@ -816,7 +1032,10 @@ export const AdminComplaintsModerationPage = () => {
               <span>Category</span>
               <select
                 value={categoryFilter}
-                onChange={(event) => setCategoryFilter(event.target.value as 'all' | ComplaintCategory)}
+                onChange={(event) => {
+                  setCategoryFilter(event.target.value as 'all' | ComplaintCategory);
+                  setServerPage(1);
+                }}
               >
                 <option value="all">All</option>
                 {CATEGORY_OPTIONS.map((category) => (
@@ -829,7 +1048,10 @@ export const AdminComplaintsModerationPage = () => {
               <span>Visibility</span>
               <select
                 value={visibilityFilter}
-                onChange={(event) => setVisibilityFilter(event.target.value as VisibilityFilter)}
+                onChange={(event) => {
+                  setVisibilityFilter(event.target.value as VisibilityFilter);
+                  setServerPage(1);
+                }}
               >
                 <option value="all">All</option>
                 {VISIBILITY_OPTIONS.map((visibility) => (
@@ -842,7 +1064,10 @@ export const AdminComplaintsModerationPage = () => {
               <span>Sort</span>
               <select
                 value={sortMode}
-                onChange={(event) => setSortMode(event.target.value as SortMode)}
+                onChange={(event) => {
+                  setSortMode(event.target.value as SortMode);
+                  setServerPage(1);
+                }}
               >
                 {Object.entries(SORT_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>{label}</option>
@@ -859,7 +1084,10 @@ export const AdminComplaintsModerationPage = () => {
                 key={item}
                 type="button"
                 className={`acp-tab ${tab === item ? 'acp-tab-active' : ''}`}
-                onClick={() => setTab(item)}
+                onClick={() => {
+                  setTab(item);
+                  setServerPage(1);
+                }}
               >
                 {TABS[item]}
               </button>
@@ -921,7 +1149,7 @@ export const AdminComplaintsModerationPage = () => {
           initial="hidden"
           animate="visible"
         >
-          {sortedComplaints.map((item) => {
+          {visibleComplaints.map((item) => {
             const isSelected = selectedIds.includes(item.id);
 
             return (
@@ -971,7 +1199,9 @@ export const AdminComplaintsModerationPage = () => {
                   <button
                     type="button"
                     className="acp-btn acp-btn-ghost"
-                    onClick={() => setActiveComplaintId(item.id)}
+                    onClick={() => {
+                      void openComplaintDetails(item);
+                    }}
                   >
                     <Eye size={14} /> Details
                   </button>
@@ -994,7 +1224,7 @@ export const AdminComplaintsModerationPage = () => {
             );
           })}
 
-          {sortedComplaints.length === 0 ? (
+          {visibleComplaints.length === 0 ? (
             <div className="acp-empty">
               <AlertTriangle size={20} />
               <h3>No complaints match your current filters</h3>
@@ -1003,6 +1233,54 @@ export const AdminComplaintsModerationPage = () => {
           ) : null}
         </motion.section>
       )}
+
+      {!isLoading ? (
+        <section className="acp-pagination">
+          <p>
+            Showing {pagination.from || 0}-{pagination.to || visibleComplaints.length} of {pagination.total || visibleComplaints.length} complaints
+          </p>
+
+          <div className="acp-pagination-controls">
+            <label>
+              <span>Per page</span>
+              <select
+                value={perPage}
+                onChange={(event) => {
+                  const nextPerPage = Number(event.target.value);
+                  setPerPage(nextPerPage);
+                  setServerPage(1);
+                }}
+              >
+                <option value={12}>12</option>
+                <option value={24}>24</option>
+                <option value={36}>36</option>
+              </select>
+            </label>
+
+            <button
+              type="button"
+              className="acp-btn acp-btn-ghost"
+              onClick={() => setServerPage((previous) => Math.max(1, previous - 1))}
+              disabled={!hasPreviousPage || isRefreshing}
+            >
+              Previous
+            </button>
+
+            <span className="acp-page-indicator">
+              Page {pagination.currentPage} of {pagination.lastPage}
+            </span>
+
+            <button
+              type="button"
+              className="acp-btn acp-btn-ghost"
+              onClick={() => setServerPage((previous) => Math.min(pagination.lastPage, previous + 1))}
+              disabled={!hasNextPage || isRefreshing}
+            >
+              Next
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       <section className="acp-activity-panel">
         <h4>Recent moderation activity</h4>
@@ -1048,6 +1326,8 @@ export const AdminComplaintsModerationPage = () => {
               </header>
 
               <div className="acp-drawer-scroll">
+                {isDetailsLoading ? <p className="acp-detail-loading">Refreshing latest complaint details...</p> : null}
+
                 {activeComplaint.photoUrl ? (
                   <img src={activeComplaint.photoUrl} alt={activeComplaint.title} className="acp-drawer-photo" />
                 ) : null}

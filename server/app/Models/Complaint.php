@@ -78,6 +78,11 @@ class Complaint extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function moderationLogs()
+    {
+        return $this->hasMany(ComplaintModerationLog::class)->latest();
+    }
+
     public static function normalizeCategory(string $value): string
     {
         $normalized = strtolower(trim(str_replace('_', ' ', $value)));

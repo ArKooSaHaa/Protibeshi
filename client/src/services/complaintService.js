@@ -20,6 +20,97 @@ const parseJsonSafely = async (response) => {
   }
 };
 
+const normalizeTokenValue = (value) => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === 'null' || trimmed === 'undefined') {
+    return null;
+  }
+
+  return trimmed.startsWith('Bearer ') ? trimmed.slice(7).trim() : trimmed;
+};
+
+const parseJsonString = (value) => {
+  if (!value || typeof value !== 'string') {
+    return null;
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
+
+const getNestedToken = (source) => {
+  if (!source || typeof source !== 'object') {
+    return null;
+  }
+
+  const directCandidates = [
+    source.token,
+    source.authToken,
+    source.accessToken,
+    source.access_token,
+    source.jwt,
+    source.jwt_token,
+  ];
+
+  for (const candidate of directCandidates) {
+    const token = normalizeTokenValue(candidate);
+    if (token) {
+      return token;
+    }
+  }
+
+  if (source.state && typeof source.state === 'object') {
+    return getNestedToken(source.state);
+  }
+
+  return null;
+};
+
+const resolveAuthToken = (providedToken) => {
+  const explicitToken = normalizeTokenValue(providedToken);
+  if (explicitToken) {
+    return explicitToken;
+  }
+
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const directKeys = ['token', 'auth_token', 'authToken', 'access_token', 'accessToken', 'jwt', 'jwt_token'];
+
+  for (const key of directKeys) {
+    const token = normalizeTokenValue(window.localStorage.getItem(key));
+    if (token) {
+      return token;
+    }
+  }
+
+  const structuredKeys = ['auth', 'authStore', 'auth-storage', 'persist:auth'];
+  for (const key of structuredKeys) {
+    const parsed = parseJsonString(window.localStorage.getItem(key));
+    const token = getNestedToken(parsed);
+    if (token) {
+      return token;
+    }
+  }
+
+  for (const key of directKeys) {
+    const token = normalizeTokenValue(window.sessionStorage.getItem(key));
+    if (token) {
+      return token;
+    }
+  }
+
+  return null;
+};
+
 const extractApiErrorMessage = (data, fallbackMessage) => {
   if (!data) {
     return fallbackMessage;
@@ -75,6 +166,227 @@ export const getComplaints = async () => {
 
   if (!response.ok) {
     throw new Error(extractApiErrorMessage(data, 'Failed to fetch complaints'));
+  }
+
+  return data;
+};
+
+const buildAdminComplaintsQuery = (options = {}) => {
+  const params = new URLSearchParams();
+
+  const page = Number(options.page);
+  if (Number.isFinite(page) && page > 0) {
+    params.set('page', String(page));
+  }
+
+  const perPage = Number(options.perPage);
+  if (Number.isFinite(perPage) && perPage > 0) {
+    params.set('per_page', String(perPage));
+  }
+
+  const search = typeof options.search === 'string' ? options.search.trim() : '';
+  if (search) {
+    params.set('search', search);
+  }
+
+  const status = typeof options.status === 'string' ? options.status.trim() : '';
+  if (status) {
+    params.set('status', status);
+  }
+
+  const priority = typeof options.priority === 'string' ? options.priority.trim() : '';
+  if (priority) {
+    params.set('priority', priority);
+  }
+
+  const category = typeof options.category === 'string' ? options.category.trim() : '';
+  if (category) {
+    params.set('category', category);
+  }
+
+  const visibility = typeof options.visibility === 'string' ? options.visibility.trim() : '';
+  if (visibility) {
+    params.set('visibility', visibility);
+  }
+
+  const tab = typeof options.tab === 'string' ? options.tab.trim() : '';
+  if (tab) {
+    params.set('tab', tab);
+  }
+
+  const sort = typeof options.sort === 'string' ? options.sort.trim() : '';
+  if (sort) {
+    params.set('sort', sort);
+  }
+
+  return params.toString();
+};
+
+export const getAdminComplaints = async (token, options = {}) => {
+  const authToken = resolveAuthToken(token);
+  if (!authToken) {
+    throw new Error('Please sign in as admin to continue.');
+  }
+
+  const query = buildAdminComplaintsQuery(options);
+  const url = `${getApiBaseUrl()}/admin/complaints${query ? `?${query}` : ''}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      Accept: 'application/json',
+    },
+  });
+
+  const data = await parseJsonSafely(response);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Your admin session has expired. Please sign in again.');
+    }
+
+    if (response.status === 403) {
+      throw new Error('You are not authorized to access admin complaints moderation.');
+    }
+
+    throw new Error(extractApiErrorMessage(data, 'Failed to fetch admin complaints'));
+  }
+
+  return data;
+};
+
+export const getAdminComplaintDetails = async (complaintId, token) => {
+  const resolvedComplaintId = Number(complaintId);
+  if (!Number.isFinite(resolvedComplaintId) || resolvedComplaintId <= 0) {
+    throw new Error('Invalid complaint selected for details view.');
+  }
+
+  const authToken = resolveAuthToken(token);
+  if (!authToken) {
+    throw new Error('Please sign in as admin to continue.');
+  }
+
+  const response = await fetch(`${getApiBaseUrl()}/admin/complaints/${resolvedComplaintId}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      Accept: 'application/json',
+    },
+  });
+
+  const data = await parseJsonSafely(response);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Your admin session has expired. Please sign in again.');
+    }
+
+    if (response.status === 403) {
+      throw new Error('You are not authorized to view complaint details.');
+    }
+
+    throw new Error(extractApiErrorMessage(data, 'Failed to fetch complaint details'));
+  }
+
+  return data;
+};
+
+export const updateAdminComplaintStatus = async (complaintId, payload, token) => {
+  const resolvedComplaintId = Number(complaintId);
+  if (!Number.isFinite(resolvedComplaintId) || resolvedComplaintId <= 0) {
+    throw new Error('Invalid complaint selected for status update.');
+  }
+
+  const authToken = resolveAuthToken(token);
+  if (!authToken) {
+    throw new Error('Please sign in as admin to continue.');
+  }
+
+  const status = typeof payload?.status === 'string' ? payload.status.trim() : '';
+  const note = typeof payload?.note === 'string' ? payload.note.trim() : '';
+
+  if (!status) {
+    throw new Error('Please provide a valid complaint status.');
+  }
+
+  const response = await fetch(`${getApiBaseUrl()}/admin/complaints/${resolvedComplaintId}/status`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      status,
+      note: note || null,
+    }),
+  });
+
+  const data = await parseJsonSafely(response);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Your admin session has expired. Please sign in again.');
+    }
+
+    if (response.status === 403) {
+      throw new Error('You are not authorized to update complaint statuses.');
+    }
+
+    throw new Error(extractApiErrorMessage(data, 'Failed to update complaint status'));
+  }
+
+  return data;
+};
+
+export const bulkUpdateAdminComplaintStatus = async (complaintIds, payload, token) => {
+  const normalizedIds = Array.isArray(complaintIds)
+    ? Array.from(new Set(complaintIds.map((value) => Number(value)).filter((value) => Number.isFinite(value) && value > 0)))
+    : [];
+
+  if (normalizedIds.length === 0) {
+    throw new Error('Select at least one complaint for bulk moderation update.');
+  }
+
+  const authToken = resolveAuthToken(token);
+  if (!authToken) {
+    throw new Error('Please sign in as admin to continue.');
+  }
+
+  const status = typeof payload?.status === 'string' ? payload.status.trim() : '';
+  const note = typeof payload?.note === 'string' ? payload.note.trim() : '';
+
+  if (!status) {
+    throw new Error('Please provide a valid complaint status.');
+  }
+
+  const response = await fetch(`${getApiBaseUrl()}/admin/complaints/status/bulk`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      complaint_ids: normalizedIds,
+      status,
+      note: note || null,
+    }),
+  });
+
+  const data = await parseJsonSafely(response);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Your admin session has expired. Please sign in again.');
+    }
+
+    if (response.status === 403) {
+      throw new Error('You are not authorized to update complaint statuses.');
+    }
+
+    throw new Error(extractApiErrorMessage(data, 'Failed to run bulk complaint status update'));
   }
 
   return data;
