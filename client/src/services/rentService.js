@@ -1,28 +1,14 @@
 // src/services/rentService.js
 import { ENV } from '@/config/env';
 
+const getConfiguredApiHost = () => String(ENV.API_BASE_URL || '').trim().replace(/\/$/, '');
+
 const getApiBaseUrl = () => {
-  if (typeof window === 'undefined') {
-    return `${ENV.API_BASE_URL}/api`;
-  }
-
-  // Vite dev server calls Laravel backend directly.
-  if (window.location.port === '5173') {
-    return `${ENV.API_BASE_URL}/api`;
-  }
-
-  // Deployed/XAMPP: same origin as current page.
-  return new URL('api/', window.location.href).toString().replace(/\/$/, '');
+  return `${getConfiguredApiHost()}/api`;
 };
 
 const getStorageBaseUrl = () => {
-  if (typeof window === 'undefined') {
-    return ENV.API_BASE_URL;
-  }
-  if (window.location.port === '5173') {
-    return ENV.API_BASE_URL;
-  }
-  return window.location.origin;
+  return getConfiguredApiHost();
 };
 
 const parseJsonSafely = async (response) => {

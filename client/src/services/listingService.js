@@ -1,17 +1,9 @@
 import { ENV } from '@/config/env';
 
+const getConfiguredApiHost = () => String(ENV.API_BASE_URL || '').trim().replace(/\/$/, '');
+
 const getApiBaseUrl = () => {
-  if (typeof window === 'undefined') {
-    return `${ENV.API_BASE_URL}/api`;
-  }
-
-  // Vite dev server should call Laravel backend URL.
-  if (window.location.port === '5173') {
-    return `${ENV.API_BASE_URL}/api`;
-  }
-
-  // Deployed/XAMPP runtime should use the same host/path base as current page.
-  return new URL('api/', window.location.href).toString().replace(/\/$/, '');
+  return `${getConfiguredApiHost()}/api`;
 };
 
 const parseJsonSafely = async (response) => {
