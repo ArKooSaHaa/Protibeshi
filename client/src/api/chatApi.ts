@@ -38,15 +38,17 @@ export type ChatMessage = {
 type JsonRecord = Record<string, unknown>;
 
 const getApiBaseUrl = () => {
-  if (typeof window === 'undefined') {
-    return `${ENV.API_BASE_URL}/api`;
+  const configuredBaseUrl = String(ENV.API_BASE_URL || '').trim().replace(/\/$/, '');
+
+  if (configuredBaseUrl) {
+    return `${configuredBaseUrl}/api`;
   }
 
-  if (window.location.port === '5173') {
-    return `${ENV.API_BASE_URL}/api`;
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/api`;
   }
 
-  return new URL('api/', window.location.href).toString().replace(/\/$/, '');
+  return 'http://127.0.0.1:8000/api';
 };
 
 const parseJsonSafely = async (response: Response): Promise<unknown> => {
@@ -55,6 +57,14 @@ const parseJsonSafely = async (response: Response): Promise<unknown> => {
   } catch {
     return null;
   }
+};
+
+const throwIfJsonMissing = (data: unknown): void => {
+  if (data !== null) {
+    return;
+  }
+
+  throw new Error('Invalid API response. Check VITE_API_URL and deployment API routing.');
 };
 
 const getAuthHeaders = (includeJsonContentType = true): Record<string, string> => {
@@ -93,6 +103,7 @@ export const startConversation = async (
 
   const data = await parseJsonSafely(response);
   throwIfNotOk(response, data, 'Failed to start conversation');
+  throwIfJsonMissing(data);
   const payload = (data ?? {}) as JsonRecord;
 
   return {
@@ -109,6 +120,7 @@ export const getConversations = async (): Promise<ChatConversation[]> => {
 
   const data = await parseJsonSafely(response);
   throwIfNotOk(response, data, 'Failed to load conversations');
+  throwIfJsonMissing(data);
   const payload = (data ?? {}) as JsonRecord;
 
   if (Array.isArray(data)) {
@@ -130,6 +142,7 @@ export const getMessages = async (conversationId: number | string): Promise<Chat
 
   const data = await parseJsonSafely(response);
   throwIfNotOk(response, data, 'Failed to load messages');
+  throwIfJsonMissing(data);
   const payload = (data ?? {}) as JsonRecord;
 
   if (Array.isArray(data)) {
@@ -155,6 +168,7 @@ export const sendMessage = async (
 
   const data = await parseJsonSafely(response);
   throwIfNotOk(response, data, 'Failed to send message');
+  throwIfJsonMissing(data);
   const payload = (data ?? {}) as JsonRecord;
 
   return {
@@ -175,6 +189,7 @@ export const saveGeminiReply = async (
 
   const data = await parseJsonSafely(response);
   throwIfNotOk(response, data, 'Failed to save Gemini reply');
+  throwIfJsonMissing(data);
   const payload = (data ?? {}) as JsonRecord;
 
   return {
@@ -194,6 +209,7 @@ export const markAsRead = async (
 
   const data = await parseJsonSafely(response);
   throwIfNotOk(response, data, 'Failed to mark messages as read');
+  throwIfJsonMissing(data);
   const payload = (data ?? {}) as JsonRecord;
 
   return {
