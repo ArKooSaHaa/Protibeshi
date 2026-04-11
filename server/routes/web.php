@@ -21,17 +21,40 @@ use Illuminate\Support\Facades\Storage;
 require __DIR__ . '/auth.php';
 
 Route::get('/storage/{path}', function (string $path) {
-    $cleanPath = trim($path);
+    $cleanPath = trim(str_replace('\\', '/', $path));
+    $cleanPath = ltrim($cleanPath, '/');
 
     if ($cleanPath === '' || str_contains($cleanPath, '..')) {
         abort(404);
     }
 
-    if (!Storage::disk('public')->exists($cleanPath)) {
-        abort(404);
+    $publicCandidates = array_values(array_unique(array_filter([
+        $cleanPath,
+        preg_replace('#^storage/#', '', $cleanPath),
+        preg_replace('#^public/#', '', $cleanPath),
+        preg_replace('#^public/storage/#', '', $cleanPath),
+    ])));
+
+    foreach ($publicCandidates as $candidatePath) {
+        if (Storage::disk('public')->exists($candidatePath)) {
+            return response()->file(storage_path('app/public/' . $candidatePath));
+        }
     }
 
-    return response()->file(storage_path('app/public/' . $cleanPath));
+    $localCandidates = array_values(array_unique(array_filter([
+        $cleanPath,
+        'public/' . $cleanPath,
+        'public/' . preg_replace('#^storage/#', '', $cleanPath),
+        'public/' . preg_replace('#^public/storage/#', '', $cleanPath),
+    ])));
+
+    foreach ($localCandidates as $candidatePath) {
+        if (Storage::disk('local')->exists($candidatePath)) {
+            return response()->file(storage_path('app/' . $candidatePath));
+        }
+    }
+
+    abort(404);
 })->where('path', '.*');
 
 Route::get('{any}', function () {
