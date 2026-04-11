@@ -1,4 +1,5 @@
 import { ENV } from '@/config/env';
+import { resolveMediaUrl } from '@/lib/mediaUrl';
 
 const getConfiguredApiHost = () => String(ENV.API_BASE_URL || '').trim().replace(/\/$/, '');
 
@@ -129,6 +130,27 @@ const extractApiErrorMessage = (data, fallbackMessage) => {
   return fallbackMessage;
 };
 
+const normalizeListingMedia = (listing) => {
+  if (!listing || typeof listing !== 'object') {
+    return listing;
+  }
+
+  const resolvedPhotoUrl = resolveMediaUrl(listing.photo_url) || resolveMediaUrl(listing.photo);
+
+  return {
+    ...listing,
+    photo_url: resolvedPhotoUrl,
+  };
+};
+
+const normalizeListingCollection = (listings) => {
+  if (!Array.isArray(listings)) {
+    return [];
+  }
+
+  return listings.map((listing) => normalizeListingMedia(listing));
+};
+
 export const createListing = async (formData, token) => {
   const response = await fetch(`${getApiBaseUrl()}/listings`, {
     method: 'POST',
@@ -150,7 +172,7 @@ export const createListing = async (formData, token) => {
 
   return {
     message: data?.message || 'Listing created successfully',
-    listing: data?.listing || null,
+    listing: normalizeListingMedia(data?.listing || null),
   };
 };
 
@@ -166,10 +188,10 @@ export const getListings = async () => {
   }
 
   if (Array.isArray(data)) {
-    return data;
+    return normalizeListingCollection(data);
   }
 
-  return data?.listings ?? [];
+  return normalizeListingCollection(data?.listings ?? []);
 };
 
 export const deleteListing = async (listingId, token) => {
@@ -211,7 +233,7 @@ export const deleteListing = async (listingId, token) => {
 
   return {
     message: data?.message || 'Listing deleted successfully',
-    listing: data?.listing || null,
+    listing: normalizeListingMedia(data?.listing || null),
   };
 };
 
@@ -244,7 +266,7 @@ export const getAdminListings = async (token) => {
   }
 
   if (Array.isArray(data?.listings)) {
-    return data.listings;
+    return normalizeListingCollection(data.listings);
   }
 
   return [];
@@ -294,7 +316,7 @@ export const deleteAdminListing = async (listingId, reason = '', token) => {
 
   return {
     message: data?.message || 'Listing removed from marketplace',
-    listing: data?.listing || null,
+    listing: normalizeListingMedia(data?.listing || null),
   };
 };
 

@@ -20,6 +20,7 @@ import type {
 } from '../types/adminMarketplace.types';
 import { ROUTES } from '@/config/routes.config';
 import { useAuthStore } from '@/features/auth/store/authStore';
+import { resolveMediaUrl } from '@/lib/mediaUrl';
 import { banListingSeller, deleteAdminListing, getAdminListings } from '@/services/listingService';
 import '../styles/AdminMarketplaceModerationPage.css';
 
@@ -74,8 +75,6 @@ type ApiAdminListing = {
   user?: ApiAdminSeller | null;
 };
 
-const BACKEND_ORIGIN = 'http://127.0.0.1:8000';
-
 const FALLBACK_IMAGES = [
   'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1200&q=80',
   'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=1200&q=80',
@@ -109,21 +108,11 @@ const slugify = (value: string): string => {
 
 const buildPhotoUrl = (listing: ApiAdminListing, seed: number): string => {
   const photoUrl = normalizeText(listing.photo_url ?? null);
-  if (photoUrl) {
-    return photoUrl;
-  }
-
   const photoPath = normalizeText(listing.photo ?? null);
-  if (photoPath) {
-    if (photoPath.startsWith('http://') || photoPath.startsWith('https://')) {
-      return photoPath;
-    }
 
-    if (photoPath.startsWith('/')) {
-      return `${BACKEND_ORIGIN}${photoPath}`;
-    }
-
-    return `${BACKEND_ORIGIN}/storage/${photoPath}`;
+  const resolvedPhotoUrl = resolveMediaUrl(photoUrl) || resolveMediaUrl(photoPath);
+  if (resolvedPhotoUrl) {
+    return resolvedPhotoUrl;
   }
 
   return FALLBACK_IMAGES[seed % FALLBACK_IMAGES.length];

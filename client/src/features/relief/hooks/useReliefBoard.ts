@@ -25,10 +25,10 @@ import type {
 } from '../types/relief.types';
 import { reliefHelpTypes } from '../types/relief.types';
 import { useReliefFilters } from './useReliefFilters';
+import { resolveMediaUrl } from '@/lib/mediaUrl';
 
 type ModalMode = 'request' | 'offer' | null;
 
-const DEFAULT_API_BASE = 'http://127.0.0.1:8000';
 const OFFERED_RELIEF_IDS_STORAGE_KEY_PREFIX = 'relief.offered.help.ids.v2';
 const LEGACY_OFFERED_RELIEF_IDS_STORAGE_KEY = 'relief.offered.help.ids';
 
@@ -164,34 +164,7 @@ const toAvatarInitials = (name: string): string => {
 };
 
 const resolveUserImageUrl = (rawPath: string | null | undefined) => {
-  if (!rawPath) {
-    return null;
-  }
-
-  const normalizedPath = rawPath.replace(/\\/g, '/').trim();
-  if (!normalizedPath) {
-    return null;
-  }
-
-  if (normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')) {
-    return normalizedPath;
-  }
-
-  const baseUrl = import.meta.env.VITE_API_URL || DEFAULT_API_BASE;
-
-  if (normalizedPath.startsWith('/')) {
-    return `${baseUrl}${normalizedPath}`;
-  }
-
-  if (normalizedPath.startsWith('storage/')) {
-    return `${baseUrl}/${normalizedPath}`;
-  }
-
-  if (normalizedPath.startsWith('public/storage/')) {
-    return `${baseUrl}/${normalizedPath.replace(/^public\//, '')}`;
-  }
-
-  return `${baseUrl}/storage/${normalizedPath}`;
+  return resolveMediaUrl(rawPath);
 };
 
 const resolveReliefUserProfilePhoto = (user: ReliefApiUser | null | undefined) => {

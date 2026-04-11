@@ -5,9 +5,9 @@ import { ChevronDown, MapPin, Search, SlidersHorizontal, Sparkles, Loader, X } f
 import CreateListingModal from '../components/CreateListingModal';
 import ProductDetailsModal from '../components/ProductDetailsModal';
 import { getListings } from '@/services/listingService';
+import { resolveMediaUrl } from '@/lib/mediaUrl';
 import styles from './MarketplacePage.module.css';
 
-const BACKEND_ORIGIN = 'http://127.0.0.1:8000';
 const FALLBACK_IMAGE =
   'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=640&q=80';
 
@@ -21,15 +21,8 @@ const categories = [
 ];
 
 const buildPhotoUrl = (listing) => {
-  if (listing?.photo_url) {
-    return listing.photo_url;
-  }
-
-  if (listing?.photo) {
-    return `${BACKEND_ORIGIN}/storage/${listing.photo}`;
-  }
-
-  return FALLBACK_IMAGE;
+  const resolvedPhotoUrl = resolveMediaUrl(listing?.photo_url) || resolveMediaUrl(listing?.photo);
+  return resolvedPhotoUrl || FALLBACK_IMAGE;
 };
 
 const mapListingToCard = (listing) => {

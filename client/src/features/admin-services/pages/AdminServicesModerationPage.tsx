@@ -32,6 +32,7 @@ import {
   normalizeService,
   verifyAdminService,
 } from '@/services/serviceService';
+import { resolveMediaUrl } from '@/lib/mediaUrl';
 import '../styles/AdminServicesModerationPage.css';
 
 type RiskLevel = 'high' | 'medium' | 'low';
@@ -453,7 +454,10 @@ const normalizeToAdminRecord = (raw: ApiAdminService, index: number): AdminServi
     id: normalizedService.id || `svc-${index + 1}`,
     ownerId: toSafeNumber(seller?.id, normalizedService.ownerId ?? 0) || normalizedService.ownerId,
     providerName,
-    avatar: (seller?.profile_picture_url || seller?.profile_picture || normalizedService.avatar || 'https://i.pravatar.cc/120?img=11'),
+    avatar:
+      resolveMediaUrl(seller?.profile_picture_url || seller?.profile_picture)
+      || normalizedService.avatar
+      || 'https://i.pravatar.cc/120?img=11',
     verified: Boolean(raw?.verified_provider ?? normalizedService.verified),
     moderationStatus: isHidden ? 'hidden' : 'active',
     providerBanned,

@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE = 'http://127.0.0.1:8000';
+import { getBackendOrigin, resolveMediaUrl } from '@/lib/mediaUrl';
 
 export type FeedUser = {
   id: number;
@@ -61,13 +61,7 @@ export class FeedApiError extends Error {
 }
 
 const getApiBaseUrl = () => {
-  const envApi = import.meta.env.VITE_API_URL;
-
-  if (envApi) {
-    return envApi;
-  }
-
-  return DEFAULT_API_BASE;
+  return getBackendOrigin();
 };
 
 const normalizeTokenValue = (value: unknown): string | null => {
@@ -215,24 +209,7 @@ const normalizePosts = (payload: unknown): FeedPost[] => {
 };
 
 export const resolvePostImageUrl = (imagePath: string | null | undefined): string | null => {
-  if (!imagePath) {
-    return null;
-  }
-
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    return imagePath;
-  }
-
-  const baseUrl = getApiBaseUrl();
-  if (imagePath.startsWith('/storage/')) {
-    return `${baseUrl}${imagePath}`;
-  }
-
-  if (imagePath.startsWith('storage/')) {
-    return `${baseUrl}/${imagePath}`;
-  }
-
-  return `${baseUrl}/storage/posts/${imagePath}`;
+  return resolveMediaUrl(imagePath, { defaultStoragePrefix: 'posts' });
 };
 
 export const getPosts = async (): Promise<FeedPost[]> => {

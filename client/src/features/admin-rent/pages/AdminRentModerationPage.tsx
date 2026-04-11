@@ -22,6 +22,7 @@ import {
   getAdminRentListings,
   hideAdminRentListing,
 } from '@/services/rentService';
+import { resolveMediaUrl } from '@/lib/mediaUrl';
 import '../styles/AdminRentModerationPage.css';
 
 type ApiAdminRentSeller = {
@@ -216,25 +217,10 @@ const resolveSellerName = (seller: ApiAdminRentSeller | null | undefined): strin
 };
 
 const resolveImageUrl = (listing: ApiAdminRentListing): string => {
-  const photoUrl = normalizeText(listing.photo_url);
-  if (photoUrl) {
-    return photoUrl;
-  }
+  const resolvedPhotoUrl =
+    resolveMediaUrl(normalizeText(listing.photo_url)) || resolveMediaUrl(normalizeText(listing.photo));
 
-  const photo = normalizeText(listing.photo);
-  if (photo) {
-    if (photo.startsWith('http://') || photo.startsWith('https://')) {
-      return photo;
-    }
-
-    if (photo.startsWith('/')) {
-      return photo;
-    }
-
-    return `/storage/${photo}`;
-  }
-
-  return FALLBACK_IMAGE;
+  return resolvedPhotoUrl || FALLBACK_IMAGE;
 };
 
 const assessRisk = (input: {

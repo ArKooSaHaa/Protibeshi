@@ -1,13 +1,10 @@
 import { ENV } from '@/config/env';
+import { resolveMediaUrl } from '@/lib/mediaUrl';
 
 const getConfiguredApiHost = () => String(ENV.API_BASE_URL || '').trim().replace(/\/$/, '');
 
 const getApiBaseUrl = () => {
   return `${getConfiguredApiHost()}/api`;
-};
-
-const getStorageBaseUrl = () => {
-  return getConfiguredApiHost();
 };
 
 const parseJsonSafely = async (response) => {
@@ -148,18 +145,18 @@ const buildProviderName = (user) => {
 };
 
 export const normalizeService = (raw) => {
-  const storageBase = getStorageBaseUrl();
-  const coverPhotoPath = raw?.cover_photo || null;
-  const userProfilePictureUrl = raw?.user?.profile_picture_url || null;
+  const coverPhotoUrl = resolveMediaUrl(raw?.cover_photo_url || raw?.cover_photo);
+  const userProfilePictureUrl = resolveMediaUrl(raw?.user?.profile_picture_url || raw?.user?.profile_picture);
 
   return {
     id: String(raw?.id ?? ''),
     ownerId: raw?.user?.id ?? null,
     providerName: buildProviderName(raw?.user),
     avatar: userProfilePictureUrl
-      || (coverPhotoPath ? `${storageBase}/storage/${coverPhotoPath}` : 'https://i.pravatar.cc/120?img=11'),
-    coverPhoto: coverPhotoPath,
-    coverPhotoUrl: coverPhotoPath ? `${storageBase}/storage/${coverPhotoPath}` : null,
+      || coverPhotoUrl
+      || 'https://i.pravatar.cc/120?img=11',
+    coverPhoto: raw?.cover_photo || null,
+    coverPhotoUrl,
     verified: Boolean(raw?.verified_provider),
     rating: 4.6,
     reviews: 0,
@@ -177,7 +174,7 @@ export const normalizeService = (raw) => {
     responseTime: 'Usually replies in 20 mins',
     skills: raw?.category ? [raw.category] : [],
     certifications: [],
-    gallery: coverPhotoPath ? [`${storageBase}/storage/${coverPhotoPath}`] : [],
+    gallery: coverPhotoUrl ? [coverPhotoUrl] : [],
     schedule: raw?.working_hours
       ? raw.working_hours.split(',').map((item) => item.trim()).filter(Boolean)
       : ['Flexible schedule'],

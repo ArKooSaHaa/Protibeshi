@@ -17,6 +17,7 @@ import { PostComments } from '@/components/feed/PostComments';
 import { CreatePostModal, CreatePostPayload } from '@/components/feed/CreatePostModal';
 import { WeatherNewsPanel } from '@/components/feed/WeatherNewsPanel';
 import { fetchAccountProfile } from '@/features/account/services/accountService';
+import { resolveMediaUrl } from '@/lib/mediaUrl';
 import styles from './Feed.module.css';
 
 type ViewPost = FeedPost & {
@@ -113,31 +114,7 @@ export const Feed = () => {
   }, []);
 
   const resolveUserImageUrl = useCallback((rawPath: string | null | undefined) => {
-    if (!rawPath) {
-      return null;
-    }
-
-    const normalizedPath = rawPath.replace(/\\/g, '/').trim();
-    if (!normalizedPath) {
-      return null;
-    }
-
-    if (normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')) {
-      return normalizedPath;
-    }
-
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-    if (normalizedPath.startsWith('/')) {
-      return `${baseUrl}${normalizedPath}`;
-    }
-    if (normalizedPath.startsWith('storage/')) {
-      return `${baseUrl}/${normalizedPath}`;
-    }
-    if (normalizedPath.startsWith('public/storage/')) {
-      return `${baseUrl}/${normalizedPath.replace(/^public\//, '')}`;
-    }
-
-    return `${baseUrl}/storage/${normalizedPath}`;
+    return resolveMediaUrl(rawPath);
   }, []);
 
   const extractUserPhoto = useCallback((source: Record<string, unknown> | null | undefined) => {

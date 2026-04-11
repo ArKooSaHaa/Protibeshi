@@ -1,14 +1,11 @@
 // src/services/rentService.js
 import { ENV } from '@/config/env';
+import { resolveMediaUrl } from '@/lib/mediaUrl';
 
 const getConfiguredApiHost = () => String(ENV.API_BASE_URL || '').trim().replace(/\/$/, '');
 
 const getApiBaseUrl = () => {
   return `${getConfiguredApiHost()}/api`;
-};
-
-const getStorageBaseUrl = () => {
-  return getConfiguredApiHost();
 };
 
 const parseJsonSafely = async (response) => {
@@ -134,12 +131,11 @@ export const normalizeRentListing = (raw) => {
   const listedDays = createdAt
     ? Math.max(0, Math.floor((Date.now() - createdAt.getTime()) / 86_400_000))
     : 0;
-
-  const storageBase = getStorageBaseUrl();
+  const imageUrl = resolveMediaUrl(raw?.photo_url) || resolveMediaUrl(raw?.photo);
 
   return {
     ...raw,
-    image: raw.photo ? `${storageBase}/storage/${raw.photo}` : null,
+    image: imageUrl,
     sqft: raw.size_sqft ?? null,
     verified: Boolean(raw.verified_landlord),
     views: 0,

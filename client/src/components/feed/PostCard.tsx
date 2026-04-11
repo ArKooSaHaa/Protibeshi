@@ -1,6 +1,7 @@
 import { FormEvent, useMemo, useRef, useState } from 'react';
 import { Bookmark, Flag, Heart, Loader2, MapPin, MessageCircle, Send, ShieldAlert, Smile } from 'lucide-react';
 import { FeedPost, resolvePostImageUrl } from '@/api/feedApi';
+import { resolveMediaUrl } from '@/lib/mediaUrl';
 import styles from './PostCard.module.css';
 
 type PostCardProps = {
@@ -26,37 +27,8 @@ const formatTime = (rawDate: string) => {
   return date.toLocaleString();
 };
 
-const DEFAULT_API_BASE = 'http://127.0.0.1:8000';
-
 const resolveUserImageUrl = (rawPath: string | null | undefined) => {
-  if (!rawPath) {
-    return null;
-  }
-
-  const normalizedPath = rawPath.replace(/\\/g, '/').trim();
-  if (!normalizedPath) {
-    return null;
-  }
-
-  if (normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')) {
-    return normalizedPath;
-  }
-
-  const baseUrl = import.meta.env.VITE_API_URL || DEFAULT_API_BASE;
-
-  if (normalizedPath.startsWith('/')) {
-    return `${baseUrl}${normalizedPath}`;
-  }
-
-  if (normalizedPath.startsWith('storage/')) {
-    return `${baseUrl}/${normalizedPath}`;
-  }
-
-  if (normalizedPath.startsWith('public/storage/')) {
-    return `${baseUrl}/${normalizedPath.replace(/^public\//, '')}`;
-  }
-
-  return `${baseUrl}/storage/${normalizedPath}`;
+  return resolveMediaUrl(rawPath);
 };
 
 const getStringAtPath = (source: Record<string, unknown>, path: string) => {
