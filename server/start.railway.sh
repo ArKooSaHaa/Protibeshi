@@ -3,32 +3,45 @@ set -eu
 
 cd "$(dirname "$0")"
 
-if [ ! -f .env ]; then
-  cp .env.example .env
-fi
+echo "Preparing Laravel environment..."
 
-mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+# Ensure required directories exist
+
+mkdir -p storage/framework/cache 
+storage/framework/sessions 
+storage/framework/views 
+storage/logs 
+bootstrap/cache
 
 touch storage/logs/laravel.log
 chmod -R 775 storage bootstrap/cache || true
 
-php artisan config:clear >/dev/null 2>&1 || true
-php artisan cache:clear >/dev/null 2>&1 || true
+echo "Clearing caches..."
+php artisan config:clear || true
+php artisan cache:clear || true
 
-app_key="$(grep '^APP_KEY=' .env | cut -d= -f2- || true)"
-if [ -z "$app_key" ]; then
-  php artisan key:generate --force >/dev/null 2>&1 || true
+echo "Checking APP_KEY..."
+if [ -z "${APP_KEY:-}" ]; then
+echo "APP_KEY not set. Generating..."
+php artisan key:generate --force || true
 fi
 
-jwt_secret="$(grep '^JWT_SECRET=' .env | cut -d= -f2- || true)"
-if [ -z "$jwt_secret" ]; then
-  php artisan jwt:secret --force >/dev/null 2>&1 || true
+echo "Checking JWT_SECRET..."
+if [ -z "${JWT_SECRET:-}" ]; then
+echo "JWT_SECRET not set. Generating..."
+php artisan jwt:secret --force || true
 fi
 
+echo "Running migrations..."
 if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
-  php artisan migrate --force
+php artisan migrate --force
 fi
 
-php artisan storage:link >/dev/null 2>&1 || true
+echo "Linking storage..."
+php artisan storage:link || true
 
+echo "Caching config..."
+php artisan config:cache
+
+echo "Starting Laravel server..."
 exec php artisan serve --host=0.0.0.0 --port="${PORT:-8000}"
