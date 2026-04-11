@@ -100,3 +100,6 @@ nginx/acme-challenge/
 !**/package-lock.json
 !yarn.lock
 !**/yarn.lock
+ 
+#txt files
+DEPLOY_VERCEL_RAILWAY_STEP_BY_STEP.txt
