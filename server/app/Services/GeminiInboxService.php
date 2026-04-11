@@ -99,4 +99,17 @@ class GeminiInboxService
 
         return $message;
     }
+
+    public function getGeminiApiKey(): ?string
+    {
+        $apiKey = env('GEMINI_API_KEY');
+
+        if (!is_string($apiKey)) {
+            return null;
+        }
+
+        $apiKey = trim($apiKey);
+
+        return $apiKey !== '' ? $apiKey : null;
+    }
 }
