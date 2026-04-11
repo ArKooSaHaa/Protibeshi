@@ -5,11 +5,12 @@ cd "$(dirname "$0")"
 
 echo "Preparing Laravel environment..."
 
-mkdir -p storage/framework/cache 
-storage/framework/sessions 
-storage/framework/views 
-storage/logs 
-bootstrap/cache || true
+mkdir -p \
+	storage/framework/cache \
+	storage/framework/sessions \
+	storage/framework/views \
+	storage/logs \
+	bootstrap/cache || true
 
 touch storage/logs/laravel.log
 chmod -R 777 storage bootstrap/cache || true
