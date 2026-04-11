@@ -14,7 +14,7 @@ storage/logs
 bootstrap/cache
 
 touch storage/logs/laravel.log
-chmod -R 775 storage bootstrap/cache || true
+chmod -R 777 storage bootstrap/cache || true
 
 echo "Clearing caches..."
 php artisan config:clear || true

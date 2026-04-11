@@ -1,0 +1,227 @@
+Protibeshi Deployment Guide
+Frontend on Vercel + Backend API and Database on Railway
+
+=================================================================
+0) What you are deploying
+=================================================================
+- Frontend: Vite React app from client/ (Vercel)
+- Backend API: Laravel app from server/ (Railway)
+- Database: MySQL service (Railway)
+- Realtime (recommended): separate Railway service for WebSocket server
+- Queue worker (recommended): separate Railway worker service for queue jobs
+
+This repository already includes:
+- client/vercel.json
+- server/railway.json
+- server/start.railway.sh
+- server/.env.railway.example
+
+=================================================================
+1) Prerequisites
+=================================================================
+- GitHub repo pushed and accessible
+- Vercel account connected to GitHub
+- Railway account connected to GitHub
+- A project branch ready for deployment (for example: deploy)
+
+Optional but recommended:
+- A custom domain for frontend and backend
+
+=================================================================
+2) Deploy Railway MySQL Database
+=================================================================
+1. Open Railway dashboard.
+2. Create a new project (or open existing project).
+3. Add a MySQL service.
+4. Wait until MySQL service status is healthy.
+5. Keep the generated DB credentials ready:
+   - host
+   - port
+   - database name
+   - username
+   - password
+
+Note:
+- Railway usually provides these as service variables or references.
+- You will map them to backend DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD.
+
+=================================================================
+3) Deploy Railway Backend API Service
+=================================================================
+1. In Railway, add a new service from GitHub repo.
+2. Select this repository.
+3. Set Root Directory to: server
+4. Railway will read server/railway.json.
+5. Deploy once to create the service URL.
+
+After first deploy, set backend environment variables in Railway.
+Use this as your base (copy from server/.env.railway.example):
+
+APP_NAME=Protibeshi
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://YOUR_BACKEND_SERVICE.up.railway.app
+FRONTEND_URL=https://YOUR_FRONTEND_PROJECT.vercel.app
+CORS_ALLOWED_ORIGINS=https://YOUR_FRONTEND_PROJECT.vercel.app
+LOG_LEVEL=warning
+QUEUE_CONNECTION=database
+BROADCAST_DRIVER=pusher
+
+DB_CONNECTION=mysql
+DB_HOST=<railway mysql host>
+DB_PORT=<railway mysql port>
+DB_DATABASE=<railway mysql database>
+DB_USERNAME=<railway mysql username>
+DB_PASSWORD=<railway mysql password>
+
+PUSHER_APP_ID=local
+PUSHER_APP_KEY=localkey
+PUSHER_APP_SECRET=<generate random secret>
+PUSHER_APP_CLUSTER=mt1
+PUSHER_HOST=YOUR_WEBSOCKET_SERVICE.up.railway.app
+PUSHER_PORT=443
+PUSHER_SCHEME=https
+
+RUN_MIGRATIONS=true
+
+Important secrets to set explicitly (do not leave blank):
+- APP_KEY
+- JWT_SECRET
+
+Generate APP_KEY locally:
+php -r "echo 'base64:'.base64_encode(random_bytes(32)).PHP_EOL;"
+
+Generate JWT_SECRET locally:
+php -r "echo bin2hex(random_bytes(32)).PHP_EOL;"
+
+Then paste both values into Railway backend variables.
+
+Redeploy backend after saving variables.
+
+=================================================================
+4) Deploy Railway WebSocket Service (Recommended)
+=================================================================
+If chat/realtime features are needed, create a second Railway service:
+
+1. Add new service from same GitHub repo.
+2. Root Directory: server
+3. Start command:
+   php artisan websockets:serve --host=0.0.0.0 --port=$PORT
+4. Add the same env variables as backend (DB_*, APP_*, PUSHER_*).
+5. Deploy and copy websocket service public domain.
+6. Ensure backend variable PUSHER_HOST points to this websocket domain.
+7. Redeploy backend after updating PUSHER_HOST.
+
+=================================================================
+5) Deploy Railway Queue Worker Service (Recommended)
+=================================================================
+If queue jobs are used, add a worker service:
+
+1. Add new service from same GitHub repo.
+2. Root Directory: server
+3. Start command:
+   php artisan queue:work --tries=3 --timeout=90
+4. Add same env variables as backend (DB_*, APP_*, QUEUE_CONNECTION, etc).
+5. Deploy.
+
+=================================================================
+6) Deploy Frontend on Vercel
+=================================================================
+1. Open Vercel dashboard.
+2. Import this GitHub repository.
+3. Set Root Directory to: client
+4. Framework preset: Vite (auto from client/vercel.json)
+5. Build command: npm run build
+6. Output directory: dist
+
+Set Vercel environment variables:
+
+VITE_API_URL=https://YOUR_BACKEND_SERVICE.up.railway.app
+VITE_WS_HOST=YOUR_WEBSOCKET_SERVICE.up.railway.app
+VITE_WS_PORT=443
+VITE_WSS_PORT=443
+VITE_WS_SCHEME=wss
+
+Optional frontend keys:
+VITE_GOOGLE_MAPS_API_KEY=
+VITE_OPENWEATHER_API_KEY=
+VITE_GEMINI_API_KEY=
+
+Deploy frontend.
+
+=================================================================
+7) Connect Frontend and Backend Properly
+=================================================================
+After frontend URL is final, confirm backend variables are updated:
+
+FRONTEND_URL=https://YOUR_FRONTEND_PROJECT.vercel.app
+CORS_ALLOWED_ORIGINS=https://YOUR_FRONTEND_PROJECT.vercel.app
+
+If you need multiple allowed origins, use comma-separated values:
+CORS_ALLOWED_ORIGINS=https://YOUR_FRONTEND_PROJECT.vercel.app,https://YOUR_CUSTOM_DOMAIN
+
+Redeploy backend after changing these.
+
+=================================================================
+8) Post-Deploy Smoke Tests
+=================================================================
+Use these checks in order.
+
+A) Public API check:
+curl -sS https://YOUR_BACKEND_SERVICE.up.railway.app/api/posts
+
+B) Frontend load check:
+Open https://YOUR_FRONTEND_PROJECT.vercel.app in browser
+
+C) Auth check:
+- Sign up from frontend
+- Sign in from frontend
+- Open account/profile section
+
+D) Protected API check with token (optional):
+curl -sS https://YOUR_BACKEND_SERVICE.up.railway.app/api/account/profile \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+E) WebSocket check (if realtime enabled):
+- Open browser devtools, check websocket connection established
+- Test chat/realtime feature in UI
+
+F) Queue check (if worker enabled):
+- In Railway worker logs, confirm no repeated crash loops
+
+=================================================================
+9) Common Issues and Fixes
+=================================================================
+1. CORS blocked in browser:
+- Verify FRONTEND_URL and CORS_ALLOWED_ORIGINS in Railway backend
+- Redeploy backend
+
+2. 401 or token issues:
+- Ensure APP_KEY and JWT_SECRET are set and stable
+- If changed accidentally, users may need to sign in again
+
+3. 500 DB errors:
+- Verify DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD
+- Confirm backend can reach Railway MySQL service
+
+4. Realtime not working:
+- Ensure websocket service is deployed separately
+- Ensure VITE_WS_HOST points to websocket domain
+- Ensure backend PUSHER_HOST points to same websocket domain
+
+5. Queue jobs not processing:
+- Ensure queue worker service is running with queue:work command
+
+=================================================================
+10) Final Production Checklist
+=================================================================
+- Backend API deployed on Railway and healthy
+- Railway MySQL attached and healthy
+- Frontend deployed on Vercel and using correct API URL
+- CORS allows Vercel domain
+- APP_KEY and JWT_SECRET set in Railway backend
+- WebSocket service deployed (if realtime needed)
+- Queue worker deployed (if queue jobs needed)
+- Smoke tests passed
+
+Deployment complete.
