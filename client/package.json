@@ -39,6 +39,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.17.10",
+    "@vercel/analytics": "^2.0.1",
     "autoprefixer": "^10.4.24",
     "axios": "^1.7.9",
     "bootstrap": "^5.3.3",
