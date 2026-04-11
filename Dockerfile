@@ -59,6 +59,14 @@ COPY client/ /var/www/html/client
 # Set working directory
 WORKDIR /var/www/html
 
+# Ensure Laravel runtime directories exist before Composer scripts run artisan.
+RUN mkdir -p \
+    storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/logs \
+    bootstrap/cache
+
 # Install Laravel dependencies
 RUN composer install
 
