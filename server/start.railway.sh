@@ -36,6 +36,11 @@ if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
 php artisan migrate --force
 fi
 
+echo "Ensuring default admin account..."
+if [ "${RUN_ADMIN_SEEDER:-true}" = "true" ]; then
+php artisan db:seed --class=AdminSeeder --force
+fi
+
 echo "Linking storage..."
 php artisan storage:link || true
 

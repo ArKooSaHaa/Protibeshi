@@ -14,15 +14,23 @@ class AdminSeeder extends Seeder
 
     public function run(): void
     {
-        $admin = Admin::where('email', self::ADMIN_EMAIL)->first();
+        $adminName = trim((string) env('ADMIN_NAME', self::ADMIN_NAME));
+        $adminEmail = strtolower(trim((string) env('ADMIN_EMAIL', self::ADMIN_EMAIL)));
+        $adminPassword = (string) env('ADMIN_PASSWORD', self::ADMIN_PASSWORD);
+
+        if ($adminEmail === '' || !filter_var($adminEmail, FILTER_VALIDATE_EMAIL) || $adminPassword === '') {
+            return;
+        }
+
+        $admin = Admin::whereRaw('LOWER(email) = ?', [$adminEmail])->first();
 
         if (!$admin) {
             $admin = new Admin();
-            $admin->email = self::ADMIN_EMAIL;
         }
 
-        $admin->name = self::ADMIN_NAME;
-        $admin->password = Hash::make(self::ADMIN_PASSWORD);
+        $admin->email = $adminEmail;
+        $admin->name = $adminName !== '' ? $adminName : self::ADMIN_NAME;
+        $admin->password = Hash::make($adminPassword);
         $admin->save();
     }
 }

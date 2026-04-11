@@ -285,6 +285,8 @@ If you deploy frontend on Vercel and backend on Railway, use the configs already
 	- `FRONTEND_URL`
 	- `CORS_ALLOWED_ORIGINS` (your Vercel URL)
 	- `DB_*`
+	- `ADMIN_EMAIL`, `ADMIN_PASSWORD` (default admin sign-in)
+	- `RUN_ADMIN_SEEDER=true` (auto-seed default admin on startup)
 	- `APP_KEY` and `JWT_SECRET` (or allow startup script to generate them)
 4. Deploy.
 
