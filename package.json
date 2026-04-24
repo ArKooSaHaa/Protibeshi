@@ -8,13 +8,18 @@
     "build:client": "cd client && npm run build",
     "copy:client": "cp -r client/dist/* server/public/",
     "build:prod": "npm run build:client && npm run copy:client",
-    "dev:watch": "chokidar 'client/src/**/*' -c 'npm run build && rsync -av client/dist/ server/public/'"  
+    "dev:watch": "chokidar 'client/src/**/*' -c 'npm run build && rsync -av client/dist/ server/public/'"
   },
   "keywords": [],
   "author": "Ali Ahnaf",
   "license": "ISC",
   "dependencies": {
-    "framer-motion": "^12.34.3"
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.0",
+    "@studio-freight/lenis": "^1.0.42",
+    "framer-motion": "^12.34.3",
+    "gsap": "^3.15.0",
+    "three": "^0.184.0"
   },
   "devDependencies": {
     "chokidar-cli": "^3.0.0"

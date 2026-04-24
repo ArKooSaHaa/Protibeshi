@@ -1,0 +1,182 @@
+.scene {
+  position: relative;
+  min-height: 420vh;
+  margin-bottom: clamp(2rem, 5vw, 3.8rem);
+  isolation: isolate;
+  background: #03121b;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.stickyScene {
+  position: relative;
+  top: 0;
+  height: 100vh;
+  min-height: 38rem;
+  overflow: hidden;
+  background: #03121b;
+}
+
+.canvas {
+  position: absolute !important;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.vignette,
+.grain {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.vignette {
+  background:
+    linear-gradient(90deg, rgba(3, 18, 27, 0.88) 0%, rgba(3, 18, 27, 0.22) 36%, rgba(3, 18, 27, 0.36) 100%),
+    radial-gradient(circle at 50% 44%, transparent 0%, transparent 46%, rgba(1, 8, 13, 0.68) 100%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.42) 0%, transparent 30%, rgba(2, 6, 23, 0.74) 100%);
+}
+
+.grain {
+  opacity: 0.12;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 5px 5px;
+  mix-blend-mode: overlay;
+}
+
+.copyLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.chapter {
+  position: absolute;
+  left: clamp(1rem, 6vw, 5.8rem);
+  bottom: clamp(6rem, 18vh, 11rem);
+  width: min(34rem, calc(100vw - 2rem));
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(18px);
+  will-change: transform, opacity;
+}
+
+.chapter:first-child {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.kicker {
+  margin: 0;
+  color: #8ff5df;
+  font-size: clamp(0.68rem, 0.9vw, 0.8rem);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.chapter h1 {
+  margin: 0.82rem 0 0;
+  color: #effcff;
+  font-size: clamp(2.2rem, 7vw, 6.4rem);
+  line-height: 0.94;
+  letter-spacing: 0;
+  text-wrap: balance;
+  text-shadow: 0 24px 68px rgba(0, 0, 0, 0.5);
+}
+
+.chapter p:last-child {
+  margin: 1.05rem 0 0;
+  max-width: 35rem;
+  color: #c8dce2;
+  font-size: clamp(0.98rem, 1.45vw, 1.18rem);
+  line-height: 1.55;
+  text-shadow: 0 14px 42px rgba(0, 0, 0, 0.54);
+}
+
+.depthMeter {
+  position: absolute;
+  right: clamp(1rem, 3vw, 2.2rem);
+  top: 50%;
+  z-index: 4;
+  display: grid;
+  gap: 0.7rem;
+  transform: translateY(-50%);
+}
+
+.depthMeter span {
+  width: 0.42rem;
+  height: 2.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(165, 243, 252, 0.34);
+  background: rgba(15, 23, 42, 0.4);
+  box-shadow: inset 0 0 18px rgba(45, 227, 178, 0.12);
+}
+
+@media (max-width: 860px) {
+  .scene {
+    min-height: 380vh;
+  }
+
+  .stickyScene {
+    min-height: 34rem;
+  }
+
+  .vignette {
+    background:
+      linear-gradient(180deg, rgba(3, 18, 27, 0.58) 0%, rgba(3, 18, 27, 0.12) 36%, rgba(3, 18, 27, 0.78) 100%),
+      radial-gradient(circle at 50% 45%, transparent 0%, transparent 44%, rgba(1, 8, 13, 0.72) 100%);
+  }
+
+  .chapter {
+    left: clamp(1rem, 5vw, 2rem);
+    bottom: clamp(5rem, 15vh, 8rem);
+    width: min(31rem, calc(100vw - 2rem));
+  }
+
+  .depthMeter {
+    right: 0.8rem;
+  }
+
+  .depthMeter span {
+    height: 2.1rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .scene {
+    min-height: 360vh;
+  }
+
+  .stickyScene {
+    min-height: 32rem;
+  }
+
+  .chapter {
+    bottom: 4.4rem;
+  }
+
+  .chapter h1 {
+    font-size: clamp(2rem, 13vw, 3.9rem);
+    max-width: 10ch;
+  }
+
+  .chapter p:last-child {
+    max-width: min(26rem, calc(100vw - 4rem));
+  }
+
+  .depthMeter {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chapter {
+    will-change: auto;
+  }
+}

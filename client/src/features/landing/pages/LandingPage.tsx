@@ -2,22 +2,8 @@ import { LazyMotion, domAnimation, m } from 'framer-motion';
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '@/config/routes.config';
+import { Scene3D } from '@/features/landing/components/Scene3D';
 import styles from './LandingPage.module.css';
-
-const FEATURES = [
-  {
-    title: 'Verified local network',
-    description: 'Discover trusted community updates, local offers, and service posts from nearby people.',
-  },
-  {
-    title: 'Fast neighborhood response',
-    description: 'Coordinate support requests and urgent help with clearer visibility and fewer delays.',
-  },
-  {
-    title: 'One place for everything',
-    description: 'From housing and services to relief and complaints, stay connected with one unified platform.',
-  },
-];
 
 const sectionTransition = {
   duration: 0.72,
@@ -39,13 +25,6 @@ export const LandingPage = () => {
       document.documentElement.style.backgroundColor = previousHtmlBackground;
     };
   }, []);
-
-  const handleScrollDown = () => {
-    document.getElementById('landing-highlights')?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    });
-  };
 
   return (
     <LazyMotion features={domAnimation}>
@@ -70,66 +49,7 @@ export const LandingPage = () => {
         </header>
 
         <main className={styles.main}>
-          <section className={styles.hero}>
-            <m.div
-              className={styles.heroContent}
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={sectionTransition}
-            >
-              <div className={styles.heroCopy}>
-                <p className={styles.eyebrow}>Neighborhood-first social platform</p>
-                <h1 className={styles.heroTitle}>A modern local hub to share updates, get help, and stay connected.</h1>
-                <p className={styles.heroDescription}>
-                  Start with your community feed, discover trusted services nearby, and respond faster to local needs in
-                  one seamless experience.
-                </p>
-              </div>
-
-              <aside className={styles.photoFrame} aria-label="Protibeshi logo">
-                <div className={styles.photoFrameInner}>
-                  <img src="/dp.png" alt="Protibeshi logo" className={styles.photoFrameImage} />
-                </div>
-              </aside>
-            </m.div>
-
-            <button type="button" className={styles.scrollHint} onClick={handleScrollDown}>
-              <span>Scroll down</span>
-              <span className={styles.scrollIcon} aria-hidden="true" />
-            </button>
-          </section>
-
-          <m.section
-            id="landing-highlights"
-            className={styles.highlights}
-            initial={{ opacity: 0, y: 28 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={sectionTransition}
-          >
-            <div className={styles.highlightsIntro}>
-              <p className={styles.sectionTag}>Why Protibeshi</p>
-              <h2 className={styles.sectionTitle}>Built for real neighborhood collaboration</h2>
-            </div>
-
-            <div className={styles.featureGrid}>
-              {FEATURES.map((feature, index) => (
-                <m.article
-                  key={feature.title}
-                  className={styles.featureCard}
-                  initial={{ opacity: 0, y: 24 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  whileHover={{ y: -6, scale: 1.01 }}
-                  viewport={{ once: true, amount: 0.45 }}
-                  transition={{ ...sectionTransition, delay: index * 0.09 }}
-                >
-                  <p className={styles.featureIndex}>{String(index + 1).padStart(2, '0')}</p>
-                  <h3>{feature.title}</h3>
-                  <p>{feature.description}</p>
-                </m.article>
-              ))}
-            </div>
-          </m.section>
+          <Scene3D />
 
           <m.section
             className={styles.bottomCta}
@@ -163,6 +83,14 @@ export const LandingPage = () => {
                 Neighborhood-first social platform for trusted local updates, verified services, and faster community
                 response.
               </p>
+
+              <div className={styles.footerTrustBar} aria-label="Protibeshi platform focus">
+                <span>
+                  <span className={styles.footerPulse} aria-hidden="true" />
+                  Local-first platform
+                </span>
+                <span>Built for neighborhood response</span>
+              </div>
             </section>
 
             <div className={styles.footerColumns}>
