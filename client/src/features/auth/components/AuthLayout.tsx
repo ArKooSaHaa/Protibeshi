@@ -64,7 +64,7 @@ export const AuthLayout = ({ children, hasError = false, variant = 'signin' }: A
           playsInline
           preload="auto"
         >
-          <source src="/splash.mp4" type="video/mp4" />
+          <source src="/hero.mp4" type="video/mp4" />
         </video>
         <div className={styles.splashOverlay} />
         <div className={styles.gradientBase} />
