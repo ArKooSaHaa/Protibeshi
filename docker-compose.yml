@@ -80,7 +80,7 @@ services:
     container_name: protibeshi_frontend
     restart: unless-stopped
     working_dir: /app
-    command: sh -c "npm run build && npm run dev -- --host"
+    command: sh -c "npm run dev -- --host"
     ports:
       - "5173:5173"
     volumes:

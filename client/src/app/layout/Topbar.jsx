@@ -10,6 +10,7 @@ import styles from './Topbar.module.css';
 export const Topbar = ({ onMenuClick }) => {
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
+  const topbarTemperature = '23°';
   const [user, setUser] = React.useState({
     firstName: 'User',
     fullName: 'User',
@@ -165,9 +166,14 @@ export const Topbar = ({ onMenuClick }) => {
       </div>
 
       <div className={styles.right}>
-        <div className={styles.location}>
-          <MapPin size={16} className={styles.locationIcon} />
-          <span className={styles.locationText}>{user.neighborhood}</span>
+        <div className={styles.locationGroup}>
+          <span className={styles.tempBadge} aria-label="Current temperature">
+            {topbarTemperature}
+          </span>
+          <div className={styles.location}>
+            <MapPin size={16} className={styles.locationIcon} />
+            <span className={styles.locationText}>{user.neighborhood}</span>
+          </div>
         </div>
 
         <div className={styles.actions}>

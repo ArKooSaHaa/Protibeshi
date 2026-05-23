@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Restaurant;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Http\Request;
@@ -35,6 +36,14 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        Route::bind('restaurant', function (string $value) {
+            return Restaurant::query()
+                ->where(function ($query) use ($value) {
+                    $query->where('id', $value)->orWhere('slug', $value);
+                })
+                ->firstOrFail();
+        });
+
         $this->configureRateLimiting();
 
         $this->routes(function () {

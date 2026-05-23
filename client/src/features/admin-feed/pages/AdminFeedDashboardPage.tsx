@@ -1,5 +1,6 @@
+import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion, type Variants } from 'framer-motion';
-import { RefreshCw, ShieldCheck } from 'lucide-react';
+import { RefreshCw, ShieldCheck, Store } from 'lucide-react';
 import { ActivityLogPanel } from '../components/ActivityLogPanel';
 import { AdminBulkActionsBar } from '../components/AdminBulkActionsBar';
 import { AdminFilterToolbar } from '../components/AdminFilterToolbar';
@@ -12,6 +13,11 @@ import { PostModerationCard } from '../components/PostModerationCard';
 import { ReportModal } from '../components/ReportModal';
 import { ToastStack } from '../components/ToastStack';
 import { useAdminFeedDashboard } from '../hooks/useAdminFeedDashboard';
+import {
+  fetchAdminRestaurants,
+  updateAdminRestaurantStatus,
+  type AdminRestaurantRecord,
+} from '../services/adminRestaurantService';
 import '../styles/AdminFeedDashboard.css';
 
 const feedContainerVariants: Variants = {
@@ -51,6 +57,56 @@ const formatSyncTime = (isoDate: string | null): string => {
 export const AdminFeedDashboardPage = () => {
   const dashboard = useAdminFeedDashboard();
   const syncLabel = formatSyncTime(dashboard.lastSyncedAt);
+  const [restaurantMode, setRestaurantMode] = useState<'requests' | 'all'>('requests');
+  const [restaurants, setRestaurants] = useState<AdminRestaurantRecord[]>([]);
+  const [isRestaurantLoading, setIsRestaurantLoading] = useState(true);
+  const [restaurantError, setRestaurantError] = useState<string | null>(null);
+  const [updatingRestaurantId, setUpdatingRestaurantId] = useState<number | null>(null);
+
+  const loadRestaurants = useCallback(async (mode: 'requests' | 'all') => {
+    setIsRestaurantLoading(true);
+    setRestaurantError(null);
+
+    try {
+      const items = await fetchAdminRestaurants(mode);
+      setRestaurants(items);
+    } catch (error) {
+      setRestaurantError(
+        error instanceof Error ? error.message : 'Could not load restaurant moderation queue.',
+      );
+      setRestaurants([]);
+    } finally {
+      setIsRestaurantLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadRestaurants(restaurantMode);
+  }, [loadRestaurants, restaurantMode]);
+
+  const moderateRestaurant = useCallback(
+    async (restaurantId: number, status: 'approved' | 'rejected') => {
+      setUpdatingRestaurantId(restaurantId);
+      setRestaurantError(null);
+
+      try {
+        const updated = await updateAdminRestaurantStatus(restaurantId, status);
+
+        setRestaurants((previous) => {
+          if (restaurantMode === 'requests' && status !== 'pending') {
+            return previous.filter((item) => item.id !== restaurantId);
+          }
+
+          return previous.map((item) => (item.id === restaurantId ? updated : item));
+        });
+      } catch (error) {
+        setRestaurantError(error instanceof Error ? error.message : 'Could not update restaurant status.');
+      } finally {
+        setUpdatingRestaurantId(null);
+      }
+    },
+    [restaurantMode],
+  );
 
   return (
     <motion.section
@@ -90,6 +146,83 @@ export const AdminFeedDashboardPage = () => {
         activeTab={dashboard.activeTab}
         onTabChange={dashboard.setActiveTab}
       />
+
+      <section className="afd-restaurant-panel">
+        <div className="afd-restaurant-panel-header">
+          <div>
+            <p className="afd-kicker">Restaurant Moderation</p>
+            <h2 className="afd-restaurant-panel-title">Review restaurant submissions</h2>
+          </div>
+
+          <div className="afd-restaurant-toggle">
+            <button
+              type="button"
+              className={`afd-restaurant-toggle-btn ${restaurantMode === 'requests' ? 'is-active' : ''}`}
+              onClick={() => setRestaurantMode('requests')}
+            >
+              Restaurant Requests
+            </button>
+            <button
+              type="button"
+              className={`afd-restaurant-toggle-btn ${restaurantMode === 'all' ? 'is-active' : ''}`}
+              onClick={() => setRestaurantMode('all')}
+            >
+              All Restaurants
+            </button>
+          </div>
+        </div>
+
+        {restaurantError ? <p className="afd-restaurant-error">{restaurantError}</p> : null}
+
+        {isRestaurantLoading ? (
+          <p className="afd-restaurant-empty">Loading restaurants...</p>
+        ) : restaurants.length === 0 ? (
+          <p className="afd-restaurant-empty">
+            {restaurantMode === 'requests' ? 'No pending restaurant requests.' : 'No restaurants found.'}
+          </p>
+        ) : (
+          <div className="afd-restaurant-list">
+            {restaurants.slice(0, 10).map((restaurant) => (
+              <article key={restaurant.id} className="afd-restaurant-card">
+                <div className="afd-restaurant-main">
+                  <div className="afd-restaurant-icon-wrap">
+                    <Store size={16} />
+                  </div>
+
+                  <div className="afd-restaurant-copy">
+                    <h3>{restaurant.name}</h3>
+                    <p>
+                      {restaurant.category} • {restaurant.location}
+                    </p>
+                    <span>
+                      Status: <strong>{restaurant.status}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="afd-restaurant-actions">
+                  <button
+                    type="button"
+                    className="afd-btn afd-btn-primary"
+                    onClick={() => void moderateRestaurant(restaurant.id, 'approved')}
+                    disabled={updatingRestaurantId === restaurant.id || restaurant.status === 'approved'}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    className="afd-btn afd-btn-danger"
+                    onClick={() => void moderateRestaurant(restaurant.id, 'rejected')}
+                    disabled={updatingRestaurantId === restaurant.id || restaurant.status === 'rejected'}
+                  >
+                    Reject
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       <AnimatePresence>
         {dashboard.selectedCount > 0 ? (

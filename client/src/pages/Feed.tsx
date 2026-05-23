@@ -15,7 +15,7 @@ import {
 import { PostCard } from '@/components/feed/PostCard';
 import { PostComments } from '@/components/feed/PostComments';
 import { CreatePostModal, CreatePostPayload } from '@/components/feed/CreatePostModal';
-import { WeatherNewsPanel } from '@/components/feed/WeatherNewsPanel';
+import { FoodCorner } from '@/components/food-corner/FoodCorner';
 import { fetchAccountProfile } from '@/features/account/services/accountService';
 import { resolveMediaUrl } from '@/lib/mediaUrl';
 import styles from './Feed.module.css';
@@ -527,7 +527,7 @@ export const Feed = () => {
       </main>
 
       <aside className={styles.rightColumn}>
-        <WeatherNewsPanel />
+        <FoodCorner />
       </aside>
 
       <PostComments

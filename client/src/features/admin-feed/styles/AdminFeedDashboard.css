@@ -1350,6 +1350,133 @@
   color: #0369a1;
 }
 
+.afd-restaurant-panel {
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: #ffffff;
+  padding: 1rem;
+  box-shadow: 0 10px 24px -20px rgba(15, 23, 42, 0.45);
+}
+
+.afd-restaurant-panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.afd-restaurant-panel-title {
+  margin: 0.2rem 0 0;
+  font-size: 1.05rem;
+  line-height: 1.4;
+  color: #0f172a;
+}
+
+.afd-restaurant-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.afd-restaurant-toggle-btn {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.7rem;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 650;
+  padding: 0.45rem 0.7rem;
+  transition: all 0.2s ease;
+}
+
+.afd-restaurant-toggle-btn.is-active {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.afd-restaurant-error {
+  margin: 0.75rem 0 0;
+  border-radius: 0.75rem;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.84rem;
+  padding: 0.6rem 0.7rem;
+}
+
+.afd-restaurant-empty {
+  margin: 0.8rem 0 0;
+  color: #64748b;
+  font-size: 0.84rem;
+}
+
+.afd-restaurant-list {
+  margin-top: 0.9rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.afd-restaurant-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  background: #f8fafc;
+  padding: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.afd-restaurant-main {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.afd-restaurant-icon-wrap {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #d1fae5;
+  color: #047857;
+  flex: 0 0 auto;
+}
+
+.afd-restaurant-copy {
+  min-width: 0;
+}
+
+.afd-restaurant-copy h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.afd-restaurant-copy p,
+.afd-restaurant-copy span {
+  margin: 0.18rem 0 0;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.afd-restaurant-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.afd-restaurant-actions .afd-btn {
+  padding: 0.46rem 0.72rem;
+}
+
 @media (min-width: 640px) {
   .afd-stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

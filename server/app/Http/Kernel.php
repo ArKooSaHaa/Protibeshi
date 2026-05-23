@@ -64,5 +64,7 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
         'not_banned' => \App\Http\Middleware\EnsureUserNotBanned::class,
+        'auth.api_or_sanctum' => \App\Http\Middleware\AuthenticateApiOrSanctum::class,
+        'auth.api_or_sanctum.optional' => \App\Http\Middleware\OptionalAuthenticateApiOrSanctum::class,
     ];
 }

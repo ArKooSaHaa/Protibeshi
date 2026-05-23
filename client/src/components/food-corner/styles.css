@@ -1,0 +1,323 @@
+.fc-card {
+  background: linear-gradient(
+    140deg,
+    rgba(255, 255, 255, 0.99),
+    rgba(240, 253, 250, 0.94)
+  );
+
+  border: 1px solid rgba(148, 163, 184, 0.35);
+
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+
+  backdrop-filter: blur(18px);
+}
+
+.fc-strong-text p,
+.fc-strong-text span,
+.fc-strong-text label {
+  color: #0f172a;
+}
+
+.fc-scrollable {
+  max-height: calc(100vh - 120px);
+
+  overflow-y: auto;
+
+  padding-right: 6px;
+
+  scrollbar-gutter: stable;
+
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.fc-minimized {
+  max-height: 220px;
+  overflow: hidden;
+}
+
+.fc-scrollable::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.fc-title {
+  color: #0b1220;
+  letter-spacing: 0.01em;
+}
+
+.fc-sheen {
+  background: radial-gradient(
+    circle at top,
+    rgba(16, 185, 129, 0.18),
+    transparent 58%
+  );
+}
+
+.fc-scroll-shadow {
+  mask-image: linear-gradient(180deg, black 75%, transparent 100%);
+}
+
+/* =========================
+   FLOATING LABEL
+========================= */
+
+.fc-floating-label {
+  position: relative;
+}
+
+/* =========================
+   PREMIUM INPUT SYSTEM
+========================= */
+
+.fc-floating-input,
+.fc-floating-textarea,
+.fc-field {
+  width: 100%;
+
+  border-radius: 18px;
+
+  border: 1px solid rgba(203, 213, 225, 0.9);
+
+  background: rgba(255, 255, 255, 0.92);
+
+  color: #0f172a;
+
+  backdrop-filter: blur(12px);
+
+  box-shadow:
+    0 2px 6px rgba(15, 23, 42, 0.03),
+    0 10px 24px rgba(15, 23, 42, 0.04);
+
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.2s ease,
+    background 0.25s ease;
+}
+
+/* =========================
+   INPUT HEIGHTS & SPACING
+========================= */
+
+.fc-floating-input,
+.fc-field {
+  height: 54px;
+
+  padding-inline: 16px;
+
+  padding-top: 20px;
+
+  font-size: 15px;
+
+  font-weight: 500;
+}
+
+.fc-floating-textarea {
+  min-height: 120px;
+
+  padding-inline: 16px;
+
+  padding-top: 24px;
+
+  padding-bottom: 14px;
+
+  font-size: 15px;
+
+  font-weight: 500;
+
+  resize: none;
+}
+
+/* =========================
+   HOVER
+========================= */
+
+.fc-floating-input:hover,
+.fc-floating-textarea:hover,
+.fc-field:hover {
+  border-color: rgba(148, 163, 184, 0.9);
+
+  box-shadow:
+    0 4px 12px rgba(15, 23, 42, 0.05),
+    0 14px 28px rgba(15, 23, 42, 0.05);
+}
+
+/* =========================
+   FOCUS STATES
+========================= */
+
+.fc-floating-input:focus,
+.fc-floating-textarea:focus,
+.fc-field:focus-visible,
+.fc-field[data-state='open'] {
+  border-color: rgba(16, 185, 129, 0.7);
+
+  background: rgba(255, 255, 255, 1);
+
+  box-shadow:
+    0 0 0 4px rgba(16, 185, 129, 0.14),
+    0 10px 30px rgba(16, 185, 129, 0.12);
+
+  transform: translateY(-1px);
+}
+
+/* =========================
+   PLACEHOLDER
+========================= */
+
+.fc-floating-input::placeholder,
+.fc-floating-textarea::placeholder {
+  color: rgba(100, 116, 139, 0.75);
+
+  font-weight: 500;
+}
+
+/* =========================
+   FLOATING LABEL
+========================= */
+
+.fc-floating-label span {
+  position: absolute;
+
+  left: 16px;
+
+  top: 16px;
+
+  color: #64748b;
+
+  font-size: 12px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.02em;
+
+  pointer-events: none;
+
+  transition:
+    transform 0.2s ease,
+    color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+/* =========================
+   LABEL ACTIVE STATE
+========================= */
+
+.fc-floating-input:focus + span,
+.fc-floating-input:not(:placeholder-shown) + span,
+.fc-floating-textarea:focus + span,
+.fc-floating-textarea:not(:placeholder-shown) + span {
+  transform: translateY(-8px) scale(0.92);
+
+  color: #10b981;
+
+  opacity: 1;
+}
+
+/* =========================
+   SELECT / DROPDOWN
+========================= */
+
+.fc-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* =========================
+   ERROR STATE
+========================= */
+
+.border-rose-300 {
+  border-color: rgba(244, 63, 94, 0.5) !important;
+
+  box-shadow:
+    0 0 0 4px rgba(244, 63, 94, 0.08),
+    0 10px 24px rgba(244, 63, 94, 0.06) !important;
+}
+
+/* =========================
+   DELIVERY SWITCH CARD
+========================= */
+
+.fc-delivery-card {
+  border-radius: 20px;
+
+  border: 1px solid rgba(16, 185, 129, 0.14);
+
+  background: linear-gradient(
+    135deg,
+    rgba(240, 253, 244, 0.95),
+    rgba(236, 253, 245, 0.9)
+  );
+
+  box-shadow:
+    0 4px 12px rgba(15, 23, 42, 0.03),
+    0 10px 24px rgba(16, 185, 129, 0.05);
+
+  transition: all 0.25s ease;
+}
+
+.fc-delivery-card:hover {
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 8px 20px rgba(15, 23, 42, 0.04),
+    0 14px 28px rgba(16, 185, 129, 0.08);
+}
+
+/* =========================
+   IMAGE UPLOAD BOX
+========================= */
+
+.fc-upload-box {
+  border-radius: 20px;
+
+  border: 1.5px dashed rgba(16, 185, 129, 0.22);
+
+  background: linear-gradient(
+    135deg,
+    rgba(240, 253, 244, 0.65),
+    rgba(255, 255, 255, 0.95)
+  );
+
+  transition: all 0.25s ease;
+}
+
+.fc-upload-box:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+
+  background: rgba(240, 253, 244, 0.9);
+
+  transform: translateY(-1px);
+}
+
+/* =========================
+   DARK MODE
+========================= */
+
+.dark .fc-floating-input,
+.dark .fc-floating-textarea,
+.dark .fc-field {
+  background: rgba(15, 23, 42, 0.82);
+
+  border-color: rgba(51, 65, 85, 0.9);
+
+  color: white;
+}
+
+.dark .fc-floating-label span {
+  color: rgba(203, 213, 225, 0.8);
+}
+
+.dark .fc-floating-input::placeholder,
+.dark .fc-floating-textarea::placeholder {
+  color: rgba(148, 163, 184, 0.8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-card {
+    transition: none;
+  }
+}
