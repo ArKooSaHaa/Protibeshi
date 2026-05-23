@@ -19,6 +19,7 @@ use App\Http\Controllers\ListingReportController;
 use App\Http\Controllers\PostCommentController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PostLikeController;
+use App\Http\Controllers\PostVoteController;
 use App\Http\Controllers\PostReportController;
 use App\Http\Controllers\ReliefController;
 use App\Http\Controllers\RentListingController;
@@ -137,6 +138,7 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('/posts', [PostController::class, 'createPost']);
     Route::delete('/posts/{id}', [PostController::class, 'deletePost']);
     Route::post('/posts/{id}/like', [PostLikeController::class, 'toggleLike']);
+    Route::post('/posts/{id}/vote', [\App\Http\Controllers\PostVoteController::class, 'vote']);
     Route::post('/posts/{id}/comment', [PostCommentController::class, 'addComment']);
     Route::post('/posts/{id}/save', [SavedPostController::class, 'toggleSave']);
     Route::post('/posts/{id}/report', [PostReportController::class, 'report']);

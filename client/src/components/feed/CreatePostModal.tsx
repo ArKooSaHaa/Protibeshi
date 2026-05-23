@@ -26,7 +26,7 @@ type CreatePostModalProps = {
   onSubmit: (payload: CreatePostPayload) => Promise<boolean>;
 };
 
-const LABEL_OPTIONS = ['Emergency', 'Community', 'Help Needed', 'Service', 'Utilities', 'Events', 'Marketplace'];
+const LABEL_OPTIONS = ['Emergency', 'Community', 'Event'];
 
 const INITIAL_STATE: CreatePostPayload = {
   title: '',

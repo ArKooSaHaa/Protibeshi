@@ -11,6 +11,7 @@ import {
   likePost,
   reportPost,
   savePost,
+  votePost,
 } from '@/api/feedApi';
 import { PostCard } from '@/components/feed/PostCard';
 import { PostComments } from '@/components/feed/PostComments';
@@ -56,8 +57,32 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   return error.message || fallback;
 };
 
-const sortByRecent = (items: ViewPost[]) => {
+const FEED_WINDOW_DAYS = 7;
+
+const isWithinFeedWindow = (createdAt: string) => {
+  const createdAtMs = new Date(createdAt).getTime();
+  if (Number.isNaN(createdAtMs)) {
+    return false;
+  }
+
+  const nowMs = Date.now();
+  const feedWindowMs = FEED_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  return nowMs - createdAtMs <= feedWindowMs;
+};
+
+const isEmergencyPost = (post: FeedPost | ViewPost) => {
+  return String(post.label || post.post_type || '').trim().toLowerCase() === 'emergency';
+};
+
+const sortFeedPosts = (items: ViewPost[]) => {
   return [...items].sort((a, b) => {
+    const aEmergency = isEmergencyPost(a) ? 0 : 1;
+    const bEmergency = isEmergencyPost(b) ? 0 : 1;
+
+    if (aEmergency !== bEmergency) {
+      return aEmergency - bEmergency;
+    }
+
     const timeA = new Date(a.created_at).getTime();
     const timeB = new Date(b.created_at).getTime();
     return timeB - timeA;
@@ -73,8 +98,9 @@ const sanitizePosts = (items: FeedPost[]): ViewPost[] => {
     const hasValidId = typeof post.id === 'number';
     const hasTitle = typeof post.title === 'string' && post.title.trim().length > 0;
     const hasContent = typeof post.content === 'string' && post.content.trim().length > 0;
+    const isRecent = typeof post.created_at === 'string' ? isWithinFeedWindow(post.created_at) : false;
 
-    return hasValidId && hasTitle && hasContent;
+    return hasValidId && hasTitle && hasContent && isRecent;
   });
 };
 
@@ -85,6 +111,7 @@ export const Feed = () => {
 
   const [likePendingId, setLikePendingId] = useState<number | null>(null);
   const [savePendingId, setSavePendingId] = useState<number | null>(null);
+  const [votePendingId, setVotePendingId] = useState<number | null>(null);
 
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -147,6 +174,14 @@ export const Feed = () => {
 
     return null;
   }, [getStringAtPath, resolveUserImageUrl]);
+
+  const isEventPost = (post: ViewPost | null | undefined) => {
+    if (!post) {
+      return false;
+    }
+
+    return String(post.label || post.post_type || '').trim().toLowerCase() === 'event';
+  };
 
   const getLocalUser = () => {
     if (typeof window === 'undefined') {
@@ -216,7 +251,7 @@ export const Feed = () => {
 
     try {
       const response = await getPosts();
-      setPosts(sortByRecent(sanitizePosts(response)));
+      setPosts(sortFeedPosts(sanitizePosts(response)));
     } catch (requestError) {
       setError(getErrorMessage(requestError, 'Failed to load neighborhood feed.'));
     } finally {
@@ -261,6 +296,11 @@ export const Feed = () => {
   }, []);
 
   const handleOpenComments = async (postId: number) => {
+    const target = posts.find((item) => item.id === postId);
+    if (isEventPost(target)) {
+      return;
+    }
+
     setCommentsOpen(true);
     setCommentsLoading(true);
     setCommentsError(null);
@@ -294,6 +334,10 @@ export const Feed = () => {
     const previous = posts;
     const target = posts.find((item) => item.id === postId);
     if (!target) {
+      return;
+    }
+
+    if (isEventPost(target)) {
       return;
     }
 
@@ -335,6 +379,10 @@ export const Feed = () => {
       return;
     }
 
+    if (isEventPost(target)) {
+      return;
+    }
+
     setSavePendingId(postId);
     setPosts((items) => items.map((post) => (post.id === postId ? { ...post, saved: !post.saved } : post)));
 
@@ -352,6 +400,11 @@ export const Feed = () => {
 
   const handleCommentSubmit = async (postId: number, comment: string) => {
     const previous = posts;
+    const target = posts.find((item) => item.id === postId);
+    if (isEventPost(target)) {
+      return;
+    }
+
     const optimisticComment: FeedComment = {
       id: Date.now() * -1,
       comment,
@@ -422,6 +475,81 @@ export const Feed = () => {
     await reportPost(postId, reason);
   };
 
+  const handleVote = async (postId: number, vote: 'yes' | 'no') => {
+    const previous = posts;
+    const target = posts.find((item) => item.id === postId);
+
+    if (!target || !isEventPost(target)) {
+      return;
+    }
+
+    const currentVote = target.current_user_vote ?? null;
+    const currentYesVotes = target.yes_votes_count ?? 0;
+    const currentNoVotes = target.no_votes_count ?? 0;
+
+    let nextYesVotes = currentYesVotes;
+    let nextNoVotes = currentNoVotes;
+    let nextCurrentVote: 'yes' | 'no' | null = vote;
+
+    if (currentVote === vote) {
+      nextCurrentVote = null;
+      if (vote === 'yes') {
+        nextYesVotes = Math.max(currentYesVotes - 1, 0);
+      } else {
+        nextNoVotes = Math.max(currentNoVotes - 1, 0);
+      }
+    } else if (currentVote === 'yes') {
+      nextYesVotes = Math.max(currentYesVotes - 1, 0);
+      if (vote === 'no') {
+        nextNoVotes += 1;
+      }
+    } else if (currentVote === 'no') {
+      nextNoVotes = Math.max(currentNoVotes - 1, 0);
+      if (vote === 'yes') {
+        nextYesVotes += 1;
+      }
+    } else if (vote === 'yes') {
+      nextYesVotes += 1;
+    } else {
+      nextNoVotes += 1;
+    }
+
+    setVotePendingId(postId);
+    setPosts((items) =>
+      items.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              yes_votes_count: nextYesVotes,
+              no_votes_count: nextNoVotes,
+              current_user_vote: nextCurrentVote,
+            }
+          : post,
+      ),
+    );
+
+    try {
+      const result = await votePost(postId, vote);
+      setPosts((items) =>
+        items.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                yes_votes_count: result.yes_votes_count,
+                no_votes_count: result.no_votes_count,
+                current_user_vote: result.current_user_vote,
+              }
+            : post,
+        ),
+      );
+    } catch (requestError) {
+      setPosts(previous);
+      setError(getErrorMessage(requestError, 'Unable to record your vote right now.'));
+    } finally {
+      setVotePendingId(null);
+    }
+  };
+
   const handleCreatePost = async (payload: CreatePostPayload): Promise<boolean> => {
     setCreatingPost(true);
     setCreatePostError(null);
@@ -437,7 +565,8 @@ export const Feed = () => {
       formData.append('location', payload.location.trim());
     }
 
-    const postType = payload.label.toLowerCase() === 'emergency' ? 'emergency' : 'community';
+    const normalizedLabel = payload.label.toLowerCase();
+    const postType = normalizedLabel === 'event' ? 'event' : normalizedLabel === 'emergency' ? 'emergency' : 'community';
     formData.append('post_type', postType);
 
     if (payload.image) {
@@ -451,7 +580,9 @@ export const Feed = () => {
       if (moderationStatus === 'verified') {
         const safeCreatedPost = sanitizePosts([createdPost]);
         if (safeCreatedPost.length > 0) {
-          setPosts((previous) => sortByRecent([{ ...safeCreatedPost[0], liked: false, saved: false }, ...previous]));
+          setPosts((previous) =>
+            sortFeedPosts([{ ...safeCreatedPost[0], liked: false, saved: false }, ...previous]),
+          );
         }
       } else {
         setCreatePostNotice('Post submitted for admin verification. It will appear in feed after approval.');
@@ -516,10 +647,12 @@ export const Feed = () => {
               currentUserAvatarUrl={currentProfile?.avatarUrl ?? null}
               likePending={likePendingId === post.id}
               savePending={savePendingId === post.id}
+              votePending={votePendingId === post.id}
               onLike={handleLike}
               onOpenComments={handleOpenComments}
               onSubmitComment={handleCommentSubmit}
               onSave={handleSave}
+              onVote={handleVote}
               onReport={handleReport}
             />
           ))}
