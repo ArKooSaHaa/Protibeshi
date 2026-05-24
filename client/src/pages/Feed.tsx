@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, Plus } from 'lucide-react';
 import {
   FeedApiError,
@@ -125,6 +125,8 @@ export const Feed = () => {
   const [createPostNotice, setCreatePostNotice] = useState<string | null>(null);
   const [composerImageFailed, setComposerImageFailed] = useState(false);
   const [currentProfile, setCurrentProfile] = useState<CurrentAccountProfile | null>(null);
+  const [highlightedPostId, setHighlightedPostId] = useState<number | null>(null);
+  const highlightTimeoutRef = useRef<number | null>(null);
 
   const getStringAtPath = useCallback((source: Record<string, unknown>, path: string) => {
     const segments = path.split('.');
@@ -213,6 +215,36 @@ export const Feed = () => {
     [activePostId, posts],
   );
 
+  const upcomingEvents = useMemo(() => {
+    return posts
+      .filter((post) => isEventPost(post))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 5)
+      .map((post) => ({ id: post.id, title: post.title.trim() }))
+      .filter((post) => post.title.length > 0);
+  }, [posts]);
+
+  const handleUpcomingEventClick = (postId: number) => {
+    const target = document.getElementById(`feed-post-${postId}`);
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    if (highlightTimeoutRef.current !== null) {
+      window.clearTimeout(highlightTimeoutRef.current);
+    }
+
+    setHighlightedPostId(null);
+    window.requestAnimationFrame(() => {
+      setHighlightedPostId(postId);
+      highlightTimeoutRef.current = window.setTimeout(() => {
+        setHighlightedPostId(null);
+      }, 2200);
+    });
+  };
+
   const localUser = useMemo(() => getLocalUser(), []);
 
   const composerName = useMemo(() => {
@@ -292,6 +324,14 @@ export const Feed = () => {
 
     return () => {
       mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current !== null) {
+        window.clearTimeout(highlightTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -639,28 +679,60 @@ export const Feed = () => {
 
         <section className={styles.feedList}>
           {posts.map((post) => (
-            <PostCard
+            <div
               key={post.id}
-              post={post}
-              currentUserId={currentProfile?.id ?? null}
-              currentUserName={currentProfile?.name ?? null}
-              currentUserAvatarUrl={currentProfile?.avatarUrl ?? null}
-              likePending={likePendingId === post.id}
-              savePending={savePendingId === post.id}
-              votePending={votePendingId === post.id}
-              onLike={handleLike}
-              onOpenComments={handleOpenComments}
-              onSubmitComment={handleCommentSubmit}
-              onSave={handleSave}
-              onVote={handleVote}
-              onReport={handleReport}
-            />
+              id={`feed-post-${post.id}`}
+              className={[
+                styles.feedPostAnchor,
+                highlightedPostId === post.id ? styles.feedPostHighlighted : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              <PostCard
+                post={post}
+                currentUserId={currentProfile?.id ?? null}
+                currentUserName={currentProfile?.name ?? null}
+                currentUserAvatarUrl={currentProfile?.avatarUrl ?? null}
+                likePending={likePendingId === post.id}
+                savePending={savePendingId === post.id}
+                votePending={votePendingId === post.id}
+                onLike={handleLike}
+                onOpenComments={handleOpenComments}
+                onSubmitComment={handleCommentSubmit}
+                onSave={handleSave}
+                onVote={handleVote}
+                onReport={handleReport}
+              />
+            </div>
           ))}
         </section>
       </main>
 
       <aside className={styles.rightColumn}>
         <FoodCorner />
+
+        <section className={styles.upcomingEventsCard} aria-label="Upcoming events">
+          <h3 className={styles.upcomingEventsTitle}>Upcoming events</h3>
+
+          {upcomingEvents.length === 0 ? (
+            <p className={styles.upcomingEventsEmpty}>No upcoming events right now</p>
+          ) : (
+            <ul className={styles.upcomingEventsList}>
+              {upcomingEvents.map((event) => (
+                <li key={event.id} className={styles.upcomingEventsItem}>
+                  <button
+                    type="button"
+                    className={styles.upcomingEventsButton}
+                    onClick={() => handleUpcomingEventClick(event.id)}
+                  >
+                    {event.title}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </aside>
 
       <PostComments

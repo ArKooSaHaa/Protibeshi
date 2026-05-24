@@ -1379,6 +1379,13 @@
   gap: 0.45rem;
 }
 
+.afd-restaurant-controls {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
 .afd-restaurant-toggle-btn {
   border: 1px solid #e2e8f0;
   border-radius: 0.7rem;
@@ -1394,6 +1401,22 @@
   border-color: #a7f3d0;
   background: #ecfdf5;
   color: #065f46;
+}
+
+.afd-restaurant-minimize-btn {
+  border: 1px solid #dbe4ef;
+  border-radius: 0.7rem;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 650;
+  padding: 0.45rem 0.72rem;
+  transition: all 0.2s ease;
+}
+
+.afd-restaurant-minimize-btn:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
 }
 
 .afd-restaurant-error {

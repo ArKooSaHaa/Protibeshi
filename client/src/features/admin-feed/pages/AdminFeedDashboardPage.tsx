@@ -58,6 +58,7 @@ export const AdminFeedDashboardPage = () => {
   const dashboard = useAdminFeedDashboard();
   const syncLabel = formatSyncTime(dashboard.lastSyncedAt);
   const [restaurantMode, setRestaurantMode] = useState<'requests' | 'all'>('requests');
+  const [isRestaurantPanelMinimized, setIsRestaurantPanelMinimized] = useState(false);
   const [restaurants, setRestaurants] = useState<AdminRestaurantRecord[]>([]);
   const [isRestaurantLoading, setIsRestaurantLoading] = useState(true);
   const [restaurantError, setRestaurantError] = useState<string | null>(null);
@@ -154,74 +155,89 @@ export const AdminFeedDashboardPage = () => {
             <h2 className="afd-restaurant-panel-title">Review restaurant submissions</h2>
           </div>
 
-          <div className="afd-restaurant-toggle">
+          <div className="afd-restaurant-controls">
+            <div className="afd-restaurant-toggle">
+              <button
+                type="button"
+                className={`afd-restaurant-toggle-btn ${restaurantMode === 'requests' ? 'is-active' : ''}`}
+                onClick={() => setRestaurantMode('requests')}
+              >
+                Restaurant Requests
+              </button>
+              <button
+                type="button"
+                className={`afd-restaurant-toggle-btn ${restaurantMode === 'all' ? 'is-active' : ''}`}
+                onClick={() => setRestaurantMode('all')}
+              >
+                All Restaurants
+              </button>
+            </div>
+
             <button
               type="button"
-              className={`afd-restaurant-toggle-btn ${restaurantMode === 'requests' ? 'is-active' : ''}`}
-              onClick={() => setRestaurantMode('requests')}
+              className="afd-restaurant-minimize-btn"
+              aria-expanded={!isRestaurantPanelMinimized}
+              onClick={() => setIsRestaurantPanelMinimized((previous) => !previous)}
             >
-              Restaurant Requests
-            </button>
-            <button
-              type="button"
-              className={`afd-restaurant-toggle-btn ${restaurantMode === 'all' ? 'is-active' : ''}`}
-              onClick={() => setRestaurantMode('all')}
-            >
-              All Restaurants
+              {isRestaurantPanelMinimized ? 'Expand' : 'Minimize'}
             </button>
           </div>
         </div>
 
-        {restaurantError ? <p className="afd-restaurant-error">{restaurantError}</p> : null}
+        {!isRestaurantPanelMinimized ? (
+          <>
+            {restaurantError ? <p className="afd-restaurant-error">{restaurantError}</p> : null}
 
-        {isRestaurantLoading ? (
-          <p className="afd-restaurant-empty">Loading restaurants...</p>
-        ) : restaurants.length === 0 ? (
-          <p className="afd-restaurant-empty">
-            {restaurantMode === 'requests' ? 'No pending restaurant requests.' : 'No restaurants found.'}
-          </p>
-        ) : (
-          <div className="afd-restaurant-list">
-            {restaurants.slice(0, 10).map((restaurant) => (
-              <article key={restaurant.id} className="afd-restaurant-card">
-                <div className="afd-restaurant-main">
-                  <div className="afd-restaurant-icon-wrap">
-                    <Store size={16} />
-                  </div>
+            {isRestaurantLoading ? (
+              <p className="afd-restaurant-empty">Loading restaurants...</p>
+            ) : restaurants.length === 0 ? (
+              <p className="afd-restaurant-empty">
+                {restaurantMode === 'requests' ? 'No pending restaurant requests.' : 'No restaurants found.'}
+              </p>
+            ) : (
+              <div className="afd-restaurant-list">
+                {restaurants.slice(0, 10).map((restaurant) => (
+                  <article key={restaurant.id} className="afd-restaurant-card">
+                    <div className="afd-restaurant-main">
+                      <div className="afd-restaurant-icon-wrap">
+                        <Store size={16} />
+                      </div>
 
-                  <div className="afd-restaurant-copy">
-                    <h3>{restaurant.name}</h3>
-                    <p>
-                      {restaurant.category} • {restaurant.location}
-                    </p>
-                    <span>
-                      Status: <strong>{restaurant.status}</strong>
-                    </span>
-                  </div>
-                </div>
+                      <div className="afd-restaurant-copy">
+                        <h3>{restaurant.name}</h3>
+                        <p>
+                          {restaurant.category} • {restaurant.location}
+                        </p>
+                        <span>
+                          Status: <strong>{restaurant.status}</strong>
+                        </span>
+                      </div>
+                    </div>
 
-                <div className="afd-restaurant-actions">
-                  <button
-                    type="button"
-                    className="afd-btn afd-btn-primary"
-                    onClick={() => void moderateRestaurant(restaurant.id, 'approved')}
-                    disabled={updatingRestaurantId === restaurant.id || restaurant.status === 'approved'}
-                  >
-                    Approve
-                  </button>
-                  <button
-                    type="button"
-                    className="afd-btn afd-btn-danger"
-                    onClick={() => void moderateRestaurant(restaurant.id, 'rejected')}
-                    disabled={updatingRestaurantId === restaurant.id || restaurant.status === 'rejected'}
-                  >
-                    Reject
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
+                    <div className="afd-restaurant-actions">
+                      <button
+                        type="button"
+                        className="afd-btn afd-btn-primary"
+                        onClick={() => void moderateRestaurant(restaurant.id, 'approved')}
+                        disabled={updatingRestaurantId === restaurant.id || restaurant.status === 'approved'}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        className="afd-btn afd-btn-danger"
+                        onClick={() => void moderateRestaurant(restaurant.id, 'rejected')}
+                        disabled={updatingRestaurantId === restaurant.id || restaurant.status === 'rejected'}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </>
+        ) : null}
       </section>
 
       <AnimatePresence>

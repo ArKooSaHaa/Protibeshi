@@ -101,7 +101,7 @@ export const RestaurantCard = ({
       <div className="flex flex-1 flex-col gap-3 bg-white p-4 text-slate-900">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h4 className="text-base font-extrabold text-slate-950 dark:text-white">
+            <h4 className="text-base font-extrabold text-slate-950">
               {restaurant.name}
             </h4>
             <p className="text-xs font-extrabold text-emerald-900 dark:text-emerald-200">
