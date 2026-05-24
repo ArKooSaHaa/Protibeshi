@@ -3,6 +3,7 @@
 namespace Tests\Feature\Complaint;
 
 use App\Models\Complaint;
+use App\Models\ComplaintModerationLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -111,6 +112,47 @@ class ComplaintControllerTest extends TestCase
                 'complaints',
                 'pagination' => ['current_page', 'last_page', 'per_page', 'total', 'from', 'to'],
             ]);
+    }
+
+    public function test_public_complaint_show_includes_moderation_timeline_and_notes(): void
+    {
+        $user = $this->createUser();
+        $complaint = $this->createComplaint($user, [
+            'title' => 'Complaint with moderator notes',
+            'status' => Complaint::STATUS_RESOLVED,
+        ]);
+
+        ComplaintModerationLog::query()->create([
+            'complaint_id' => $complaint->id,
+            'admin_id' => null,
+            'action' => ComplaintModerationLog::ACTION_STATUS_UPDATE,
+            'from_status' => Complaint::STATUS_PENDING,
+            'to_status' => Complaint::STATUS_IN_PROGRESS,
+            'note' => 'received',
+        ]);
+
+        ComplaintModerationLog::query()->create([
+            'complaint_id' => $complaint->id,
+            'admin_id' => null,
+            'action' => ComplaintModerationLog::ACTION_STATUS_UPDATE,
+            'from_status' => Complaint::STATUS_IN_PROGRESS,
+            'to_status' => Complaint::STATUS_RESOLVED,
+            'note' => 'solved the matter',
+        ]);
+
+        $response = $this->getJson('/api/complaints/'.$complaint->id);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('complaint.updates.0.stage', 'Reported')
+            ->assertJsonPath('complaint.updates.1.stage', 'In Progress')
+            ->assertJsonPath('complaint.updates.1.note', 'received')
+            ->assertJsonPath('complaint.updates.2.stage', 'Resolved')
+            ->assertJsonPath('complaint.updates.2.note', 'solved the matter')
+            ->assertJsonPath('complaint.internal_notes.0', 'received')
+            ->assertJsonPath('complaint.internal_notes.1', 'solved the matter')
+            ->assertJsonPath('complaint.resolution_summary', 'solved the matter');
     }
 
     public function test_authenticated_user_can_list_own_complaints_including_private(): void

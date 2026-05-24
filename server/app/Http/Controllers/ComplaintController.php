@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Complaint;
+use App\Models\ComplaintModerationLog;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -84,7 +85,10 @@ class ComplaintController extends Controller
 
     public function index()
     {
-        $query = Complaint::query()->with('user');
+        $query = Complaint::query()->with([
+            'user',
+            'moderationLogs.admin',
+        ]);
 
         $query->where('visibility', Complaint::VISIBILITY_PUBLIC);
         $this->applyFilters($query, request());
@@ -113,7 +117,10 @@ class ComplaintController extends Controller
     public function myComplaints(Request $request)
     {
         $query = Complaint::query()
-            ->with('user')
+            ->with([
+                'user',
+                'moderationLogs.admin',
+            ])
             ->where('user_id', Auth::id());
 
         $this->applyFilters($query, $request);
@@ -142,7 +149,10 @@ class ComplaintController extends Controller
     public function show($id)
     {
         try {
-            $complaint = Complaint::with('user')->findOrFail($id);
+            $complaint = Complaint::with([
+                'user',
+                'moderationLogs.admin',
+            ])->findOrFail($id);
 
             if (!$this->canViewComplaint($complaint)) {
                 return response()->json([
@@ -200,7 +210,10 @@ class ComplaintController extends Controller
         ]);
 
         try {
-            $complaint = Complaint::with('user')->findOrFail($id);
+            $complaint = Complaint::with([
+                'user',
+                'moderationLogs.admin',
+            ])->findOrFail($id);
         } catch (ModelNotFoundException $exception) {
             return response()->json([
                 'success' => false,
@@ -226,12 +239,45 @@ class ComplaintController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Complaint status updated successfully',
-            'complaint' => $this->formatComplaint($complaint->fresh('user')),
+            'complaint' => $this->formatComplaint($complaint->fresh([
+                'user',
+                'moderationLogs.admin',
+            ])),
         ], 200);
     }
 
     private function formatComplaint(Complaint $complaint): array
     {
+        $logs = $complaint->relationLoaded('moderationLogs')
+            ? $complaint->moderationLogs->sortBy(function (ComplaintModerationLog $log): string {
+                $createdAt = optional($log->created_at)->format('Y-m-d H:i:s.u') ?? '';
+                return $createdAt.'|'.str_pad((string) $log->id, 12, '0', STR_PAD_LEFT);
+            })->values()
+            : collect();
+
+        $updates = collect([
+            [
+                'stage' => 'Reported',
+                'date' => optional($complaint->created_at)->toISOString(),
+                'note' => null,
+            ],
+        ])->merge(
+            $logs->map(function (ComplaintModerationLog $log): array {
+                return [
+                    'stage' => $this->resolveStatusLabel((string) $log->to_status),
+                    'date' => optional($log->created_at)->toISOString(),
+                    'note' => $log->note ?: null,
+                ];
+            })
+        )->values();
+
+        $internalNotes = $logs
+            ->pluck('note')
+            ->filter(static fn ($value): bool => is_string($value) && trim($value) !== '')
+            ->map(static fn ($value): string => trim((string) $value))
+            ->unique()
+            ->values();
+
         return [
             'id' => $complaint->id,
             'complaint_code' => $complaint->complaint_code,
@@ -246,11 +292,21 @@ class ComplaintController extends Controller
             'photo' => $this->resolvePhotoUrl($complaint->photo),
             'created_at' => $complaint->created_at,
             'updated_at' => $complaint->updated_at,
+            'updates' => $updates,
+            'internal_notes' => $internalNotes,
+            'resolution_summary' => $internalNotes->isNotEmpty() && in_array($complaint->status, [Complaint::STATUS_RESOLVED, Complaint::STATUS_REJECTED], true)
+                ? $internalNotes->last()
+                : null,
             'user' => $complaint->user ? [
                 'id' => $complaint->user->id,
                 'name' => $this->resolveUserName($complaint),
             ] : null,
         ];
+    }
+
+    private function resolveStatusLabel(string $status): string
+    {
+        return str_replace('_', ' ', ucwords(str_replace('_', ' ', strtolower($status))));
     }
 
     private function applyFilters(Builder $query, Request $request): void
