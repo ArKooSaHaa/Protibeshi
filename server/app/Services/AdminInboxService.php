@@ -111,6 +111,44 @@ class AdminInboxService
         return $message;
     }
 
+    public function sendUserBanNotice(User $recipient, Carbon $banEndsAt, ?string $reason, int $durationDays): Message
+    {
+        $conversation = $this->getOrCreateConversationForRecipient((int) $recipient->id);
+
+        $messageBody = $this->buildUserBanMessage($recipient, $banEndsAt, $reason, $durationDays);
+
+        $message = Message::create([
+            'conversation_id' => (int) $conversation->id,
+            'sender_id' => $this->getInboxUserId(),
+            'message' => $messageBody,
+            'is_read' => false,
+        ]);
+
+        $conversation->last_message = $messageBody;
+        $conversation->save();
+
+        return $message;
+    }
+
+    public function sendUserUnbanNotice(User $recipient): Message
+    {
+        $conversation = $this->getOrCreateConversationForRecipient((int) $recipient->id);
+
+        $messageBody = $this->buildUserUnbanMessage($recipient);
+
+        $message = Message::create([
+            'conversation_id' => (int) $conversation->id,
+            'sender_id' => $this->getInboxUserId(),
+            'message' => $messageBody,
+            'is_read' => false,
+        ]);
+
+        $conversation->last_message = $messageBody;
+        $conversation->save();
+
+        return $message;
+    }
+
     public function sendListingDeletedNotice(Listing $listing, ?string $reason = null): Message
     {
         $recipientId = (int) $listing->user_id;
@@ -241,6 +279,52 @@ class AdminInboxService
 
         $parts[] = '';
         $parts[] = 'If you think this action is a mistake, contact on ' . self::ADMIN_CONTACT_EMAIL . '.';
+
+        return implode("\n", $parts);
+    }
+
+    private function buildUserBanMessage(User $recipient, Carbon $banEndsAt, ?string $reason, int $durationDays): string
+    {
+        $recipientName = trim((string) ($recipient->first_name ?? ''));
+        if ($recipientName === '') {
+            $recipientName = 'Neighbor';
+        }
+
+        $normalizedReason = trim((string) ($reason ?? ''));
+
+        $parts = [
+            'Hello ' . $recipientName . ',',
+            '',
+            'You have been banned for ' . ($normalizedReason !== '' ? $normalizedReason : 'violating the community guidelines') . '.',
+            'During this period, you cannot create feed posts, marketplace listings, rent listings, services, complaints, or relief requests.',
+            'Ban ends on: ' . $banEndsAt->toDayDateTimeString(),
+        ];
+
+        if ($durationDays > 0) {
+            $parts[] = 'Ban duration: ' . $durationDays . ' day' . ($durationDays === 1 ? '' : 's') . '.';
+        }
+
+        $parts[] = '';
+        $parts[] = 'If you think this action is a mistake, contact on ' . self::ADMIN_CONTACT_EMAIL . '.';
+
+        return implode("\n", $parts);
+    }
+
+    private function buildUserUnbanMessage(User $recipient): string
+    {
+        $recipientName = trim((string) ($recipient->first_name ?? ''));
+        if ($recipientName === '') {
+            $recipientName = 'Neighbor';
+        }
+
+        $parts = [
+            'Hello ' . $recipientName . ',',
+            '',
+            'Your ban has been lifted by the admin moderation team.',
+            'You can create posts, listings, services, complaints, and relief requests again.',
+            '',
+            'If you need help, contact on ' . self::ADMIN_CONTACT_EMAIL . '.',
+        ];
 
         return implode("\n", $parts);
     }

@@ -39,6 +39,10 @@ export interface UserProfile {
   createdAt: string;
   emailVerified: boolean;
   verificationStatus: 'verified' | 'unverified';
+  isBanned: boolean;
+  bannedAt: string;
+  bannedUntil: string;
+  bannedReason: string;
 }
 
 export interface UserPost {
@@ -111,6 +115,10 @@ const initialProfile: UserProfile = {
   createdAt: '',
   emailVerified: false,
   verificationStatus: 'unverified',
+  isBanned: false,
+  bannedAt: '',
+  bannedUntil: '',
+  bannedReason: '',
 };
 
 const allTabs: Array<{ key: AccountPostTab; label: string }> = [
@@ -136,6 +144,10 @@ const mapAccountProfile = (profile: AccountProfileApi): UserProfile => ({
   createdAt: profile.created_at || '',
   emailVerified: Boolean(profile.email_verified),
   verificationStatus: profile.verification_status === 'verified' ? 'verified' : 'unverified',
+  isBanned: Boolean(profile.is_banned),
+  bannedAt: profile.banned_at || '',
+  bannedUntil: profile.banned_until || '',
+  bannedReason: profile.banned_reason || '',
 });
 
 const formatDatePosted = (rawDate: unknown): string => {

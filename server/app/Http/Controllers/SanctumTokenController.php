@@ -29,10 +29,6 @@ class SanctumTokenController extends Controller
             return $this->error('Invalid credentials', 401);
         }
 
-        if ($user->is_banned) {
-            return $this->error('Your account has been suspended', 403);
-        }
-
         $token = $user->createToken($request->device_name)->plainTextToken;
 
         return $this->success('Token created successfully', [
