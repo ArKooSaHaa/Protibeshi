@@ -26,7 +26,7 @@ type CreatePostModalProps = {
   onSubmit: (payload: CreatePostPayload) => Promise<boolean>;
 };
 
-const LABEL_OPTIONS = ['Emergency', 'Community', 'Help Needed', 'Service', 'Utilities', 'Events', 'Marketplace'];
+const LABEL_OPTIONS = ['Emergency', 'Community', 'Event'];
 
 const INITIAL_STATE: CreatePostPayload = {
   title: '',
@@ -159,7 +159,7 @@ export const CreatePostModal = ({ open, submitting, error, onClose, onSubmit }: 
       });
 
       const place = await reverseGeocode(mapsApi, coordinates);
-      const address = place.formatted_address?.trim() || resolveNeighborhoodFromPlace(place);
+      const address = resolveNeighborhoodFromPlace(place) || place.formatted_address?.trim();
       if (!address) {
         throw new Error('No address found for your location.');
       }

@@ -12,7 +12,7 @@ const LABEL_OPTIONS = [
     'Utilities',
     'Safety',
     'Marketplace',
-    'Events',
+    'Event',
     'Lost & Found',
     'Traffic',
 ];

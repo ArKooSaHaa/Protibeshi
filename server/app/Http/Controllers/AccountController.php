@@ -200,6 +200,10 @@ class AccountController extends Controller
             'created_at' => optional($user->created_at)->toJSON(),
             'email_verified' => $user->email_verified_at !== null,
             'verification_status' => $user->email_verified_at !== null ? 'verified' : 'unverified',
+            'is_banned' => (bool) $user->is_banned,
+            'banned_at' => optional($user->banned_at)->toJSON(),
+            'banned_until' => optional($user->banned_until)->toJSON(),
+            'banned_reason' => $user->banned_reason,
         ];
     }
 

@@ -10,6 +10,8 @@ import styles from './Topbar.module.css';
 export const Topbar = ({ onMenuClick }) => {
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
+  const role = useAuthStore((state) => state.role);
+  const topbarTemperature = '23°';
   const [user, setUser] = React.useState({
     firstName: 'User',
     fullName: 'User',
@@ -21,9 +23,11 @@ export const Topbar = ({ onMenuClick }) => {
   const settingsRef = React.useRef(null);
 
   const initials = React.useMemo(() => {
-    const source = user.firstName || user.fullName || 'U';
+    const source = role === 'admin' ? 'Admin' : (user.firstName || user.fullName || 'U');
     return source.slice(0, 1).toUpperCase();
-  }, [user.firstName, user.fullName]);
+  }, [role, user.firstName, user.fullName]);
+
+  const displayName = role === 'admin' ? 'Admin' : user.firstName;
 
   React.useEffect(() => {
     let active = true;
@@ -165,9 +169,14 @@ export const Topbar = ({ onMenuClick }) => {
       </div>
 
       <div className={styles.right}>
-        <div className={styles.location}>
-          <MapPin size={16} className={styles.locationIcon} />
-          <span className={styles.locationText}>{user.neighborhood}</span>
+        <div className={styles.locationGroup}>
+          <span className={styles.tempBadge} aria-label="Current temperature">
+            {topbarTemperature}
+          </span>
+          <div className={styles.location}>
+            <MapPin size={16} className={styles.locationIcon} />
+            <span className={styles.locationText}>{user.neighborhood}</span>
+          </div>
         </div>
 
         <div className={styles.actions}>
@@ -217,7 +226,7 @@ export const Topbar = ({ onMenuClick }) => {
           className={styles.user}
           whileHover={{ scale: 1.02 }}
         >
-          <span className={styles.userName}>{user.firstName}</span>
+          <span className={styles.userName}>{displayName}</span>
           {user.profilePictureUrl ? (
             <img src={user.profilePictureUrl} alt={user.fullName} className={styles.userAvatarImage} />
           ) : (

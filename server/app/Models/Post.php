@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\PostVote;
+use Illuminate\Support\Carbon;
 
 class Post extends Model
 {
@@ -25,6 +27,7 @@ class Post extends Model
         'is_active',
         'is_pinned',
         'moderation_status',
+        'moderation_source',
         'moderated_by_admin_id',
         'moderated_at',
         'moderation_note',
@@ -56,8 +59,41 @@ class Post extends Model
         return $this->hasMany(PostReport::class);
     }
 
+    public function votes(): HasMany
+    {
+        return $this->hasMany(PostVote::class);
+    }
+
     public function moderatedByAdmin(): BelongsTo
     {
         return $this->belongsTo(Admin::class, 'moderated_by_admin_id');
+    }
+
+    public function isEventPost(): bool
+    {
+        $label = strtolower(trim((string) ($this->label ?? '')));
+        $postType = strtolower(trim((string) ($this->post_type ?? '')));
+
+        return $label === 'event' || $postType === 'event';
+    }
+
+    public function eventVotingExpiresAt(): ?Carbon
+    {
+        if (!$this->isEventPost() || !$this->created_at) {
+            return null;
+        }
+
+        return $this->created_at->copy()->addDays(2);
+    }
+
+    public function isEventVotingOpen(): bool
+    {
+        $expiresAt = $this->eventVotingExpiresAt();
+
+        if (!$expiresAt) {
+            return false;
+        }
+
+        return now()->lessThanOrEqualTo($expiresAt);
     }
 }

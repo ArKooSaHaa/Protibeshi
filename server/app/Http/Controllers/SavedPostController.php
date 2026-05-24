@@ -20,6 +20,13 @@ class SavedPostController extends Controller
             ], 404);
         }
 
+        if ($post->isEventPost()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Event posts cannot be saved',
+            ], 422);
+        }
+
         $userId = (int) Auth::id();
 
         $saved = SavedPost::where('post_id', $post->id)

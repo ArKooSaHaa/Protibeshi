@@ -21,6 +21,13 @@ class PostLikeController extends Controller
             ], 404);
         }
 
+        if ($post->isEventPost()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Event posts support yes/no votes instead of likes',
+            ], 422);
+        }
+
         $existingLike = PostLike::where('post_id', $post->id)
             ->where('user_id', $userId)
             ->first();

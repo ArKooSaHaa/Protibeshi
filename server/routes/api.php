@@ -9,6 +9,8 @@ use App\Http\Controllers\AdminComplaintModerationController;
 use App\Http\Controllers\AdminPostModerationController;
 use App\Http\Controllers\AdminReliefModerationController;
 use App\Http\Controllers\AdminRentModerationController;
+use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\AdminRestaurantModerationController;
 use App\Http\Controllers\AdminServiceModerationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatController;
@@ -18,10 +20,14 @@ use App\Http\Controllers\ListingReportController;
 use App\Http\Controllers\PostCommentController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PostLikeController;
+use App\Http\Controllers\PostVoteController;
 use App\Http\Controllers\PostReportController;
 use App\Http\Controllers\ReliefController;
 use App\Http\Controllers\RentListingController;
 use App\Http\Controllers\RentListingReportController;
+use App\Http\Controllers\RestaurantController;
+use App\Http\Controllers\RestaurantFavoriteController;
+use App\Http\Controllers\RestaurantReviewController;
 use App\Http\Controllers\SavedPostController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ServiceReportController;
@@ -44,6 +50,8 @@ Route::middleware(['auth:admin_api'])->prefix('admin')->group(function () {
 
     Route::get('/posts', [AdminPostModerationController::class, 'index']);
     Route::post('/posts/{id}/verify', [AdminPostModerationController::class, 'verify']);
+    Route::post('/posts/{id}/gemini-review', [AdminPostModerationController::class, 'geminiReview']);
+    Route::post('/posts/{id}/ai-reject', [AdminPostModerationController::class, 'aiReject']);
     Route::post('/posts/{id}/ignore-reports', [AdminPostModerationController::class, 'ignoreReports']);
     Route::delete('/posts/{id}', [AdminPostModerationController::class, 'destroy']);
 
@@ -61,6 +69,14 @@ Route::middleware(['auth:admin_api'])->prefix('admin')->group(function () {
     Route::post('/services/{id}/flag', [AdminServiceModerationController::class, 'flag']);
     Route::post('/services/{id}/ignore-reports', [AdminServiceModerationController::class, 'ignoreReports']);
     Route::post('/services/{id}/ban-user', [AdminServiceModerationController::class, 'banProvider']);
+
+    Route::get('/restaurants', [AdminRestaurantModerationController::class, 'index']);
+    Route::patch('/restaurants/{restaurant}/status', [AdminRestaurantModerationController::class, 'updateStatus']);
+    Route::delete('/restaurants/{restaurant}', [AdminRestaurantModerationController::class, 'destroy']);
+
+    Route::get('/users', [AdminUserController::class, 'index']);
+    Route::post('/users/{user}/ban', [AdminUserController::class, 'ban']);
+    Route::post('/users/{user}/unban', [AdminUserController::class, 'unban']);
 
     Route::get('/reliefs', [AdminReliefModerationController::class, 'index']);
     Route::post('/reliefs/{id}/ignore-reports', [AdminReliefModerationController::class, 'ignoreReports']);
@@ -80,6 +96,9 @@ Route::get('/reliefs', [ReliefController::class, 'index']);
 Route::get('/reliefs/{id}', [ReliefController::class, 'show']);
 Route::get('/offers', [\App\Http\Controllers\Api\OfferController::class, 'index']);
 Route::get('/offers/{id}', [\App\Http\Controllers\Api\OfferController::class, 'show']);
+Route::get('/restaurants', [RestaurantController::class, 'index']);
+Route::get('/restaurants/{restaurant}', [RestaurantController::class, 'show']);
+Route::get('/restaurants/{restaurant}/reviews', [RestaurantReviewController::class, 'index']);
 
 
 /*
@@ -123,25 +142,49 @@ Route::middleware(['auth:api'])->group(function () {
         return $request->user();
     });
 
-    Route::post('/posts', [PostController::class, 'createPost']);
+    Route::post('/posts', [PostController::class, 'createPost'])
+        ->middleware('not_banned');
     Route::delete('/posts/{id}', [PostController::class, 'deletePost']);
     Route::post('/posts/{id}/like', [PostLikeController::class, 'toggleLike']);
-    Route::post('/posts/{id}/comment', [PostCommentController::class, 'addComment']);
+    Route::post('/posts/{id}/vote', [\App\Http\Controllers\PostVoteController::class, 'vote']);
+    Route::post('/posts/{id}/comment', [PostCommentController::class, 'addComment'])
+        ->middleware('not_banned');
     Route::post('/posts/{id}/save', [SavedPostController::class, 'toggleSave']);
     Route::post('/posts/{id}/report', [PostReportController::class, 'report']);
 
     // Offer Help API
-    Route::post('/offers', [\App\Http\Controllers\Api\OfferController::class, 'store']);
+    Route::post('/offers', [\App\Http\Controllers\Api\OfferController::class, 'store'])
+        ->middleware('not_banned');
     Route::delete('/offers/{id}', [\App\Http\Controllers\Api\OfferController::class, 'destroy']);
 
     Route::get('/account/complaints', [ComplaintController::class, 'myComplaints']);
-    Route::post('/complaints', [ComplaintController::class, 'store']);
+    Route::post('/complaints', [ComplaintController::class, 'store'])
+        ->middleware('not_banned');
     Route::delete('/complaints/{id}', [ComplaintController::class, 'destroy']);
     Route::patch('/complaints/{id}/status', [ComplaintController::class, 'updateStatus']);
-    Route::post('/reliefs', [ReliefController::class, 'store']);
-    Route::post('/reliefs/{id}/offer-help', [ReliefController::class, 'offerHelp']);
-    Route::post('/reliefs/{id}/comments', [ReliefController::class, 'addComment']);
+    Route::post('/reliefs', [ReliefController::class, 'store'])
+        ->middleware('not_banned');
+    Route::post('/reliefs/{id}/offer-help', [ReliefController::class, 'offerHelp'])
+        ->middleware('not_banned');
+    Route::post('/reliefs/{id}/comments', [ReliefController::class, 'addComment'])
+        ->middleware('not_banned');
     Route::post('/reliefs/{id}/report', [ReliefController::class, 'report']);
     Route::patch('/reliefs/{id}/status', [ReliefController::class, 'updateStatus']);
     Route::delete('/reliefs/{id}', [ReliefController::class, 'destroy']);
+});
+
+Route::middleware(['auth.api_or_sanctum'])->group(function () {
+    Route::get('/account/restaurants', [RestaurantController::class, 'myRestaurants']);
+    Route::post('/restaurants', [RestaurantController::class, 'store'])->middleware('not_banned');
+    Route::put('/restaurants/{restaurant}', [RestaurantController::class, 'update']);
+    Route::delete('/restaurants/{restaurant}', [RestaurantController::class, 'destroy']);
+
+    Route::post('/restaurants/{restaurant}/favorite', [RestaurantFavoriteController::class, 'store']);
+    Route::delete('/restaurants/{restaurant}/favorite', [RestaurantFavoriteController::class, 'destroy']);
+    Route::get('/restaurants/favorites', [RestaurantFavoriteController::class, 'index']);
+
+    Route::post('/restaurants/{restaurant}/reviews', [RestaurantReviewController::class, 'store'])
+        ->middleware('not_banned');
+    Route::put('/restaurants/reviews/{review}', [RestaurantReviewController::class, 'update']);
+    Route::delete('/restaurants/reviews/{review}', [RestaurantReviewController::class, 'destroy']);
 });

@@ -18,6 +18,10 @@ export type AccountProfileApi = {
   created_at?: string | null;
   email_verified?: boolean;
   verification_status?: 'verified' | 'unverified';
+  is_banned?: boolean;
+  banned_at?: string | null;
+  banned_until?: string | null;
+  banned_reason?: string | null;
 };
 
 type AccountProfileResponse = {

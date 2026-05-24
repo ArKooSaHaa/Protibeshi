@@ -8,6 +8,7 @@ export const ENV = {
   GOOGLE_MAPS_API_KEY: String(import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '').trim(),
   OPENWEATHER_API_KEY: String(import.meta.env.VITE_OPENWEATHER_API_KEY || '').trim(),
   GEMINI_API_KEY: String(import.meta.env.VITE_GEMINI_API_KEY || '').trim(),
+  GROQ_CLOUD_API_KEY: String(import.meta.env.VITE_GROQ_CLOUD_API_KEY || '').trim(),
   APP_ENV: import.meta.env.MODE || 'development',
   DEBUG: import.meta.env.DEV,
 } as const;
@@ -25,7 +26,7 @@ export const validateEnv = () => {
     console.warn('VITE_OPENWEATHER_API_KEY not set, feed weather panel will be disabled');
   }
 
-  if (!ENV.GEMINI_API_KEY) {
-    console.warn('VITE_GEMINI_API_KEY not set, Gemini inbox will be disabled');
+  if (!ENV.GROQ_CLOUD_API_KEY) {
+    console.warn('VITE_GROQ_CLOUD_API_KEY not set, Groq chat will be disabled');
   }
 };

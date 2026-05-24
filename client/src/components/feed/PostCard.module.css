@@ -10,6 +10,19 @@
   overflow: hidden;
 }
 
+.highlight {
+  animation: highlightPulse 2s ease-in-out;
+  border-color: #bbf7d0;
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.12);
+}
+
+@keyframes highlightPulse {
+  0% { transform: translateY(0); }
+  20% { transform: translateY(-6px); }
+  60% { transform: translateY(0); }
+  100% { transform: translateY(0); }
+}
+
 .emergencyCard {
   border-color: rgba(234, 88, 12, 0.45);
   background: linear-gradient(180deg, rgba(255, 237, 213, 0.45) 0%, rgba(254, 242, 242, 0.7) 100%);
@@ -173,6 +186,91 @@
   font-weight: 700;
 }
 
+.pollSection {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  background: linear-gradient(180deg, rgba(236, 253, 245, 0.96) 0%, rgba(255, 255, 255, 1) 100%);
+}
+
+.pollHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.pollLabel {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--emerald-700);
+}
+
+.pollCounts {
+  font-size: 12px;
+  color: var(--slate-500);
+  font-weight: 600;
+}
+
+.pollClosedNotice {
+  margin-bottom: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(248, 250, 252, 0.92);
+  color: var(--slate-600);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pollActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.pollButton {
+  border: 1px solid var(--slate-200);
+  border-radius: 12px;
+  background: white;
+  color: var(--slate-700);
+  padding: 11px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pollButton:hover {
+  border-color: var(--emerald-300);
+  transform: translateY(-1px);
+}
+
+.pollButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  transform: none;
+}
+
+.pollButtonActiveYes {
+  border-color: rgba(16, 185, 129, 0.45);
+  background: rgba(236, 253, 245, 1);
+  color: var(--emerald-700);
+}
+
+.pollButtonActiveNo {
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(254, 242, 242, 1);
+  color: #b91c1c;
+}
+
 .viewMoreButton {
   margin-top: 8px;
   border: none;
@@ -216,6 +314,16 @@
 
 .footer {
   border-top: 1px solid var(--slate-200);
+}
+
+.eventFooter {
+  border-top: 1px solid var(--slate-200);
+  padding-top: 10px;
+}
+
+.eventFooterActions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .stats {

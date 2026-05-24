@@ -1,0 +1,142 @@
+{
+  "info": {
+    "name": "Protibeshi - Food Corner Restaurants",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000/api" },
+    { "key": "token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth - Sanctum Token",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password\",\n  \"device_name\": \"postman\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/auth/token"
+      }
+    },
+    {
+      "name": "List Restaurants",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/restaurants?category=Bengali&top_rated=1&per_page=12",
+          "host": ["{{baseUrl}}"],
+          "path": ["restaurants"],
+          "query": [
+            { "key": "category", "value": "Bengali" },
+            { "key": "top_rated", "value": "1" },
+            { "key": "per_page", "value": "12" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Restaurant Details",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": "{{baseUrl}}/restaurants/1"
+      }
+    },
+    {
+      "name": "Create Restaurant",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "name", "value": "Protibeshi Cafe", "type": "text" },
+            { "key": "category", "value": "Cafe", "type": "text" },
+            { "key": "address", "value": "12 Main Road", "type": "text" },
+            { "key": "location", "value": "Dhaka", "type": "text" },
+            { "key": "phone", "value": "+8801700000000", "type": "text" },
+            { "key": "description", "value": "Community favorite cafe.", "type": "text" },
+            { "key": "price_range", "value": "$$", "type": "text" },
+            { "key": "delivery_available", "value": "1", "type": "text" }
+          ]
+        },
+        "url": "{{baseUrl}}/restaurants"
+      }
+    },
+    {
+      "name": "My Restaurants",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/account/restaurants"
+      }
+    },
+    {
+      "name": "Favorites",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/account/restaurant-favorites"
+      }
+    },
+    {
+      "name": "Add Favorite",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/restaurants/1/favorite"
+      }
+    },
+    {
+      "name": "Add Review",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rating\": 5,\n  \"review\": \"Great food and service!\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/restaurants/1/reviews"
+      }
+    },
+    {
+      "name": "Admin - Update Status",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"approved\",\n  \"is_verified\": true\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/admin/restaurants/1/status"
+      }
+    }
+  ]
+}

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { isFeedRefreshSignalKey } from '@/lib/feedRefresh';
 import { Loader2, Plus } from 'lucide-react';
 import {
   FeedApiError,
@@ -11,11 +12,12 @@ import {
   likePost,
   reportPost,
   savePost,
+  votePost,
 } from '@/api/feedApi';
 import { PostCard } from '@/components/feed/PostCard';
 import { PostComments } from '@/components/feed/PostComments';
 import { CreatePostModal, CreatePostPayload } from '@/components/feed/CreatePostModal';
-import { WeatherNewsPanel } from '@/components/feed/WeatherNewsPanel';
+import { FoodCorner } from '@/components/food-corner/FoodCorner';
 import { fetchAccountProfile } from '@/features/account/services/accountService';
 import { resolveMediaUrl } from '@/lib/mediaUrl';
 import styles from './Feed.module.css';
@@ -56,8 +58,32 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   return error.message || fallback;
 };
 
-const sortByRecent = (items: ViewPost[]) => {
+const FEED_WINDOW_DAYS = 7;
+
+const isWithinFeedWindow = (createdAt: string) => {
+  const createdAtMs = new Date(createdAt).getTime();
+  if (Number.isNaN(createdAtMs)) {
+    return false;
+  }
+
+  const nowMs = Date.now();
+  const feedWindowMs = FEED_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  return nowMs - createdAtMs <= feedWindowMs;
+};
+
+const isEmergencyPost = (post: FeedPost | ViewPost) => {
+  return String(post.label || post.post_type || '').trim().toLowerCase() === 'emergency';
+};
+
+const sortFeedPosts = (items: ViewPost[]) => {
   return [...items].sort((a, b) => {
+    const aEmergency = isEmergencyPost(a) ? 0 : 1;
+    const bEmergency = isEmergencyPost(b) ? 0 : 1;
+
+    if (aEmergency !== bEmergency) {
+      return aEmergency - bEmergency;
+    }
+
     const timeA = new Date(a.created_at).getTime();
     const timeB = new Date(b.created_at).getTime();
     return timeB - timeA;
@@ -73,8 +99,9 @@ const sanitizePosts = (items: FeedPost[]): ViewPost[] => {
     const hasValidId = typeof post.id === 'number';
     const hasTitle = typeof post.title === 'string' && post.title.trim().length > 0;
     const hasContent = typeof post.content === 'string' && post.content.trim().length > 0;
+    const isRecent = typeof post.created_at === 'string' ? isWithinFeedWindow(post.created_at) : false;
 
-    return hasValidId && hasTitle && hasContent;
+    return hasValidId && hasTitle && hasContent && isRecent;
   });
 };
 
@@ -85,6 +112,7 @@ export const Feed = () => {
 
   const [likePendingId, setLikePendingId] = useState<number | null>(null);
   const [savePendingId, setSavePendingId] = useState<number | null>(null);
+  const [votePendingId, setVotePendingId] = useState<number | null>(null);
 
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -98,6 +126,9 @@ export const Feed = () => {
   const [createPostNotice, setCreatePostNotice] = useState<string | null>(null);
   const [composerImageFailed, setComposerImageFailed] = useState(false);
   const [currentProfile, setCurrentProfile] = useState<CurrentAccountProfile | null>(null);
+  const [highlightedPostId, setHighlightedPostId] = useState<number | null>(null);
+  const highlightTimeoutRef = useRef<number | null>(null);
+  const prevPostIdsRef = useRef<number[]>([]);
 
   const getStringAtPath = useCallback((source: Record<string, unknown>, path: string) => {
     const segments = path.split('.');
@@ -148,6 +179,14 @@ export const Feed = () => {
     return null;
   }, [getStringAtPath, resolveUserImageUrl]);
 
+  const isEventPost = (post: ViewPost | null | undefined) => {
+    if (!post) {
+      return false;
+    }
+
+    return String(post.label || post.post_type || '').trim().toLowerCase() === 'event';
+  };
+
   const getLocalUser = () => {
     if (typeof window === 'undefined') {
       return null;
@@ -177,6 +216,36 @@ export const Feed = () => {
     () => posts.find((post) => post.id === activePostId) || null,
     [activePostId, posts],
   );
+
+  const upcomingEvents = useMemo(() => {
+    return posts
+      .filter((post) => isEventPost(post))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 5)
+      .map((post) => ({ id: post.id, title: post.title.trim() }))
+      .filter((post) => post.title.length > 0);
+  }, [posts]);
+
+  const handleUpcomingEventClick = (postId: number) => {
+    const target = document.getElementById(`feed-post-${postId}`);
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    if (highlightTimeoutRef.current !== null) {
+      window.clearTimeout(highlightTimeoutRef.current);
+    }
+
+    setHighlightedPostId(null);
+    window.requestAnimationFrame(() => {
+      setHighlightedPostId(postId);
+      highlightTimeoutRef.current = window.setTimeout(() => {
+        setHighlightedPostId(null);
+      }, 2200);
+    });
+  };
 
   const localUser = useMemo(() => getLocalUser(), []);
 
@@ -210,23 +279,54 @@ export const Feed = () => {
     return null;
   }, [currentProfile?.avatarUrl, extractUserPhoto, localUser, resolveUserImageUrl]);
 
-  const loadPosts = async () => {
+  const loadPosts = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
       const response = await getPosts();
-      setPosts(sortByRecent(sanitizePosts(response)));
+      const sanitized = sortFeedPosts(sanitizePosts(response));
+
+      // detect newly added verified post and highlight it
+      const prevIds = prevPostIdsRef.current ?? [];
+      const newlyAdded = sanitized.find((p) => !prevIds.includes(p.id) && ((p as any).moderation_status === 'verified' || (p as any).status === 'verified'));
+
+      setPosts(sanitized);
+
+      if (newlyAdded) {
+        if (highlightTimeoutRef.current !== null) {
+          window.clearTimeout(highlightTimeoutRef.current);
+        }
+
+        setHighlightedPostId(newlyAdded.id);
+        highlightTimeoutRef.current = window.setTimeout(() => {
+          setHighlightedPostId(null);
+        }, 2200);
+      }
+
+      prevPostIdsRef.current = sanitized.map((p) => p.id);
     } catch (requestError) {
       setError(getErrorMessage(requestError, 'Failed to load neighborhood feed.'));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadPosts();
-  }, []);
+
+    const handler = (e: StorageEvent) => {
+      if (isFeedRefreshSignalKey(e.key)) {
+        void loadPosts();
+      }
+    };
+
+    window.addEventListener('storage', handler);
+
+    return () => {
+      window.removeEventListener('storage', handler);
+    };
+  }, [loadPosts]);
 
   useEffect(() => {
     let mounted = true;
@@ -260,7 +360,20 @@ export const Feed = () => {
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current !== null) {
+        window.clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleOpenComments = async (postId: number) => {
+    const target = posts.find((item) => item.id === postId);
+    if (isEventPost(target)) {
+      return;
+    }
+
     setCommentsOpen(true);
     setCommentsLoading(true);
     setCommentsError(null);
@@ -294,6 +407,10 @@ export const Feed = () => {
     const previous = posts;
     const target = posts.find((item) => item.id === postId);
     if (!target) {
+      return;
+    }
+
+    if (isEventPost(target)) {
       return;
     }
 
@@ -335,6 +452,10 @@ export const Feed = () => {
       return;
     }
 
+    if (isEventPost(target)) {
+      return;
+    }
+
     setSavePendingId(postId);
     setPosts((items) => items.map((post) => (post.id === postId ? { ...post, saved: !post.saved } : post)));
 
@@ -352,6 +473,11 @@ export const Feed = () => {
 
   const handleCommentSubmit = async (postId: number, comment: string) => {
     const previous = posts;
+    const target = posts.find((item) => item.id === postId);
+    if (isEventPost(target)) {
+      return;
+    }
+
     const optimisticComment: FeedComment = {
       id: Date.now() * -1,
       comment,
@@ -422,6 +548,81 @@ export const Feed = () => {
     await reportPost(postId, reason);
   };
 
+  const handleVote = async (postId: number, vote: 'yes' | 'no') => {
+    const previous = posts;
+    const target = posts.find((item) => item.id === postId);
+
+    if (!target || !isEventPost(target)) {
+      return;
+    }
+
+    const currentVote = target.current_user_vote ?? null;
+    const currentYesVotes = target.yes_votes_count ?? 0;
+    const currentNoVotes = target.no_votes_count ?? 0;
+
+    let nextYesVotes = currentYesVotes;
+    let nextNoVotes = currentNoVotes;
+    let nextCurrentVote: 'yes' | 'no' | null = vote;
+
+    if (currentVote === vote) {
+      nextCurrentVote = null;
+      if (vote === 'yes') {
+        nextYesVotes = Math.max(currentYesVotes - 1, 0);
+      } else {
+        nextNoVotes = Math.max(currentNoVotes - 1, 0);
+      }
+    } else if (currentVote === 'yes') {
+      nextYesVotes = Math.max(currentYesVotes - 1, 0);
+      if (vote === 'no') {
+        nextNoVotes += 1;
+      }
+    } else if (currentVote === 'no') {
+      nextNoVotes = Math.max(currentNoVotes - 1, 0);
+      if (vote === 'yes') {
+        nextYesVotes += 1;
+      }
+    } else if (vote === 'yes') {
+      nextYesVotes += 1;
+    } else {
+      nextNoVotes += 1;
+    }
+
+    setVotePendingId(postId);
+    setPosts((items) =>
+      items.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              yes_votes_count: nextYesVotes,
+              no_votes_count: nextNoVotes,
+              current_user_vote: nextCurrentVote,
+            }
+          : post,
+      ),
+    );
+
+    try {
+      const result = await votePost(postId, vote);
+      setPosts((items) =>
+        items.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                yes_votes_count: result.yes_votes_count,
+                no_votes_count: result.no_votes_count,
+                current_user_vote: result.current_user_vote,
+              }
+            : post,
+        ),
+      );
+    } catch (requestError) {
+      setPosts(previous);
+      setError(getErrorMessage(requestError, 'Unable to record your vote right now.'));
+    } finally {
+      setVotePendingId(null);
+    }
+  };
+
   const handleCreatePost = async (payload: CreatePostPayload): Promise<boolean> => {
     setCreatingPost(true);
     setCreatePostError(null);
@@ -437,7 +638,8 @@ export const Feed = () => {
       formData.append('location', payload.location.trim());
     }
 
-    const postType = payload.label.toLowerCase() === 'emergency' ? 'emergency' : 'community';
+    const normalizedLabel = payload.label.toLowerCase();
+    const postType = normalizedLabel === 'event' ? 'event' : normalizedLabel === 'emergency' ? 'emergency' : 'community';
     formData.append('post_type', postType);
 
     if (payload.image) {
@@ -447,14 +649,23 @@ export const Feed = () => {
     try {
       const createdPost = await createPost(formData);
       const moderationStatus = createdPost.moderation_status || 'verified';
+      const moderationSource = createdPost.moderation_source || null;
 
       if (moderationStatus === 'verified') {
         const safeCreatedPost = sanitizePosts([createdPost]);
         if (safeCreatedPost.length > 0) {
-          setPosts((previous) => sortByRecent([{ ...safeCreatedPost[0], liked: false, saved: false }, ...previous]));
+          setPosts((previous) =>
+            sortFeedPosts([{ ...safeCreatedPost[0], liked: false, saved: false }, ...previous]),
+          );
         }
+
+        setCreatePostNotice('Gemini approved your post and it is now visible in the feed.');
       } else {
-        setCreatePostNotice('Post submitted for admin verification. It will appear in feed after approval.');
+        if (moderationSource === 'gemini') {
+          setCreatePostNotice('Gemini reviewed your post and sent it to the admin review queue.');
+        } else {
+          setCreatePostNotice('Post submitted for admin verification. It will appear in feed after approval.');
+        }
       }
 
       setCreateModalOpen(false);
@@ -508,26 +719,61 @@ export const Feed = () => {
 
         <section className={styles.feedList}>
           {posts.map((post) => (
-            <PostCard
+            <div
               key={post.id}
-              post={post}
-              currentUserId={currentProfile?.id ?? null}
-              currentUserName={currentProfile?.name ?? null}
-              currentUserAvatarUrl={currentProfile?.avatarUrl ?? null}
-              likePending={likePendingId === post.id}
-              savePending={savePendingId === post.id}
-              onLike={handleLike}
-              onOpenComments={handleOpenComments}
-              onSubmitComment={handleCommentSubmit}
-              onSave={handleSave}
-              onReport={handleReport}
-            />
+              id={`feed-post-${post.id}`}
+              className={[
+                styles.feedPostAnchor,
+                highlightedPostId === post.id ? styles.feedPostHighlighted : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              <PostCard
+                post={post}
+                highlighted={highlightedPostId === post.id}
+                currentUserId={currentProfile?.id ?? null}
+                currentUserName={currentProfile?.name ?? null}
+                currentUserAvatarUrl={currentProfile?.avatarUrl ?? null}
+                likePending={likePendingId === post.id}
+                savePending={savePendingId === post.id}
+                votePending={votePendingId === post.id}
+                onLike={handleLike}
+                onOpenComments={handleOpenComments}
+                onSubmitComment={handleCommentSubmit}
+                onSave={handleSave}
+                onVote={handleVote}
+                onReport={handleReport}
+              />
+            </div>
           ))}
         </section>
       </main>
 
       <aside className={styles.rightColumn}>
-        <WeatherNewsPanel />
+        <FoodCorner />
+
+        <section className={styles.upcomingEventsCard} aria-label="Upcoming events">
+          <h3 className={styles.upcomingEventsTitle}>Upcoming events</h3>
+
+          {upcomingEvents.length === 0 ? (
+            <p className={styles.upcomingEventsEmpty}>No upcoming events right now</p>
+          ) : (
+            <ul className={styles.upcomingEventsList}>
+              {upcomingEvents.map((event) => (
+                <li key={event.id} className={styles.upcomingEventsItem}>
+                  <button
+                    type="button"
+                    className={styles.upcomingEventsButton}
+                    onClick={() => handleUpcomingEventClick(event.id)}
+                  >
+                    {event.title}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </aside>
 
       <PostComments

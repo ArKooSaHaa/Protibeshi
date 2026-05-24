@@ -37,17 +37,26 @@ type GetOffersResponse = {
 };
 
 export async function createOffer(payload: OfferPayload, token: string) {
-  const res = await axios.post(
-    `${apiConfig.baseURL}/api/offers`,
-    payload,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+  try {
+    const res = await axios.post(
+      `${apiConfig.baseURL}/api/offers`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    return res.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const responseMessage = error.response?.data?.message;
+      throw new Error(responseMessage || error.message || 'Failed to create offer');
     }
-  );
-  return res.data;
+
+    throw error;
+  }
 }
 
 export async function getOffers() {

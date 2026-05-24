@@ -25,6 +25,13 @@ class PostCommentController extends Controller
             ], 404);
         }
 
+        if ($post->isEventPost()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Event posts do not support comments',
+            ], 422);
+        }
+
         $comment = PostComment::create([
             'post_id' => $post->id,
             'user_id' => $user->id,

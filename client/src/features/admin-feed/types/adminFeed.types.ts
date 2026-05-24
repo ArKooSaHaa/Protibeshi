@@ -1,6 +1,6 @@
-export type AdminPostStatus = 'pending' | 'verified' | 'reported';
+export type AdminPostStatus = 'pending' | 'verified' | 'reported' | 'rejected';
 
-export type AdminFilterTab = 'all' | 'pending' | 'verified' | 'reported';
+export type AdminFilterTab = 'all' | 'pending' | 'verified' | 'reported' | 'rejected';
 
 export type AdminDateFilter = 'all' | '24h' | '7d' | '30d';
 
@@ -31,6 +31,8 @@ export interface AdminFeedPost {
   created_at: string;
   location: string;
   status: AdminPostStatus;
+  moderation_source?: string | null;
+  moderation_note?: string | null;
   report_count: number;
   is_deleted: boolean;
   reports: PostReport[];
@@ -42,6 +44,7 @@ export interface AdminFeedStats {
   pendingPosts: number;
   reportedPosts: number;
   deletedPosts: number;
+  geminiQueuePosts: number;
 }
 
 export interface AdminActivityItem {

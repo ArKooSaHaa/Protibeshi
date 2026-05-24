@@ -10,6 +10,10 @@ type AdminFeedApiPayload = {
   post?: AdminFeedPost;
 };
 
+export type AdminFeedQuery = {
+  queue?: 'all' | 'gemini';
+};
+
 const apiClient = axios.create({
   baseURL: `${ENV.API_BASE_URL}/api`,
   headers: {
@@ -39,6 +43,25 @@ const extractErrorMessage = (error: unknown, fallback: string): string => {
 export const fetchAdminFeedPosts = async (): Promise<AdminFeedPost[]> => {
   try {
     const response = await apiClient.get<AdminFeedApiPayload>('/admin/posts');
+    return Array.isArray(response.data.posts) ? response.data.posts : [];
+  } catch (error) {
+    throw new Error(extractErrorMessage(error, 'Could not load moderation posts.'));
+  }
+};
+
+export const fetchAdminFeedPostsWithQuery = async (query: AdminFeedQuery): Promise<AdminFeedPost[]> => {
+  try {
+    const searchParams = new URLSearchParams();
+
+    if (query.queue && query.queue !== 'all') {
+      searchParams.set('queue', query.queue);
+    }
+
+    const endpoint = searchParams.toString()
+      ? `/admin/posts?${searchParams.toString()}`
+      : '/admin/posts';
+
+    const response = await apiClient.get<AdminFeedApiPayload>(endpoint);
     return Array.isArray(response.data.posts) ? response.data.posts : [];
   } catch (error) {
     throw new Error(extractErrorMessage(error, 'Could not load moderation posts.'));
@@ -84,5 +107,33 @@ export const deleteAdminFeedPost = async (postId: string): Promise<AdminFeedPost
     return response.data.post;
   } catch (error) {
     throw new Error(extractErrorMessage(error, 'Could not delete post.'));
+  }
+};
+
+export const reviewAdminFeedPostWithGemini = async (postId: string): Promise<AdminFeedPost> => {
+  try {
+    const response = await apiClient.post<AdminFeedApiPayload>(`/admin/posts/${postId}/gemini-review`);
+
+    if (!response.data.post) {
+      throw new Error('Updated post payload was not returned.');
+    }
+
+    return response.data.post;
+  } catch (error) {
+    throw new Error(extractErrorMessage(error, 'Could not review post with Gemini.'));
+  }
+};
+
+export const rejectAdminFeedPostWithAI = async (postId: string): Promise<AdminFeedPost> => {
+  try {
+    const response = await apiClient.post<AdminFeedApiPayload>(`/admin/posts/${postId}/ai-reject`);
+
+    if (!response.data.post) {
+      throw new Error('Updated post payload was not returned.');
+    }
+
+    return response.data.post;
+  } catch (error) {
+    throw new Error(extractErrorMessage(error, 'Could not run AI reject review.'));
   }
 };

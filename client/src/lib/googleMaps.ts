@@ -1,3 +1,5 @@
+import { getPlaceList } from '@/data/placeList';
+
 type GoogleAddressComponent = {
   long_name: string;
   short_name: string;
@@ -143,6 +145,43 @@ const getAddressComponent = (
   return match?.long_name?.trim() || '';
 };
 
+const normalizePlaceText = (value: string): string => {
+  return value
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+};
+
+const PLACE_MATCHERS = getPlaceList()
+  .map((place) => ({
+    name: place,
+    normalized: normalizePlaceText(place),
+  }))
+  .filter((place) => place.normalized.length > 0);
+
+const matchPlaceFromText = (value: string): string => {
+  const normalizedValue = normalizePlaceText(value);
+  if (!normalizedValue) {
+    return '';
+  }
+
+  const paddedValue = ` ${normalizedValue} `;
+  let bestMatch = '';
+  let bestLength = 0;
+
+  for (const place of PLACE_MATCHERS) {
+    const paddedPlace = ` ${place.normalized} `;
+    if (paddedValue.includes(paddedPlace) && place.normalized.length > bestLength) {
+      bestMatch = place.name;
+      bestLength = place.normalized.length;
+    }
+  }
+
+  return bestMatch;
+};
+
 export const resolveNeighborhoodFromPlace = (place: GooglePlaceResult | null | undefined): string => {
   if (!place) {
     return '';
@@ -150,15 +189,23 @@ export const resolveNeighborhoodFromPlace = (place: GooglePlaceResult | null | u
 
   const components = place.address_components;
 
-  return (
-    getAddressComponent(components, ['neighborhood'])
-    || getAddressComponent(components, ['sublocality_level_1'])
-    || getAddressComponent(components, ['sublocality'])
-    || getAddressComponent(components, ['administrative_area_level_3'])
-    || place.name?.trim()
-    || place.formatted_address?.trim()
-    || ''
-  );
+  const candidates = [
+    getAddressComponent(components, ['neighborhood']),
+    getAddressComponent(components, ['sublocality_level_1']),
+    getAddressComponent(components, ['sublocality']),
+    getAddressComponent(components, ['administrative_area_level_3']),
+    place.name?.trim() || '',
+    place.formatted_address?.trim() || '',
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const match = matchPlaceFromText(candidate);
+    if (match) {
+      return match;
+    }
+  }
+
+  return candidates[0] || '';
 };
 
 export const resolveCityFromPlace = (place: GooglePlaceResult | null | undefined): string => {

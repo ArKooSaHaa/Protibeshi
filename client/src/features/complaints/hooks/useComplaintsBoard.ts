@@ -128,6 +128,44 @@ const normalizeComplaint = (raw: Record<string, unknown>): ComplaintItem => {
     const photoPath = typeof raw.photo === 'string' ? raw.photo : null;
     const attachmentName =
         photoPath && photoPath.includes('/') ? photoPath.split('/').pop() || photoPath : photoPath;
+    const createdAt = String(raw.created_at || new Date().toISOString());
+    const rawUpdates = Array.isArray(raw.updates) ? raw.updates : [];
+    const updates = rawUpdates
+        .map((entry) => {
+            if (!entry || typeof entry !== 'object') {
+                return null;
+            }
+
+            const candidate = entry as Record<string, unknown>;
+            const stage = typeof candidate.stage === 'string' && candidate.stage.trim() ? candidate.stage.trim() : 'Status update';
+            const date = typeof candidate.date === 'string' && candidate.date.trim() ? candidate.date.trim() : createdAt;
+            const note = typeof candidate.note === 'string' && candidate.note.trim() ? candidate.note.trim() : undefined;
+
+            return note ? { stage, date, note } : { stage, date };
+        })
+        .filter((entry): entry is ComplaintItem['updates'][number] => entry !== null);
+
+    const internalNotesSource = Array.isArray(raw.internal_notes)
+        ? raw.internal_notes
+        : Array.isArray(raw.internalNotes)
+            ? raw.internalNotes
+            : [];
+
+    const internalNotes = internalNotesSource
+        .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+        .map((entry) => entry.trim());
+
+    const resolutionSummary = typeof raw.resolution_summary === 'string' && raw.resolution_summary.trim()
+        ? raw.resolution_summary.trim()
+        : typeof raw.resolutionSummary === 'string' && raw.resolutionSummary.trim()
+            ? raw.resolutionSummary.trim()
+            : undefined;
+
+    const assignedTo = typeof raw.assigned_to === 'string' && raw.assigned_to.trim()
+        ? raw.assigned_to.trim()
+        : typeof raw.assignedTo === 'string' && raw.assignedTo.trim()
+            ? raw.assignedTo.trim()
+            : null;
 
     const resolvedByName =
         raw.user && typeof raw.user === 'object' && raw.user !== null
@@ -150,7 +188,7 @@ const normalizeComplaint = (raw: Record<string, unknown>): ComplaintItem => {
         description: String(raw.description || ''),
         priority: priorityMap[priorityKey] || 'Medium',
         status: statusMap[statusKey] || 'Pending',
-        createdAt: String(raw.created_at || new Date().toISOString()),
+        createdAt,
         distance: Number(raw.distance ?? 0),
         upvotes: 0,
         comments: 0,
@@ -160,11 +198,14 @@ const normalizeComplaint = (raw: Record<string, unknown>): ComplaintItem => {
         location: String(raw.location || ''),
         photoUrl: photoPath,
         photoPath,
-        updates: [{
+        updates: updates.length > 0 ? updates : [{
             stage: 'Reported',
-            date: String(raw.created_at || new Date().toISOString()).split('T')[0],
+            date: createdAt,
         }],
         attachments: attachmentName ? [attachmentName] : [],
+        internalNotes: internalNotes.length > 0 ? internalNotes : undefined,
+        assignedTo,
+        resolutionSummary,
     };
 };
 

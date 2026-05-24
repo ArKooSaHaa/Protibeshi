@@ -67,6 +67,8 @@ export interface ComplaintItem {
     updates: ComplaintUpdate[]; attachments?: string[];
     resolutionSummary?: string;
     commentThread?: ComplaintComment[];
+    internalNotes?: string[];
+    assignedTo?: string | null;
 }
 
 export interface ComplaintFilterState {

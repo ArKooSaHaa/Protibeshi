@@ -5,17 +5,24 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
+use App\Services\GeminiPostModerationService;
 
 class PostController extends Controller
 {
+    public function __construct(private readonly GeminiPostModerationService $geminiPostModerationService)
+    {
+    }
+
     public function createPost(Request $request)
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'short_description' => 'nullable|string',
-            'label' => 'nullable|string|max:120',
+            'label' => 'nullable|string|in:Emergency,Community,Event',
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
             'post_type' => 'nullable|string|max:60',
             'visibility' => 'nullable|string|max:60',
@@ -29,32 +36,95 @@ class PostController extends Controller
             $imagePath = $request->file('image')->store('posts', 'public');
         }
 
-        $post = Post::create([
+        $geminiReview = [
+            'allow' => false,
+            'reason' => 'Gemini moderation is temporarily unavailable. Sent for manual review.',
+            'raw' => null,
+            'model' => null,
+        ];
+
+        try {
+            $geminiReview = $this->geminiPostModerationService->reviewPost([
+                'title' => $validated['title'],
+                'short_description' => $validated['short_description'] ?? null,
+                'content' => $validated['content'],
+                'label' => $validated['label'] ?? null,
+                'post_type' => $this->resolvePostType($validated['label'] ?? null, $validated['post_type'] ?? null),
+                'visibility' => $validated['visibility'] ?? 'public',
+                'location' => $validated['location'] ?? null,
+            ], $request->file('image'));
+        } catch (\Throwable $exception) {
+            Log::warning('Gemini moderation crashed, falling back to manual review', [
+                'user_id' => Auth::id(),
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        $isGeminiApproved = (bool) ($geminiReview['allow'] ?? false);
+
+        // If AI approves, do NOT auto-publish — send for manual admin verification.
+        // If AI rejects, mark as rejected immediately.
+        if ($isGeminiApproved) {
+            $moderationStatus = 'pending';
+            $moderationNote = 'AI recommended approval: ' . ($geminiReview['reason'] ?? 'Approved. Sent for manual verification by admin.');
+            $isActive = false;
+        } else {
+            $moderationStatus = 'rejected';
+            $moderationNote = 'Rejected by AI: ' . ($geminiReview['reason'] ?? 'Content did not meet feed rules.');
+            $isActive = false;
+        }
+
+        $postAttributes = [
             'user_id' => Auth::id(),
             'title' => $validated['title'],
             'short_description' => $validated['short_description'] ?? null,
             'content' => $validated['content'],
             'label' => $validated['label'] ?? null,
             'image' => $imagePath,
-            'post_type' => $validated['post_type'] ?? 'community',
+            'post_type' => $this->resolvePostType($validated['label'] ?? null, $validated['post_type'] ?? null),
             'visibility' => $validated['visibility'] ?? 'public',
             'location' => $validated['location'] ?? null,
             'distance' => $validated['distance'] ?? null,
-            'is_active' => true,
+            'is_active' => $isActive,
             'is_pinned' => false,
-            'moderation_status' => 'pending',
+            'moderation_status' => $moderationStatus,
             'moderated_by_admin_id' => null,
-            'moderated_at' => null,
-            'moderation_note' => null,
-        ]);
+            'moderated_at' => now(),
+            'moderation_note' => $moderationNote,
+        ];
+
+        if (Schema::hasColumn('posts', 'moderation_source')) {
+            $postAttributes['moderation_source'] = $geminiReview['provider'] ?? 'ai';
+        }
+
+        try {
+            $post = Post::create([
+                ...$postAttributes,
+            ]);
+        } catch (\Throwable $exception) {
+            if ($imagePath !== null) {
+                Storage::disk('public')->delete($imagePath);
+            }
+
+            throw $exception;
+        }
 
         $post->load('user');
 
         return response()->json([
             'success' => true,
-            'message' => 'Post submitted for admin verification',
+            'message' => $isGeminiApproved
+                ? 'Post reviewed by AI and sent for admin verification.'
+                : 'Post rejected by AI moderation.',
             'post' => $this->formatPost($post, (int) Auth::id()),
-            'requires_verification' => true,
+            'requires_verification' => $isGeminiApproved,
+            'rejected_by_ai' => !$isGeminiApproved,
+            'gemini_review' => [
+                'allow' => $isGeminiApproved,
+                'reason' => $geminiReview['reason'] ?? null,
+                'model' => $geminiReview['model'] ?? null,
+                'provider' => $geminiReview['provider'] ?? null,
+            ],
         ], 201);
     }
 
@@ -65,9 +135,14 @@ class PostController extends Controller
         $postsQuery = Post::with('user')
             ->where('is_active', true)
             ->where('moderation_status', 'verified')
-            ->latest();
+            ->where('created_at', '>=', now()->subDays(7))
+            ->orderByRaw("CASE WHEN LOWER(COALESCE(label, post_type, '')) = 'emergency' THEN 0 ELSE 1 END")
+            ->orderByDesc('created_at');
 
         if ($viewerUserId) {
+            $postsQuery->with(['votes' => function ($query) use ($viewerUserId) {
+                $query->where('user_id', (int) $viewerUserId);
+            }]);
             $postsQuery->withCount([
                 'likes as liked_by_current_user' => function ($query) use ($viewerUserId) {
                     $query->where('user_id', (int) $viewerUserId);
@@ -75,24 +150,26 @@ class PostController extends Controller
             ]);
         }
 
-        $posts = $postsQuery->paginate(10);
+        $postsQuery->withCount([
+            'votes as yes_votes_count' => function ($query) {
+                $query->where('vote', 'yes');
+            },
+            'votes as no_votes_count' => function ($query) {
+                $query->where('vote', 'no');
+            },
+        ]);
+
+        $posts = $postsQuery->get();
 
         $formattedPosts = array_map(
             fn (Post $post) => $this->formatPost($post, $viewerUserId ? (int) $viewerUserId : null),
-            $posts->items()
+            $posts->all()
         );
 
         return response()->json([
             'success' => true,
             'posts' => $formattedPosts,
-            'pagination' => [
-                'current_page' => $posts->currentPage(),
-                'last_page' => $posts->lastPage(),
-                'per_page' => $posts->perPage(),
-                'total' => $posts->total(),
-                'from' => $posts->firstItem(),
-                'to' => $posts->lastItem(),
-            ],
+            'feed_window_days' => 7,
         ], 200);
     }
 
@@ -100,16 +177,27 @@ class PostController extends Controller
     {
         $authId = (int) Auth::id();
 
-        $posts = Post::with('user')
+        $postsQuery = Post::with('user')
             ->withCount([
                 'likes as liked_by_current_user' => function ($query) use ($authId) {
                     $query->where('user_id', $authId);
                 },
+                'votes as yes_votes_count' => function ($query) {
+                    $query->where('vote', 'yes');
+                },
+                'votes as no_votes_count' => function ($query) {
+                    $query->where('vote', 'no');
+                },
             ])
             ->where('user_id', $authId)
             ->where('is_active', true)
-            ->latest()
-            ->paginate(30);
+            ->latest();
+
+        $postsQuery->with(['votes' => function ($query) use ($authId) {
+            $query->where('user_id', $authId);
+        }]);
+
+        $posts = $postsQuery->paginate(30);
 
         $formattedPosts = array_map(
             fn (Post $post) => $this->formatPost($post, $authId),
@@ -135,9 +223,20 @@ class PostController extends Controller
         $viewerUserId = Auth::guard('api')->id();
 
         $postQuery = Post::with(['user', 'comments.user'])
-            ->withCount(['likes as likes_relation_count']);
+            ->withCount(['likes as likes_relation_count'])
+            ->withCount([
+                'votes as yes_votes_count' => function ($query) {
+                    $query->where('vote', 'yes');
+                },
+                'votes as no_votes_count' => function ($query) {
+                    $query->where('vote', 'no');
+                },
+            ]);
 
         if ($viewerUserId) {
+            $postQuery->with(['votes' => function ($query) use ($viewerUserId) {
+                $query->where('user_id', (int) $viewerUserId);
+            }]);
             $postQuery->withCount([
                 'likes as liked_by_current_user' => function ($query) use ($viewerUserId) {
                     $query->where('user_id', (int) $viewerUserId);
@@ -157,7 +256,7 @@ class PostController extends Controller
         $formatted = $this->formatPost($post, $viewerUserId ? (int) $viewerUserId : null);
         $formatted['likes_count'] = (int) $post->likes_count;
         $formatted['likes_relation_count'] = (int) $post->likes_relation_count;
-        $formatted['comments'] = $post->comments->map(function ($comment) {
+        $formatted['comments'] = $post->isEventPost() ? [] : $post->comments->map(function ($comment) {
             return [
                 'id' => $comment->id,
                 'comment' => $comment->comment,
@@ -211,10 +310,16 @@ class PostController extends Controller
     private function formatPost(Post $post, ?int $viewerUserId = null): array
     {
         $liked = false;
+        $currentUserVote = null;
 
         if ($viewerUserId !== null && $viewerUserId > 0) {
             $liked = (int) ($post->liked_by_current_user ?? 0) > 0;
+            if ($post->relationLoaded('votes')) {
+                $currentUserVote = $post->votes->first()?->vote;
+            }
         }
+
+        $isEventPost = $post->isEventPost();
 
         return [
             'id' => $post->id,
@@ -224,14 +329,22 @@ class PostController extends Controller
             'label' => $post->label,
             'image' => $post->image ? Storage::url($post->image) : null,
             'post_type' => $post->post_type,
+            'is_event' => $isEventPost,
+            'interaction_mode' => $isEventPost ? 'poll' : 'standard',
+            'event_vote_open' => $isEventPost ? $post->isEventVotingOpen() : null,
+            'event_vote_expires_at' => $isEventPost && $post->eventVotingExpiresAt() ? $post->eventVotingExpiresAt()?->toISOString() : null,
             'visibility' => $post->visibility,
             'likes_count' => (int) $post->likes_count,
             'liked' => $liked,
             'comments_count' => (int) $post->comments_count,
             'shares_count' => (int) $post->shares_count,
+            'yes_votes_count' => (int) ($post->yes_votes_count ?? 0),
+            'no_votes_count' => (int) ($post->no_votes_count ?? 0),
+            'current_user_vote' => $currentUserVote,
             'is_active' => (bool) $post->is_active,
             'is_pinned' => (bool) $post->is_pinned,
             'moderation_status' => (string) $post->moderation_status,
+            'moderation_source' => $post->moderation_source,
             'location' => $post->location,
             'distance' => $post->distance,
             'created_at' => $post->created_at,
@@ -243,6 +356,29 @@ class PostController extends Controller
                 'profile_picture_url' => $this->resolveProfilePictureUrl($post->user->profile_picture),
             ] : null,
         ];
+    }
+
+    private function resolvePostType(?string $label, ?string $fallbackType = null): string
+    {
+        $normalizedLabel = strtolower(trim((string) $label));
+        if ($normalizedLabel === 'event') {
+            return 'event';
+        }
+
+        if ($normalizedLabel === 'emergency') {
+            return 'emergency';
+        }
+
+        if ($normalizedLabel === 'community') {
+            return 'community';
+        }
+
+        $normalizedFallback = strtolower(trim((string) $fallbackType));
+        if (in_array($normalizedFallback, ['event', 'emergency', 'community'], true)) {
+            return $normalizedFallback;
+        }
+
+        return 'community';
     }
 
     private function resolveProfilePictureUrl(?string $profilePicture): string

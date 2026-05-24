@@ -31,15 +31,21 @@ class EnsureUserNotBanned
             return $next($request);
         }
 
-        $message = 'You are temporarily banned from posting listings.';
+        $banReason = trim((string) ($user->banned_reason ?? ''));
+        $message = 'You have been banned from posting content.';
+
+        if ($banReason !== '') {
+            $message = 'You have been banned for ' . $banReason . '.';
+        }
+
         if ($banEndsAt !== null) {
-            $message = 'You are temporarily banned from posting listings until '
-                .$banEndsAt->toDayDateTimeString().'.';
+            $message .= ' Ban ends on ' . $banEndsAt->toDayDateTimeString() . '.';
         }
 
         return response()->json([
             'success' => false,
             'message' => $message,
+            'banned_reason' => $banReason !== '' ? $banReason : null,
             'banned_until' => $banEndsAt?->toISOString(),
         ], 403);
     }

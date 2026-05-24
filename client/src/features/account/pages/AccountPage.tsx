@@ -336,7 +336,7 @@ export const AccountPage = () => {
     return (
       <div className="px-3 pb-10 pt-6 md:px-6">
         <div className="mx-auto max-w-7xl space-y-6">
-          <div className="flex min-h-[220px] items-center justify-center rounded-[32px] border border-slate-200/80 bg-white/80 shadow-[0_18px_55px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+          <div className="flex min-h-55 items-center justify-center rounded-4xl border border-slate-200/80 bg-white/80 shadow-[0_18px_55px_rgba(15,23,42,0.06)] backdrop-blur-xl">
             <div className="flex items-center gap-3 text-slate-700">
               <LoaderCircle className="h-5 w-5 animate-spin text-emerald-600" />
               <span className="text-sm font-medium">Loading your account details...</span>
@@ -355,7 +355,7 @@ export const AccountPage = () => {
   if (profileError) {
     return (
       <div className="px-3 pb-10 pt-6 md:px-6">
-        <div className="mx-auto max-w-4xl rounded-[32px] border border-rose-200 bg-white/85 p-8 shadow-[0_18px_55px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+        <div className="mx-auto max-w-4xl rounded-4xl border border-rose-200 bg-white/85 p-8 shadow-[0_18px_55px_rgba(15,23,42,0.06)] backdrop-blur-xl">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-rose-600">Account unavailable</p>
@@ -470,6 +470,33 @@ export const AccountPage = () => {
             </div>
           </div>
         </section>
+
+        {profile.isBanned ? (
+          <section className="overflow-hidden rounded-[28px] border border-rose-200 bg-rose-50/90 p-5 shadow-[0_18px_55px_rgba(15,23,42,0.05)] backdrop-blur-xl md:p-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="max-w-3xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-rose-700">
+                  <CircleAlert className="h-3.5 w-3.5" />
+                  Account restricted
+                </div>
+                <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">You have been banned from posting content.</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-700">
+                  {profile.bannedReason || 'An admin has restricted this account from creating new content.'}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-rose-200 bg-white/80 px-4 py-3 text-sm text-rose-700">
+                <p className="font-semibold uppercase tracking-[0.18em]">Ban status</p>
+                <p className="mt-2 leading-6">You cannot create feed posts, marketplace listings, rent listings, services, complaints, or relief requests until the ban is lifted.</p>
+                {profile.bannedUntil ? (
+                  <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-rose-600">
+                    Ban ends: {new Date(profile.bannedUntil).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {statsCards.map((card, index) => (

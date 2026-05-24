@@ -64,15 +64,38 @@
   gap: 20px;
 }
 
+.locationGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .location {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 8px 14px;
   background: var(--slate-100);
   border-radius: 20px;
   font-size: 13px;
   color: var(--slate-600);
+}
+
+.tempBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #eef7f3;
+  border: 1px solid #b9e8d3;
+  color: #0f8f62;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .locationIcon {

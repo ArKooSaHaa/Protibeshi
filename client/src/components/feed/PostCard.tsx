@@ -11,11 +11,14 @@ type PostCardProps = {
   currentUserAvatarUrl?: string | null;
   likePending?: boolean;
   savePending?: boolean;
+  votePending?: boolean;
   onLike: (postId: number) => Promise<void>;
   onOpenComments: (postId: number) => Promise<void>;
   onSubmitComment: (postId: number, comment: string) => Promise<void>;
   onSave: (postId: number) => Promise<void>;
+  onVote: (postId: number, vote: 'yes' | 'no') => Promise<void>;
   onReport: (postId: number, reason: string) => Promise<void>;
+  highlighted?: boolean;
 };
 
 const formatTime = (rawDate: string) => {
@@ -188,11 +191,14 @@ export const PostCard = ({
   currentUserAvatarUrl = null,
   likePending,
   savePending,
+  votePending,
   onLike,
   onOpenComments,
   onSubmitComment,
   onSave,
+  onVote,
   onReport,
+  highlighted = false,
 }: PostCardProps) => {
   const [showReport, setShowReport] = useState(false);
   const [reportReason, setReportReason] = useState('');
@@ -227,12 +233,19 @@ export const PostCard = ({
   }, [post, currentUserAvatarUrl, currentUserId, currentUserName]);
   const isEmergency = (post.post_type || '').toLowerCase() === 'emergency';
   const isVerified = String(post.moderation_status || '').toLowerCase() === 'verified';
+  const isEvent = String(post.label || post.post_type || '').trim().toLowerCase() === 'event';
   const shortDescription = (post.short_description || '').trim();
   const fallbackSummary = (post.content || '').trim();
   const summaryText = shortDescription || fallbackSummary;
   const detailText = (post.content || '').trim();
   const hasDetailText = !!detailText && detailText !== summaryText;
   const hasExpandableContent = hasDetailText || !!imageUrl;
+  const yesVotes = post.yes_votes_count ?? 0;
+  const noVotes = post.no_votes_count ?? 0;
+  const currentVote = post.current_user_vote ?? null;
+  const eventVoteOpen = post.event_vote_open !== false;
+  const eventVoteClosed = isEvent && !eventVoteOpen;
+  const eventVoteExpiryLabel = post.event_vote_expires_at ? formatTime(post.event_vote_expires_at) : null;
 
   const commenterPhoto = useMemo(() => {
     if (!currentUserAvatarUrl) {
@@ -285,7 +298,7 @@ export const PostCard = ({
   };
 
   return (
-    <article className={`${styles.card} ${isEmergency ? styles.emergencyCard : ''}`}>
+    <article className={`${styles.card} ${isEmergency ? styles.emergencyCard : ''} ${highlighted ? styles.highlight : ''}`}>
       <header className={styles.header}>
         <div className={styles.headerTop}>
           <div className={styles.userSection}>
@@ -333,6 +346,42 @@ export const PostCard = ({
         <h3 className={styles.title}>{post.title}</h3>
         <p className={styles.shortDescription}>{summaryText}</p>
 
+        {isEvent ? (
+          <div className={styles.pollSection}>
+            <div className={styles.pollHeader}>
+              <span className={styles.pollLabel}>Event poll</span>
+              <span className={styles.pollCounts}>{yesVotes + noVotes} votes</span>
+            </div>
+
+            {eventVoteClosed ? (
+              <div className={styles.pollClosedNotice}>
+                Voting closed after 2 days{eventVoteExpiryLabel ? ` • Closed ${eventVoteExpiryLabel}` : ''}
+              </div>
+            ) : null}
+
+            <div className={styles.pollActions}>
+              <button
+                type="button"
+                className={`${styles.pollButton} ${currentVote === 'yes' ? styles.pollButtonActiveYes : ''}`}
+                onClick={() => void onVote(post.id, 'yes')}
+                disabled={votePending || eventVoteClosed}
+              >
+                <span>Yes</span>
+                <span>{yesVotes}</span>
+              </button>
+              <button
+                type="button"
+                className={`${styles.pollButton} ${currentVote === 'no' ? styles.pollButtonActiveNo : ''}`}
+                onClick={() => void onVote(post.id, 'no')}
+                disabled={votePending || eventVoteClosed}
+              >
+                <span>No</span>
+                <span>{noVotes}</span>
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         {hasExpandableContent ? (
           <button
             type="button"
@@ -361,101 +410,114 @@ export const PostCard = ({
         </div>
       ) : null}
 
-      <footer className={styles.footer}>
-        <div className={styles.stats}>
-          <span>{post.likes_count} likes</span>
-          <span>{post.comments_count} comments</span>
-        </div>
-
-        <div className={styles.actions}>
-          <button
-            type="button"
-            className={`${styles.actionButton} ${post.liked ? styles.likeActive : ''}`}
-            onClick={() => onLike(post.id)}
-            disabled={likePending}
-          >
-            {likePending ? (
-              <Loader2 className={styles.spin} size={15} />
-            ) : (
-              <Heart
-                size={15}
-                className={post.liked ? styles.likeIconActive : undefined}
-                fill={post.liked ? 'currentColor' : 'none'}
-              />
-            )}
-            Like
-          </button>
-
-          <button
-            type="button"
-            className={styles.actionButton}
-            onClick={() => {
-              commentInputRef.current?.focus();
-              void onOpenComments(post.id);
-            }}
-          >
-            <MessageCircle size={15} />
-            Comment
-          </button>
-
-          <button
-            type="button"
-            className={`${styles.actionButton} ${post.saved ? styles.actionActive : ''}`}
-            onClick={() => onSave(post.id)}
-            disabled={savePending}
-          >
-            {savePending ? <Loader2 className={styles.spin} size={15} /> : <Bookmark size={15} />}
-            Save
-          </button>
-
-          <button
-            type="button"
-            className={styles.actionButton}
-            onClick={() => setShowReport(true)}
-          >
-            <Flag size={15} />
-            Report
-          </button>
-        </div>
-
-        <form className={styles.commentComposer} onSubmit={handleInlineCommentSubmit}>
-          <div className={styles.commentAvatar}>
-            {commenterPhoto && !commentAvatarFailed ? (
-              <img
-                src={commenterPhoto}
-                alt={currentUserName || 'You'}
-                className={styles.commentAvatarImage}
-                onError={() => setCommentAvatarFailed(true)}
-              />
-            ) : (
-              commenterInitial
-            )}
+      {isEvent ? (
+        <footer className={styles.eventFooter}>
+          <div className={styles.eventFooterActions}>
+            <button type="button" className={styles.actionButton} onClick={() => setShowReport(true)}>
+              <Flag size={15} />
+              Report
+            </button>
           </div>
-          <input
-            ref={commentInputRef}
-            className={styles.commentInput}
-            type="text"
-            placeholder="Write your comment..."
-            value={inlineComment}
-            onChange={(event) => setInlineComment(event.target.value)}
-            disabled={commenting}
-          />
-          <button type="button" className={styles.commentIconBtn} aria-label="emoji picker" disabled>
-            <Smile size={15} />
-          </button>
-          <button
-            type="submit"
-            className={styles.commentSendBtn}
-            aria-label="send comment"
-            disabled={commenting || !inlineComment.trim()}
-          >
-            {commenting ? <Loader2 className={styles.spin} size={14} /> : <Send size={14} />}
-          </button>
-        </form>
 
-        {reportFeedback ? <p className={styles.feedback}>{reportFeedback}</p> : null}
-        {commentFeedback ? <p className={styles.feedback}>{commentFeedback}</p> : null}
-      </footer>
+          {reportFeedback ? <p className={styles.feedback}>{reportFeedback}</p> : null}
+        </footer>
+      ) : (
+        <footer className={styles.footer}>
+          <div className={styles.stats}>
+            <span>{post.likes_count} likes</span>
+            <span>{post.comments_count} comments</span>
+          </div>
+
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={`${styles.actionButton} ${post.liked ? styles.likeActive : ''}`}
+              onClick={() => onLike(post.id)}
+              disabled={likePending}
+            >
+              {likePending ? (
+                <Loader2 className={styles.spin} size={15} />
+              ) : (
+                <Heart
+                  size={15}
+                  className={post.liked ? styles.likeIconActive : undefined}
+                  fill={post.liked ? 'currentColor' : 'none'}
+                />
+              )}
+              Like
+            </button>
+
+            <button
+              type="button"
+              className={styles.actionButton}
+              onClick={() => {
+                commentInputRef.current?.focus();
+                void onOpenComments(post.id);
+              }}
+            >
+              <MessageCircle size={15} />
+              Comment
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.actionButton} ${post.saved ? styles.actionActive : ''}`}
+              onClick={() => onSave(post.id)}
+              disabled={savePending}
+            >
+              {savePending ? <Loader2 className={styles.spin} size={15} /> : <Bookmark size={15} />}
+              Save
+            </button>
+
+            <button
+              type="button"
+              className={styles.actionButton}
+              onClick={() => setShowReport(true)}
+            >
+              <Flag size={15} />
+              Report
+            </button>
+          </div>
+
+          <form className={styles.commentComposer} onSubmit={handleInlineCommentSubmit}>
+            <div className={styles.commentAvatar}>
+              {commenterPhoto && !commentAvatarFailed ? (
+                <img
+                  src={commenterPhoto}
+                  alt={currentUserName || 'You'}
+                  className={styles.commentAvatarImage}
+                  onError={() => setCommentAvatarFailed(true)}
+                />
+              ) : (
+                commenterInitial
+              )}
+            </div>
+            <input
+              ref={commentInputRef}
+              className={styles.commentInput}
+              type="text"
+              placeholder="Write your comment..."
+              value={inlineComment}
+              onChange={(event) => setInlineComment(event.target.value)}
+              disabled={commenting}
+            />
+            <button type="button" className={styles.commentIconBtn} aria-label="emoji picker" disabled>
+              <Smile size={15} />
+            </button>
+            <button
+              type="submit"
+              className={styles.commentSendBtn}
+              aria-label="send comment"
+              disabled={commenting || !inlineComment.trim()}
+            >
+              {commenting ? <Loader2 className={styles.spin} size={14} /> : <Send size={14} />}
+            </button>
+          </form>
+
+          {reportFeedback ? <p className={styles.feedback}>{reportFeedback}</p> : null}
+          {commentFeedback ? <p className={styles.feedback}>{commentFeedback}</p> : null}
+        </footer>
+      )}
 
       {showReport ? (
         <div className={styles.reportOverlay} onClick={() => setShowReport(false)}>

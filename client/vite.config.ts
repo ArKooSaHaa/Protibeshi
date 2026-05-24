@@ -18,6 +18,10 @@ export default defineConfig({
     // ✅ Option 1 (recommended for dev)
     allowedHosts: true,
 
+    fs: {
+      allow: [path.resolve(__dirname, '..')],
+    },
+
     // ✅ Option 2 (strict)
     // allowedHosts: ['applications-jaguar-perceived-talks.trycloudflare.com'],
   },

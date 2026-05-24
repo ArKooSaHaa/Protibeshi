@@ -27,6 +27,14 @@ export type FeedPost = {
   comments_count: number;
   shares_count?: number;
   moderation_status?: 'pending' | 'verified' | 'reported';
+  moderation_source?: 'gemini' | 'admin' | null;
+  is_event?: boolean;
+  interaction_mode?: 'standard' | 'poll';
+  event_vote_open?: boolean | null;
+  event_vote_expires_at?: string | null;
+  yes_votes_count?: number;
+  no_votes_count?: number;
+  current_user_vote?: 'yes' | 'no' | null;
   location: string | null;
   distance: number | null;
   created_at: string;
@@ -308,4 +316,32 @@ export const reportPost = async (id: number | string, reason: string): Promise<{
     },
     body: JSON.stringify({ reason }),
   });
+};
+
+export const votePost = async (
+  id: number | string,
+  vote: 'yes' | 'no',
+): Promise<{ success: boolean; message: string; yes_votes_count: number; no_votes_count: number; current_user_vote: 'yes' | 'no' | null }> => {
+  const response = await request<{
+    success: boolean;
+    message: string;
+    yes_votes_count?: number;
+    no_votes_count?: number;
+    current_user_vote?: 'yes' | 'no' | null;
+  }>(`/posts/${id}/vote`, {
+    method: 'POST',
+    protected: true,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ vote }),
+  });
+
+  return {
+    success: response.success,
+    message: response.message,
+    yes_votes_count: response.yes_votes_count ?? 0,
+    no_votes_count: response.no_votes_count ?? 0,
+    current_user_vote: response.current_user_vote ?? null,
+  };
 };

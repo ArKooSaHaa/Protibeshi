@@ -109,6 +109,24 @@ export const ComplaintDetailsDrawer = ({
               </div>
             </div>
 
+            {complaint.internalNotes && complaint.internalNotes.length > 0 && (
+              <div className={styles.section}>
+                <h4>Messages from moderators</h4>
+                <div className={styles.attachments}>
+                  {complaint.internalNotes.map((note) => (
+                    <span key={note}>{note}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {complaint.resolutionSummary && (
+              <div className={styles.section}>
+                <h4>Resolution summary</h4>
+                <div className={styles.resolutionBox}>{complaint.resolutionSummary}</div>
+              </div>
+            )}
+
             {complaint.attachments && complaint.attachments.length > 0 && (
               <div className={styles.section}>
                 <h4>Attachments</h4>
@@ -118,15 +136,6 @@ export const ComplaintDetailsDrawer = ({
                       <FileText size={14} /> {item}
                     </span>
                   ))}
-                </div>
-              </div>
-            )}
-
-            {complaint.resolutionSummary && (
-              <div className={styles.section}>
-                <h4>Resolution summary</h4>
-                <div className={styles.resolutionBox}>
-                  {complaint.resolutionSummary}
                 </div>
               </div>
             )}

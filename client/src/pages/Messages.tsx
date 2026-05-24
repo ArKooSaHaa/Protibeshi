@@ -715,7 +715,7 @@ export const Messages = () => {
         await markAsRead(activeConversationId);
         await loadConversationList();
       } catch (requestError) {
-        const message = requestError instanceof Error ? requestError.message : 'Gemini is unavailable right now.';
+        const message = requestError instanceof Error ? requestError.message : 'Groq is unavailable right now.';
         setError(message);
         setMessages((previous) => previous.filter((item) => String(item.id) !== tempId));
         setDraft(text);

@@ -22,13 +22,15 @@ export const PostComposer = () => {
             .map((label) => String(label).trim())
             .filter(Boolean);
         const tags = sanitizedLabels.length > 0 ? sanitizedLabels : ['Community'];
-        const isEmergencyPost = tags.some((tag) => tag.toLowerCase() === 'emergency');
+        const lowerTags = tags.map((tag) => tag.toLowerCase());
+        const isEventPost = lowerTags.some((tag) => tag === 'event');
+        const isEmergencyPost = lowerTags.some((tag) => tag === 'emergency');
 
         addPost({
             title: trimmedHeadline,
             content,
             tags,
-            type: isEmergencyPost ? 'emergency' : 'community',
+            type: isEventPost ? 'event' : isEmergencyPost ? 'emergency' : 'community',
             priority: isEmergencyPost ? 'high' : 'low',
         });
 

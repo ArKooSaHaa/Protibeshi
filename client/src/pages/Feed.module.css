@@ -23,6 +23,49 @@
   justify-self: end;
   position: sticky;
   top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.upcomingEventsCard {
+  width: 100%;
+  border-radius: 20px;
+  border: 1px solid #d6e4ee;
+  background: linear-gradient(145deg, #f8fcfb 0%, #f1f8f6 100%);
+  padding: 16px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.07);
+}
+
+.upcomingEventsTitle {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.upcomingEventsEmpty {
+  margin: 10px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.upcomingEventsList {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upcomingEventsItem {
+  border-radius: 12px;
+  border: 1px solid #dbe7ee;
+  background: rgba(255, 255, 255, 0.95);
+  overflow: hidden;
 }
 
 .composerCard {
@@ -105,6 +148,57 @@
   gap: 16px;
   width: 100%;
   max-width: 680px;
+}
+
+.feedPostAnchor {
+  scroll-margin-top: 18px;
+}
+
+.feedPostHighlighted {
+  border-radius: 18px;
+  animation: feedPostGreenGlow 0.55s ease-in-out 4;
+}
+
+@keyframes feedPostGreenGlow {
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(16, 185, 129, 0),
+      0 0 0 0 rgba(16, 185, 129, 0);
+  }
+
+  25% {
+    box-shadow:
+      0 0 0 3px rgba(16, 185, 129, 0.45),
+      0 10px 28px rgba(16, 185, 129, 0.22);
+  }
+
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(16, 185, 129, 0),
+      0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.upcomingEventsButton {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #111827;
+  cursor: pointer;
+}
+
+.upcomingEventsButton:hover {
+  background: #ecfdf5;
+}
+
+.upcomingEventsButton:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: -2px;
 }
 
 .loadingState,

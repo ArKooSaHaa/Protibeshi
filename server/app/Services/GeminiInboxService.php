@@ -102,7 +102,7 @@ class GeminiInboxService
 
     public function getGeminiApiKey(): ?string
     {
-        $apiKey = env('GEMINI_API_KEY');
+        $apiKey = env('GEMINI_API_KEY') ?: env('VITE_GEMINI_API_KEY');
 
         if (!is_string($apiKey)) {
             return null;

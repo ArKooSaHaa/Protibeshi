@@ -6,6 +6,7 @@ import {
   MessageSquare,
   Pin,
   PinOff,
+  Sparkles,
   ShieldCheck,
   Trash2,
   UserRound,
@@ -18,6 +19,8 @@ interface PostModerationCardProps {
   isSelected: boolean;
   onToggleSelect: (postId: string) => void;
   onVerifyPost: (postId: string) => void;
+  onRunGeminiReview: (postId: string) => void;
+  onAiRejectPost: (postId: string) => void;
   onDeletePost: (postId: string) => void;
   onOpenReports: (postId: string) => void;
   onOpenFullPost: (postId: string) => void;
@@ -28,12 +31,14 @@ const statusLabels: Record<AdminPostStatus, string> = {
   pending: 'Pending',
   verified: 'Verified',
   reported: 'Reported',
+  rejected: 'Rejected',
 };
 
 const statusClasses: Record<AdminPostStatus, string> = {
   pending: 'afd-status-pending',
   verified: 'afd-status-verified',
   reported: 'afd-status-reported',
+  rejected: 'afd-status-rejected',
 };
 
 const formatPostTime = (isoDate: string): string => {
@@ -64,6 +69,7 @@ export const PostModerationCard = ({
   isSelected,
   onToggleSelect,
   onVerifyPost,
+  onRunGeminiReview,
   onDeletePost,
   onOpenReports,
   onOpenFullPost,
@@ -114,7 +120,7 @@ export const PostModerationCard = ({
 
   return (
     <motion.article
-      className={`afd-post-card ${post.status === 'reported' ? 'afd-post-card-reported' : ''}`}
+      className={`afd-post-card ${post.status === 'reported' ? 'afd-post-card-reported' : ''} ${post.status === 'rejected' ? 'afd-post-card-rejected' : ''}`}
       whileHover={{ y: -4, scale: 1.006 }}
       transition={{ duration: 0.2 }}
       layout
@@ -143,6 +149,11 @@ export const PostModerationCard = ({
         </div>
 
         <div className="afd-card-header-right">
+          {post.moderation_source && post.status === 'pending' ? (
+            <span className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-700">
+              <Sparkles size={12} /> AI pending
+            </span>
+          ) : null}
           <AnimatePresence mode="wait" initial={false}>
             <motion.span
               key={post.status}
@@ -158,6 +169,11 @@ export const PostModerationCard = ({
           {post.report_count > 0 ? (
             <span className="afd-report-chip">
               <Flag size={12} /> {post.report_count}
+            </span>
+          ) : null}
+          {post.status === 'rejected' ? (
+            <span className="afd-report-chip afd-report-chip-rejected">
+              <Flag size={12} /> Rejected
             </span>
           ) : null}
         </div>
@@ -213,6 +229,25 @@ export const PostModerationCard = ({
 
         <motion.button
           type="button"
+          className="afd-action-btn afd-action-neutral afd-ripple-btn"
+          whileTap={{ scale: 0.97 }}
+          onClick={() => onRunGeminiReview(post.id)}
+          disabled={post.status === 'verified'}
+        >
+          <Sparkles size={14} /> Re-run AI
+        </motion.button>
+
+        <motion.button
+          type="button"
+          className="afd-action-btn afd-action-danger afd-ripple-btn"
+          whileTap={{ scale: 0.97 }}
+          onClick={() => onAiRejectPost(post.id)}
+        >
+          <Flag size={14} /> Reject by AI
+        </motion.button>
+
+        <motion.button
+          type="button"
           className="afd-action-btn afd-action-danger afd-ripple-btn"
           whileTap={{ scale: 0.97 }}
           onClick={() => onDeletePost(post.id)}
@@ -237,7 +272,14 @@ export const PostModerationCard = ({
         >
           <ShieldCheck size={14} /> View Full Post
         </motion.button>
+
+        {/* Share action removed per design request */}
       </div>
+      {post.moderation_note ? (
+        <div className="afd-ai-note">
+          <small className="text-xs text-muted">AI note: {post.moderation_note}</small>
+        </div>
+      ) : null}
     </motion.article>
   );
 };
