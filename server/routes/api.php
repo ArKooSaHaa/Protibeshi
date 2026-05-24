@@ -50,6 +50,8 @@ Route::middleware(['auth:admin_api'])->prefix('admin')->group(function () {
 
     Route::get('/posts', [AdminPostModerationController::class, 'index']);
     Route::post('/posts/{id}/verify', [AdminPostModerationController::class, 'verify']);
+    Route::post('/posts/{id}/gemini-review', [AdminPostModerationController::class, 'geminiReview']);
+    Route::post('/posts/{id}/ai-reject', [AdminPostModerationController::class, 'aiReject']);
     Route::post('/posts/{id}/ignore-reports', [AdminPostModerationController::class, 'ignoreReports']);
     Route::delete('/posts/{id}', [AdminPostModerationController::class, 'destroy']);
 

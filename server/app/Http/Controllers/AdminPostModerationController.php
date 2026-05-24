@@ -5,26 +5,53 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Models\PostReport;
 use App\Services\AdminInboxService;
+use App\Services\GeminiPostModerationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
 
 class AdminPostModerationController extends Controller
 {
     private AdminInboxService $adminInboxService;
+    private GeminiPostModerationService $geminiPostModerationService;
 
-    public function __construct(AdminInboxService $adminInboxService)
+    public function __construct(
+        AdminInboxService $adminInboxService,
+        GeminiPostModerationService $geminiPostModerationService,
+    )
     {
         $this->adminInboxService = $adminInboxService;
+        $this->geminiPostModerationService = $geminiPostModerationService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $posts = Post::with(['user', 'reports.user'])
+        $validated = $request->validate([
+            'queue' => ['sometimes', 'nullable', 'string', 'in:all,gemini,gemini-approved,gemini-rejected'],
+        ]);
+
+        $postsQuery = Post::with(['user', 'reports.user'])
             ->withCount('reports')
-            ->latest()
-            ->paginate(60);
+            ->latest();
+
+        $queue = $validated['queue'] ?? 'all';
+
+        if (Schema::hasColumn('posts', 'moderation_source') && in_array($queue, ['gemini', 'gemini-approved', 'gemini-rejected'], true)) {
+            $postsQuery->where('moderation_source', 'gemini');
+
+            if ($queue === 'gemini') {
+                // Gemini queue shows posts that Gemini did not approve (pending/manual review)
+                $postsQuery->where('moderation_status', 'pending');
+            } elseif ($queue === 'gemini-approved') {
+                $postsQuery->where('moderation_status', 'verified');
+            } elseif ($queue === 'gemini-rejected') {
+                $postsQuery->where('moderation_status', 'pending');
+            }
+        }
+
+        $posts = $postsQuery->paginate(60);
 
         $formattedPosts = array_map(
             fn (Post $post) => $this->formatModerationPost($post),
@@ -57,6 +84,7 @@ class AdminPostModerationController extends Controller
         }
 
         $post->moderation_status = 'verified';
+        $post->is_active = true;
         $post->moderated_by_admin_id = Auth::guard('admin_api')->id();
         $post->moderated_at = now();
 
@@ -70,6 +98,135 @@ class AdminPostModerationController extends Controller
             'success' => true,
             'message' => 'Post verified successfully',
             'post' => $this->formatModerationPost($post),
+        ], 200);
+    }
+
+    public function geminiReview(Request $request, $id)
+    {
+        $post = Post::with(['user', 'reports.user'])
+            ->withCount('reports')
+            ->find($id);
+
+        if (!$post || !$post->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Post not found',
+            ], 404);
+        }
+
+        $image = null;
+        if (!empty($post->image)) {
+            $image = storage_path('app/public/' . ltrim($post->image, '/'));
+        }
+
+        $review = $this->geminiPostModerationService->reviewPost([
+            'title' => (string) $post->title,
+            'short_description' => $post->short_description,
+            'content' => (string) $post->content,
+            'label' => $post->label,
+            'post_type' => $post->post_type,
+            'visibility' => $post->visibility,
+            'location' => $post->location,
+        ], $image);
+
+        if (Schema::hasColumn('posts', 'moderation_source')) {
+            $post->moderation_source = $review['provider'] ?? 'gemini';
+        }
+        $post->moderation_status = $review['allow'] ? 'verified' : 'pending';
+        if (!empty($review['allow'])) {
+            $post->is_active = true;
+        }
+        $post->moderated_by_admin_id = null;
+        $post->moderated_at = now();
+        $post->moderation_note = $review['reason'] ?? null;
+        $post->save();
+
+        $post->refresh();
+        $post->load(['user', 'reports.user']);
+        $post->loadCount('reports');
+
+        return response()->json([
+            'success' => true,
+            'message' => $review['allow']
+                ? 'Gemini approved the post and it is now visible in the feed.'
+                : 'Gemini kept the post in manual review.',
+            'post' => $this->formatModerationPost($post),
+            'gemini_review' => [
+                'allow' => (bool) $review['allow'],
+                'reason' => $review['reason'] ?? null,
+                'model' => $review['model'] ?? null,
+                'provider' => $review['provider'] ?? null,
+            ],
+        ], 200);
+    }
+
+    public function aiReject(Request $request, $id)
+    {
+        $post = Post::with(['user', 'reports.user'])
+            ->withCount('reports')
+            ->find($id);
+
+        if (!$post || !$post->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Post not found',
+            ], 404);
+        }
+
+        $image = null;
+        if (!empty($post->image)) {
+            $image = storage_path('app/public/' . ltrim($post->image, '/'));
+        }
+
+        $review = $this->geminiPostModerationService->reviewPost([
+            'title' => (string) $post->title,
+            'short_description' => $post->short_description,
+            'content' => (string) $post->content,
+            'label' => $post->label,
+            'post_type' => $post->post_type,
+            'visibility' => $post->visibility,
+            'location' => $post->location,
+        ], $image);
+
+        if (Schema::hasColumn('posts', 'moderation_source')) {
+            $post->moderation_source = $review['provider'] ?? 'ai';
+        }
+
+        if (!empty($review['allow'])) {
+            $post->moderation_status = 'verified';
+            $post->is_active = true;
+            $message = 'AI approved the post and it is now visible in the feed.';
+        } else {
+            $post->moderation_status = 'rejected';
+            $post->is_active = false;
+            $message = 'AI rejected the post and it has been removed from the feed.';
+        }
+
+        $post->moderated_by_admin_id = Auth::guard('admin_api')->id();
+        $post->moderated_at = now();
+        if (!empty($review['reason'])) {
+            $post->moderation_note = !empty($review['allow'])
+                ? ('AI approved: ' . $review['reason'])
+                : ('Rejected by AI: ' . $review['reason']);
+        } else {
+            $post->moderation_note = $review['reason'] ?? null;
+        }
+        $post->save();
+
+        $post->refresh();
+        $post->load(['user', 'reports.user']);
+        $post->loadCount('reports');
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'post' => $this->formatModerationPost($post),
+            'ai_review' => [
+                'allow' => (bool) $review['allow'],
+                'reason' => $review['reason'] ?? null,
+                'model' => $review['model'] ?? null,
+                'provider' => $review['provider'] ?? null,
+            ],
         ], 200);
     }
 
@@ -154,6 +311,8 @@ class AdminPostModerationController extends Controller
             $status = 'reported';
         } elseif ((string) $post->moderation_status === 'verified') {
             $status = 'verified';
+        } elseif ((string) $post->moderation_status === 'rejected') {
+            $status = 'rejected';
         }
 
         $reports = $post->reports->map(function (PostReport $report) {
@@ -183,10 +342,12 @@ class AdminPostModerationController extends Controller
             'created_at' => optional($post->created_at)->toISOString(),
             'location' => $post->location ?: 'Unknown',
             'status' => $status,
+            'moderation_source' => Schema::hasColumn('posts', 'moderation_source') ? ($post->moderation_source ?? null) : null,
             'report_count' => $reportCount,
             'is_deleted' => !(bool) $post->is_active,
             'reports' => $reports,
             'pinned' => (bool) $post->is_pinned,
+            'moderation_note' => $post->moderation_note ?? null,
         ];
     }
 

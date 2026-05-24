@@ -27,6 +27,7 @@ class Post extends Model
         'is_active',
         'is_pinned',
         'moderation_status',
+        'moderation_source',
         'moderated_by_admin_id',
         'moderated_at',
         'moderation_note',

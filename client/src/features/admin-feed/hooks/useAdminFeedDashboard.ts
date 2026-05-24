@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { broadcastFeedRefreshSignal } from '@/lib/feedRefresh';
 import {
   deleteAdminFeedPost,
-  fetchAdminFeedPosts,
+  fetchAdminFeedPostsWithQuery,
   ignoreAdminFeedReports,
+  reviewAdminFeedPostWithGemini,
   verifyAdminFeedPost,
 } from '../services/adminFeedService';
 import type {
@@ -26,6 +28,7 @@ const statusPriority: Record<AdminPostStatus, number> = {
   reported: 3,
   pending: 2,
   verified: 1,
+  rejected: 0,
 };
 
 const createId = (prefix: string): string => {
@@ -66,6 +69,7 @@ export const useAdminFeedDashboard = () => {
   const [activeTab, setActiveTab] = useState<AdminFilterTab>('all');
   const [dateFilter, setDateFilter] = useState<AdminDateFilter>('all');
   const [locationFilter, setLocationFilter] = useState('all');
+  const [reviewQueue, setReviewQueue] = useState<'all' | 'gemini'>('all');
 
   const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
 
@@ -126,7 +130,7 @@ export const useAdminFeedDashboard = () => {
       setLoadingError(null);
 
       try {
-        const response = await fetchAdminFeedPosts();
+        const response = await fetchAdminFeedPostsWithQuery({ queue: reviewQueue });
         setPosts(response);
         setSelectedPostIds([]);
         setReportModalPostId(null);
@@ -142,7 +146,7 @@ export const useAdminFeedDashboard = () => {
         setIsRefreshing(false);
       }
     },
-    [appendActivity],
+    [appendActivity, reviewQueue],
   );
 
   useEffect(() => {
@@ -212,6 +216,11 @@ export const useAdminFeedDashboard = () => {
       pendingPosts: posts.filter((post) => !post.is_deleted && post.status === 'pending').length,
       reportedPosts: posts.filter((post) => !post.is_deleted && post.status === 'reported').length,
       deletedPosts: posts.filter((post) => post.is_deleted).length,
+      geminiQueuePosts: posts.filter(
+        (post) => !post.is_deleted
+          && post.status === 'pending'
+          && post.moderation_source === 'gemini',
+      ).length,
     };
   }, [posts]);
 
@@ -301,6 +310,37 @@ export const useAdminFeedDashboard = () => {
       try {
         const updatedPost = await verifyAdminFeedPost(postId);
 
+          setPosts((previous) =>
+            previous.map((post) => {
+              if (post.id !== postId) {
+                return post;
+              }
+
+              return updatedPost;
+            }),
+          );
+
+        pushToast('Post Verified', 'success');
+        appendActivity(`Verified post ${postId}.`, 'success');
+        setLastSyncedAt(new Date().toISOString());
+        if (updatedPost.status === 'verified') {
+          broadcastFeedRefreshSignal();
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Could not verify post.';
+        pushToast('Verification failed', 'danger');
+        appendActivity(`Verification failed for post ${postId}.`, 'danger');
+        setLoadingError(message);
+      }
+    },
+    [appendActivity, pushToast],
+  );
+
+  const runGeminiReview = useCallback(
+    async (postId: string) => {
+      try {
+        const updatedPost = await reviewAdminFeedPostWithGemini(postId);
+
         setPosts((previous) =>
           previous.map((post) => {
             if (post.id !== postId) {
@@ -311,13 +351,47 @@ export const useAdminFeedDashboard = () => {
           }),
         );
 
-        pushToast('Post Verified', 'success');
-        appendActivity(`Verified post ${postId}.`, 'success');
+        pushToast('Gemini Review Complete', 'success');
+        appendActivity(`Gemini reviewed post ${postId}.`, 'info');
         setLastSyncedAt(new Date().toISOString());
+        if (updatedPost.status === 'verified') {
+          broadcastFeedRefreshSignal();
+        }
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Could not verify post.';
-        pushToast('Verification failed', 'danger');
-        appendActivity(`Verification failed for post ${postId}.`, 'danger');
+        const message = error instanceof Error ? error.message : 'Could not run Gemini review.';
+        pushToast('Gemini review failed', 'danger');
+        appendActivity(`Gemini review failed for post ${postId}.`, 'danger');
+        setLoadingError(message);
+      }
+    },
+    [appendActivity, pushToast],
+  );
+
+  const aiRejectPost = useCallback(
+    async (postId: string) => {
+      try {
+        const updatedPost = await (await import('../services/adminFeedService')).rejectAdminFeedPostWithAI(postId);
+
+        setPosts((previous) =>
+          previous.map((post) => {
+            if (post.id !== postId) {
+              return post;
+            }
+
+            return updatedPost;
+          }),
+        );
+
+        pushToast('AI Review Complete', 'info');
+        appendActivity(`AI reviewed post ${postId}.`, 'info');
+        setLastSyncedAt(new Date().toISOString());
+        if (updatedPost.status === 'verified') {
+          broadcastFeedRefreshSignal();
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Could not run AI review.';
+        pushToast('AI review failed', 'danger');
+        appendActivity(`AI review failed for post ${postId}.`, 'danger');
         setLoadingError(message);
       }
     },
@@ -523,6 +597,11 @@ export const useAdminFeedDashboard = () => {
 
       appendActivity(`Bulk verified ${selectedPostIds.length} selected posts.`, 'success');
       pushToast('Post Verified', 'success');
+      // Broadcast feed refresh if any of the verified posts became visible
+      const anyNowVisible = verifiedPosts.some((p) => (p as any).moderation_status === 'verified' || (p as any).status === 'verified');
+      if (anyNowVisible) {
+        broadcastFeedRefreshSignal();
+      }
       setSelectedPostIds([]);
       setLastSyncedAt(new Date().toISOString());
     } catch (error) {
@@ -577,6 +656,8 @@ export const useAdminFeedDashboard = () => {
     setActiveTab,
     setDateFilter,
     setLocationFilter,
+    reviewQueue,
+    setReviewQueue,
     removeToast,
     loadMorePosts,
     refreshPosts,
@@ -593,11 +674,13 @@ export const useAdminFeedDashboard = () => {
     openFullPostModal,
     closeFullPostModal,
     togglePinned,
+    runGeminiReview,
     toggleSelectPost,
     toggleSelectVisiblePosts,
     clearSelection,
     bulkVerify,
     bulkMarkSafe,
     exportReports,
+    aiRejectPost,
   };
 };

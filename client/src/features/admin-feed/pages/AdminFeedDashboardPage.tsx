@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion, type Variants } from 'framer-motion';
-import { RefreshCw, ShieldCheck, Store } from 'lucide-react';
+import { RefreshCw, ShieldCheck, Sparkles, Store } from 'lucide-react';
 import { ActivityLogPanel } from '../components/ActivityLogPanel';
 import { AdminBulkActionsBar } from '../components/AdminBulkActionsBar';
 import { AdminFilterToolbar } from '../components/AdminFilterToolbar';
@@ -127,6 +127,42 @@ export const AdminFeedDashboardPage = () => {
 
         <div className="afd-hero-actions">
           <span className="afd-sync-chip">Last Sync: {syncLabel}</span>
+          <motion.button
+            type="button"
+            className={`afd-btn ${dashboard.reviewQueue === 'gemini' ? 'afd-btn-primary' : 'afd-btn-neutral'} afd-ripple-btn`}
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => {
+              if (dashboard.reviewQueue === 'gemini') {
+                dashboard.setReviewQueue('all');
+                return;
+              }
+
+              dashboard.setReviewQueue('gemini');
+              dashboard.setActiveTab('pending');
+            }}
+          >
+            <Sparkles size={14} />
+            {dashboard.reviewQueue === 'gemini' ? 'Showing Gemini Queue' : 'Open Gemini Queue'}
+          </motion.button>
+          <motion.button
+            type="button"
+            className={`afd-btn ${dashboard.reviewQueue === 'gemini-approved' ? 'afd-btn-primary' : 'afd-btn-neutral'} afd-ripple-btn`}
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => {
+              if (dashboard.reviewQueue === 'gemini-approved') {
+                dashboard.setReviewQueue('all');
+                return;
+              }
+
+              dashboard.setReviewQueue('gemini-approved');
+              dashboard.setActiveTab('verified');
+            }}
+          >
+            <ShieldCheck size={14} />
+            {dashboard.reviewQueue === 'gemini-approved' ? 'Showing Gemini Approved' : 'Gemini Approved'}
+          </motion.button>
           <motion.button
             type="button"
             className="afd-btn afd-btn-neutral afd-ripple-btn"
@@ -275,6 +311,8 @@ export const AdminFeedDashboardPage = () => {
                       isSelected={dashboard.selectedPostIds.includes(post.id)}
                       onToggleSelect={dashboard.toggleSelectPost}
                       onVerifyPost={dashboard.verifyPost}
+                      onRunGeminiReview={dashboard.runGeminiReview}
+                      onAiRejectPost={dashboard.aiRejectPost}
                       onDeletePost={dashboard.openDeleteModalForPost}
                       onOpenReports={dashboard.openReportModal}
                       onOpenFullPost={dashboard.openFullPostModal}

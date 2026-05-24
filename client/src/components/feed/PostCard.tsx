@@ -18,6 +18,7 @@ type PostCardProps = {
   onSave: (postId: number) => Promise<void>;
   onVote: (postId: number, vote: 'yes' | 'no') => Promise<void>;
   onReport: (postId: number, reason: string) => Promise<void>;
+  highlighted?: boolean;
 };
 
 const formatTime = (rawDate: string) => {
@@ -197,6 +198,7 @@ export const PostCard = ({
   onSave,
   onVote,
   onReport,
+  highlighted = false,
 }: PostCardProps) => {
   const [showReport, setShowReport] = useState(false);
   const [reportReason, setReportReason] = useState('');
@@ -296,7 +298,7 @@ export const PostCard = ({
   };
 
   return (
-    <article className={`${styles.card} ${isEmergency ? styles.emergencyCard : ''}`}>
+    <article className={`${styles.card} ${isEmergency ? styles.emergencyCard : ''} ${highlighted ? styles.highlight : ''}`}>
       <header className={styles.header}>
         <div className={styles.headerTop}>
           <div className={styles.userSection}>

@@ -1,13 +1,12 @@
 import { ENV } from '@/config/env';
 
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-const GEMINI_MODELS_ENDPOINT = `${GEMINI_API_BASE}/models`;
-const GEMINI_FALLBACK_MODELS = [
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
-  'gemini-1.5-flash-latest',
-  'gemini-1.5-flash',
+const GROQ_API_BASE = 'https://api.groq.com/openai/v1';
+const GROQ_CHAT_ENDPOINT = `${GROQ_API_BASE}/chat/completions`;
+const GROQ_MODELS_ENDPOINT = `${GROQ_API_BASE}/models`;
+const GROQ_FALLBACK_MODELS = [
+  'llama-3.1-8b-instant',
+  'llama-3.1-70b-versatile',
+  'mixtral-8x7b-32768',
 ];
 
 let cachedWorkingModel: string | null = null;
@@ -18,12 +17,10 @@ export type GeminiConversationTurn = {
   text: string;
 };
 
-type GeminiApiResponse = {
-  candidates?: Array<{
-    content?: {
-      parts?: Array<{
-        text?: string;
-      }>;
+type GroqChatResponse = {
+  choices?: Array<{
+    message?: {
+      content?: string;
     };
   }>;
   error?: {
@@ -31,10 +28,9 @@ type GeminiApiResponse = {
   };
 };
 
-type GeminiModelsApiResponse = {
-  models?: Array<{
-    name?: string;
-    supportedGenerationMethods?: string[];
+type GroqModelsResponse = {
+  data?: Array<{
+    id?: string;
   }>;
 };
 
@@ -45,7 +41,7 @@ const getPreferredModel = (availableModels: string[]): string | null => {
     return null;
   }
 
-  for (const preferred of GEMINI_FALLBACK_MODELS) {
+  for (const preferred of GROQ_FALLBACK_MODELS) {
     if (availableModels.includes(preferred)) {
       return preferred;
     }
@@ -60,15 +56,19 @@ const listSupportedModels = async (apiKey: string): Promise<string[]> => {
   }
 
   try {
-    const response = await fetch(`${GEMINI_MODELS_ENDPOINT}?key=${encodeURIComponent(apiKey)}`);
+    const response = await fetch(GROQ_MODELS_ENDPOINT, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
+
     if (!response.ok) {
       return [];
     }
 
-    const payload = (await response.json().catch(() => null)) as GeminiModelsApiResponse | null;
-    const models = (payload?.models || [])
-      .filter((model) => model.supportedGenerationMethods?.includes('generateContent'))
-      .map((model) => normalizeModelName(model.name || ''))
+    const payload = (await response.json().catch(() => null)) as GroqModelsResponse | null;
+    const models = (payload?.data || [])
+      .map((model) => normalizeModelName(model.id || ''))
       .filter((model): model is string => Boolean(model));
 
     cachedSupportedModels = Array.from(new Set(models));
@@ -78,17 +78,8 @@ const listSupportedModels = async (apiKey: string): Promise<string[]> => {
   }
 };
 
-const extractReplyText = (data: GeminiApiResponse | null): string => {
-  return (
-    data?.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text || '')
-      .join('')
-      .trim() || ''
-  );
-};
-
-const buildGenerateEndpoint = (model: string, apiKey: string): string => {
-  return `${GEMINI_MODELS_ENDPOINT}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+const extractReplyText = (data: GroqChatResponse | null): string => {
+  return data?.choices?.[0]?.message?.content?.trim() || '';
 };
 
 const sanitizeTurn = (turn: GeminiConversationTurn): GeminiConversationTurn | null => {
@@ -103,18 +94,22 @@ const sanitizeTurn = (turn: GeminiConversationTurn): GeminiConversationTurn | nu
   };
 };
 
+const toGroqRole = (role: GeminiConversationTurn['role']): 'user' | 'assistant' => {
+  return role === 'model' ? 'assistant' : 'user';
+};
+
 export const generateGeminiReply = async (
   history: GeminiConversationTurn[],
   prompt: string,
 ): Promise<string> => {
-  const apiKey = ENV.GEMINI_API_KEY;
+  const apiKey = ENV.GROQ_CLOUD_API_KEY;
   if (!apiKey) {
-    throw new Error('Gemini key missing. Set VITE_GEMINI_API_KEY in .env.');
+    throw new Error('Groq key missing. Set VITE_GROQ_CLOUD_API_KEY in .env.');
   }
 
   const cleanedPrompt = prompt.trim();
   if (!cleanedPrompt) {
-    throw new Error('Cannot send an empty prompt to Gemini.');
+    throw new Error('Cannot send an empty prompt to Groq.');
   }
 
   const turns = [...history, { role: 'user' as const, text: cleanedPrompt }]
@@ -123,14 +118,12 @@ export const generateGeminiReply = async (
     .slice(-20);
 
   const payload = {
-    contents: turns.map((turn) => ({
-      role: turn.role,
-      parts: [{ text: turn.text }],
+    messages: turns.map((turn) => ({
+      role: toGroqRole(turn.role),
+      content: turn.text,
     })),
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 600,
-    },
+    temperature: 0.7,
+    max_tokens: 600,
   };
 
   const discoveredModels = await listSupportedModels(apiKey);
@@ -140,27 +133,30 @@ export const generateGeminiReply = async (
       cachedWorkingModel,
       preferredDiscoveredModel,
       ...discoveredModels,
-      ...GEMINI_FALLBACK_MODELS,
+      ...GROQ_FALLBACK_MODELS,
     ].filter((model): model is string => Boolean(model))),
   );
 
   let lastError: Error | null = null;
 
   for (const model of modelCandidates) {
-    const response = await fetch(buildGenerateEndpoint(model, apiKey), {
+    const response = await fetch(GROQ_CHAT_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        ...payload,
+        model,
+      }),
     });
 
-    const data = (await response.json().catch(() => null)) as GeminiApiResponse | null;
+    const data = (await response.json().catch(() => null)) as GroqChatResponse | null;
 
     if (!response.ok) {
-      lastError = new Error(data?.error?.message || `Gemini request failed with status ${response.status}`);
+      lastError = new Error(data?.error?.message || `Groq request failed with status ${response.status}`);
 
-      // If model is unavailable for this API version/key, try the next candidate.
       if (response.status === 404) {
         continue;
       }
@@ -170,7 +166,7 @@ export const generateGeminiReply = async (
 
     const reply = extractReplyText(data);
     if (!reply) {
-      lastError = new Error('Gemini returned an empty response.');
+      lastError = new Error('Groq returned an empty response.');
       continue;
     }
 
@@ -180,6 +176,6 @@ export const generateGeminiReply = async (
 
   throw (
     lastError
-    || new Error('No supported Gemini model found for generateContent. Check model access for your API key.')
+    || new Error('No supported Groq model found for chat completions. Check model access for your API key.')
   );
 };

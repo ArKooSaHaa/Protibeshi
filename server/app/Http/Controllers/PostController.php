@@ -5,10 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
+use App\Services\GeminiPostModerationService;
 
 class PostController extends Controller
 {
+    public function __construct(private readonly GeminiPostModerationService $geminiPostModerationService)
+    {
+    }
+
     public function createPost(Request $request)
     {
         $validated = $request->validate([
@@ -29,7 +36,45 @@ class PostController extends Controller
             $imagePath = $request->file('image')->store('posts', 'public');
         }
 
-        $post = Post::create([
+        $geminiReview = [
+            'allow' => false,
+            'reason' => 'Gemini moderation is temporarily unavailable. Sent for manual review.',
+            'raw' => null,
+            'model' => null,
+        ];
+
+        try {
+            $geminiReview = $this->geminiPostModerationService->reviewPost([
+                'title' => $validated['title'],
+                'short_description' => $validated['short_description'] ?? null,
+                'content' => $validated['content'],
+                'label' => $validated['label'] ?? null,
+                'post_type' => $this->resolvePostType($validated['label'] ?? null, $validated['post_type'] ?? null),
+                'visibility' => $validated['visibility'] ?? 'public',
+                'location' => $validated['location'] ?? null,
+            ], $request->file('image'));
+        } catch (\Throwable $exception) {
+            Log::warning('Gemini moderation crashed, falling back to manual review', [
+                'user_id' => Auth::id(),
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        $isGeminiApproved = (bool) ($geminiReview['allow'] ?? false);
+
+        // If AI approves, do NOT auto-publish — send for manual admin verification.
+        // If AI rejects, mark as rejected immediately.
+        if ($isGeminiApproved) {
+            $moderationStatus = 'pending';
+            $moderationNote = 'AI recommended approval: ' . ($geminiReview['reason'] ?? 'Approved. Sent for manual verification by admin.');
+            $isActive = false;
+        } else {
+            $moderationStatus = 'rejected';
+            $moderationNote = 'Rejected by AI: ' . ($geminiReview['reason'] ?? 'Content did not meet feed rules.');
+            $isActive = false;
+        }
+
+        $postAttributes = [
             'user_id' => Auth::id(),
             'title' => $validated['title'],
             'short_description' => $validated['short_description'] ?? null,
@@ -40,21 +85,46 @@ class PostController extends Controller
             'visibility' => $validated['visibility'] ?? 'public',
             'location' => $validated['location'] ?? null,
             'distance' => $validated['distance'] ?? null,
-            'is_active' => true,
+            'is_active' => $isActive,
             'is_pinned' => false,
-            'moderation_status' => 'pending',
+            'moderation_status' => $moderationStatus,
             'moderated_by_admin_id' => null,
-            'moderated_at' => null,
-            'moderation_note' => null,
-        ]);
+            'moderated_at' => now(),
+            'moderation_note' => $moderationNote,
+        ];
+
+        if (Schema::hasColumn('posts', 'moderation_source')) {
+            $postAttributes['moderation_source'] = $geminiReview['provider'] ?? 'ai';
+        }
+
+        try {
+            $post = Post::create([
+                ...$postAttributes,
+            ]);
+        } catch (\Throwable $exception) {
+            if ($imagePath !== null) {
+                Storage::disk('public')->delete($imagePath);
+            }
+
+            throw $exception;
+        }
 
         $post->load('user');
 
         return response()->json([
             'success' => true,
-            'message' => 'Post submitted for admin verification',
+            'message' => $isGeminiApproved
+                ? 'Post reviewed by AI and sent for admin verification.'
+                : 'Post rejected by AI moderation.',
             'post' => $this->formatPost($post, (int) Auth::id()),
-            'requires_verification' => true,
+            'requires_verification' => $isGeminiApproved,
+            'rejected_by_ai' => !$isGeminiApproved,
+            'gemini_review' => [
+                'allow' => $isGeminiApproved,
+                'reason' => $geminiReview['reason'] ?? null,
+                'model' => $geminiReview['model'] ?? null,
+                'provider' => $geminiReview['provider'] ?? null,
+            ],
         ], 201);
     }
 
@@ -274,6 +344,7 @@ class PostController extends Controller
             'is_active' => (bool) $post->is_active,
             'is_pinned' => (bool) $post->is_pinned,
             'moderation_status' => (string) $post->moderation_status,
+            'moderation_source' => $post->moderation_source,
             'location' => $post->location,
             'distance' => $post->distance,
             'created_at' => $post->created_at,

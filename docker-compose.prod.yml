@@ -39,6 +39,8 @@ services:
       DB_DATABASE: ${DB_DATABASE:-protibeshi_db}
       DB_USERNAME: ${DB_USERNAME:-protibeshi}
       DB_PASSWORD: ${DB_PASSWORD:-protibeshi}
+      VITE_GEMINI_API_KEY: ${VITE_GEMINI_API_KEY:-}
+      VITE_GROQ_CLOUD_API_KEY: ${VITE_GROQ_CLOUD_API_KEY:-}
       BROADCAST_DRIVER: ${BROADCAST_DRIVER:-pusher}
       PUSHER_APP_ID: ${PUSHER_APP_ID:-local}
       PUSHER_APP_KEY: ${PUSHER_APP_KEY:-localkey}
@@ -73,6 +75,7 @@ services:
       DB_DATABASE: ${DB_DATABASE:-protibeshi_db}
       DB_USERNAME: ${DB_USERNAME:-protibeshi}
       DB_PASSWORD: ${DB_PASSWORD:-protibeshi}
+      VITE_GEMINI_API_KEY: ${VITE_GEMINI_API_KEY:-}
       BROADCAST_DRIVER: ${BROADCAST_DRIVER:-pusher}
       PUSHER_APP_ID: ${PUSHER_APP_ID:-local}
       PUSHER_APP_KEY: ${PUSHER_APP_KEY:-localkey}
@@ -127,6 +130,7 @@ services:
         VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
         VITE_OPENWEATHER_API_KEY: ${VITE_OPENWEATHER_API_KEY:-}
         VITE_GEMINI_API_KEY: ${VITE_GEMINI_API_KEY:-}
+        VITE_GROQ_CLOUD_API_KEY: ${VITE_GROQ_CLOUD_API_KEY:-}
     container_name: protibeshi_nginx
     restart: unless-stopped
     ports:

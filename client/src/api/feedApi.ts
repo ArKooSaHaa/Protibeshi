@@ -27,6 +27,7 @@ export type FeedPost = {
   comments_count: number;
   shares_count?: number;
   moderation_status?: 'pending' | 'verified' | 'reported';
+  moderation_source?: 'gemini' | 'admin' | null;
   is_event?: boolean;
   interaction_mode?: 'standard' | 'poll';
   event_vote_open?: boolean | null;

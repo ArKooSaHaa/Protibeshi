@@ -31,6 +31,8 @@ services:
       DB_DATABASE: protibeshi_db
       DB_USERNAME: root
       DB_PASSWORD: root
+      VITE_GEMINI_API_KEY: ${VITE_GEMINI_API_KEY:-}
+      VITE_GROQ_CLOUD_API_KEY: ${VITE_GROQ_CLOUD_API_KEY:-}
     ports:
       - "8000:8000"
     volumes:
@@ -65,6 +67,8 @@ services:
       DB_DATABASE: protibeshi_db
       DB_USERNAME: root
       DB_PASSWORD: root
+      VITE_GEMINI_API_KEY: ${VITE_GEMINI_API_KEY:-}
+      VITE_GROQ_CLOUD_API_KEY: ${VITE_GROQ_CLOUD_API_KEY:-}
     volumes:
       - ./server:/var/www
     depends_on:
@@ -81,6 +85,8 @@ services:
     restart: unless-stopped
     working_dir: /app
     command: sh -c "npm run dev -- --host"
+    environment:
+      VITE_GROQ_CLOUD_API_KEY: ${VITE_GROQ_CLOUD_API_KEY:-}
     ports:
       - "5173:5173"
     volumes:

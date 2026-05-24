@@ -10,6 +10,19 @@
   overflow: hidden;
 }
 
+.highlight {
+  animation: highlightPulse 2s ease-in-out;
+  border-color: #bbf7d0;
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.12);
+}
+
+@keyframes highlightPulse {
+  0% { transform: translateY(0); }
+  20% { transform: translateY(-6px); }
+  60% { transform: translateY(0); }
+  100% { transform: translateY(0); }
+}
+
 .emergencyCard {
   border-color: rgba(234, 88, 12, 0.45);
   background: linear-gradient(180deg, rgba(255, 237, 213, 0.45) 0%, rgba(254, 242, 242, 0.7) 100%);

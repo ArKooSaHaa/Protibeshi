@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { isFeedRefreshSignalKey } from '@/lib/feedRefresh';
 import { Loader2, Plus } from 'lucide-react';
 import {
   FeedApiError,
@@ -127,6 +128,7 @@ export const Feed = () => {
   const [currentProfile, setCurrentProfile] = useState<CurrentAccountProfile | null>(null);
   const [highlightedPostId, setHighlightedPostId] = useState<number | null>(null);
   const highlightTimeoutRef = useRef<number | null>(null);
+  const prevPostIdsRef = useRef<number[]>([]);
 
   const getStringAtPath = useCallback((source: Record<string, unknown>, path: string) => {
     const segments = path.split('.');
@@ -277,23 +279,54 @@ export const Feed = () => {
     return null;
   }, [currentProfile?.avatarUrl, extractUserPhoto, localUser, resolveUserImageUrl]);
 
-  const loadPosts = async () => {
+  const loadPosts = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
       const response = await getPosts();
-      setPosts(sortFeedPosts(sanitizePosts(response)));
+      const sanitized = sortFeedPosts(sanitizePosts(response));
+
+      // detect newly added verified post and highlight it
+      const prevIds = prevPostIdsRef.current ?? [];
+      const newlyAdded = sanitized.find((p) => !prevIds.includes(p.id) && ((p as any).moderation_status === 'verified' || (p as any).status === 'verified'));
+
+      setPosts(sanitized);
+
+      if (newlyAdded) {
+        if (highlightTimeoutRef.current !== null) {
+          window.clearTimeout(highlightTimeoutRef.current);
+        }
+
+        setHighlightedPostId(newlyAdded.id);
+        highlightTimeoutRef.current = window.setTimeout(() => {
+          setHighlightedPostId(null);
+        }, 2200);
+      }
+
+      prevPostIdsRef.current = sanitized.map((p) => p.id);
     } catch (requestError) {
       setError(getErrorMessage(requestError, 'Failed to load neighborhood feed.'));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadPosts();
-  }, []);
+
+    const handler = (e: StorageEvent) => {
+      if (isFeedRefreshSignalKey(e.key)) {
+        void loadPosts();
+      }
+    };
+
+    window.addEventListener('storage', handler);
+
+    return () => {
+      window.removeEventListener('storage', handler);
+    };
+  }, [loadPosts]);
 
   useEffect(() => {
     let mounted = true;
@@ -616,6 +649,7 @@ export const Feed = () => {
     try {
       const createdPost = await createPost(formData);
       const moderationStatus = createdPost.moderation_status || 'verified';
+      const moderationSource = createdPost.moderation_source || null;
 
       if (moderationStatus === 'verified') {
         const safeCreatedPost = sanitizePosts([createdPost]);
@@ -624,8 +658,14 @@ export const Feed = () => {
             sortFeedPosts([{ ...safeCreatedPost[0], liked: false, saved: false }, ...previous]),
           );
         }
+
+        setCreatePostNotice('Gemini approved your post and it is now visible in the feed.');
       } else {
-        setCreatePostNotice('Post submitted for admin verification. It will appear in feed after approval.');
+        if (moderationSource === 'gemini') {
+          setCreatePostNotice('Gemini reviewed your post and sent it to the admin review queue.');
+        } else {
+          setCreatePostNotice('Post submitted for admin verification. It will appear in feed after approval.');
+        }
       }
 
       setCreateModalOpen(false);
@@ -691,6 +731,7 @@ export const Feed = () => {
             >
               <PostCard
                 post={post}
+                highlighted={highlightedPostId === post.id}
                 currentUserId={currentProfile?.id ?? null}
                 currentUserName={currentProfile?.name ?? null}
                 currentUserAvatarUrl={currentProfile?.avatarUrl ?? null}

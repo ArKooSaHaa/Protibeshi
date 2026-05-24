@@ -841,6 +841,16 @@
   background: #fde68a;
 }
 
+.afd-action-share {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.afd-action-share:hover {
+  background: #e0e7ff;
+}
+
 .afd-action-neutral {
   border-color: #cbd5e1;
   background: #f1f5f9;
