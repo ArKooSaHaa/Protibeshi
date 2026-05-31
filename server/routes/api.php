@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AdminAuthController;
+use App\Http\Controllers\AdminInboxController;
 use App\Http\Controllers\AdminListingModerationController;
 use App\Http\Controllers\AdminComplaintModerationController;
 use App\Http\Controllers\AdminPostModerationController;
@@ -78,6 +79,13 @@ Route::middleware(['auth:admin_api'])->prefix('admin')->group(function () {
     Route::post('/users/{user}/ban', [AdminUserController::class, 'ban']);
     Route::post('/users/{user}/unban', [AdminUserController::class, 'unban']);
 
+    Route::get('/messages/conversations', [AdminInboxController::class, 'getConversations']);
+    Route::post('/messages/conversations', [AdminInboxController::class, 'startConversation']);
+    Route::get('/messages/conversations/{id}/messages', [AdminInboxController::class, 'getMessages']);
+    Route::post('/messages', [AdminInboxController::class, 'sendMessage']);
+    Route::post('/messages/read', [AdminInboxController::class, 'markAsRead']);
+    Route::get('/messages/users', [AdminInboxController::class, 'searchUsers']);
+
     Route::get('/reliefs', [AdminReliefModerationController::class, 'index']);
     Route::post('/reliefs/{id}/ignore-reports', [AdminReliefModerationController::class, 'ignoreReports']);
     Route::delete('/reliefs/{id}', [AdminReliefModerationController::class, 'destroy']);
@@ -111,6 +119,13 @@ Route::middleware(['auth:api'])->group(function () {
 
     Route::post('/conversations', [ChatController::class, 'startConversation']);
     Route::get('/conversations', [ChatController::class, 'getUserConversations']);
+    Route::post('/calls', [ChatController::class, 'startAudioCall']);
+    Route::get('/calls/active', [ChatController::class, 'getActiveIncomingCall']);
+    Route::get('/conversations/{id}/calls', [ChatController::class, 'getConversationCalls']);
+    Route::get('/calls/{id}', [ChatController::class, 'getCallSession']);
+    Route::post('/calls/{id}/end', [ChatController::class, 'endCallSession']);
+    Route::post('/calls/{id}/accept', [ChatController::class, 'acceptCallSession']);
+    Route::post('/calls/{id}/signal', [ChatController::class, 'sendCallSignal']);
 
     Route::post('/messages', [ChatController::class, 'sendMessage']);
     Route::post('/messages/gemini/reply', [ChatController::class, 'saveGeminiReply']);

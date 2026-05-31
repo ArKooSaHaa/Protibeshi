@@ -17,7 +17,8 @@ import { AdminMarketplaceModerationPage } from '@/features/admin-marketplace';
 import { AdminRentModerationPage } from '@/features/admin-rent';
 import { AdminServicesModerationPage } from '@/features/admin-services';
 import { AccountPage, AdminAccountPage } from '@/features/account';
-import { AdminFeedDashboardPage, AdminUnderConstructionPage } from '@/features/admin-feed';
+import { AdminFeedDashboardPage } from '@/features/admin-feed';
+import { AdminMessagesPage } from '@/features/admin-messages';
 import { AdminAuthPage, SignInPage, SignUpPage } from '@/features/auth';
 import { LandingPage } from '@/features/landing/pages/LandingPage';
 import { useAuthStore } from '@/features/auth/store/authStore';
@@ -36,14 +37,15 @@ const AdminFeedRoute = ({ children }: { children: ReactElement }) => {
   return children;
 };
 
-const AdminWorkInProgressRoute = ({ children }: { children: ReactElement }) => {
+
+const MessagesRoute = () => {
   const role = useAuthStore((state) => state.role);
 
   if (role === 'admin') {
-    return <AdminUnderConstructionPage />;
+    return <AdminMessagesPage />;
   }
 
-  return children;
+  return <MessagesPage />;
 };
 
 const MarketplaceRoute = () => {
@@ -228,7 +230,7 @@ const routes: RouteObject[] = [
       { index: true, element: <AdminFeedRoute><FeedPage /></AdminFeedRoute> },
       { path: ROUTES.FEED, element: <AdminFeedRoute><FeedPage /></AdminFeedRoute> },
       { path: ROUTES.ADMIN_FEED, element: <AdminFeedDashboardPage /> },
-      { path: ROUTES.MESSAGES, element: <AdminWorkInProgressRoute><MessagesPage /></AdminWorkInProgressRoute> },
+      { path: ROUTES.MESSAGES, element: <MessagesRoute /> },
       { path: ROUTES.MARKETPLACE, element: <MarketplaceRoute /> },
       { path: ROUTES.RENT, element: <RentRoute /> },
       { path: ROUTES.SERVICES, element: <ServicesRoute /> },

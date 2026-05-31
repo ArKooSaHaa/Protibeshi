@@ -1,5 +1,6 @@
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
+import { getBearerTokenHeader } from '@/features/auth/utils/tokenStorage';
 
 let echoInstance: Echo<'pusher'> | null = null;
 
@@ -14,7 +15,6 @@ const getEchoConfig = () => {
     wsHost,
     wsPort,
     wssPort,
-    wsPath: '/app',
     forceTLS: wsScheme === 'wss',
   };
 };
@@ -33,19 +33,60 @@ export const getEcho = (): Echo<'pusher'> | null => {
     win.Pusher = Pusher;
     const config = getEchoConfig();
 
-    echoInstance = new Echo({
-      broadcaster: 'pusher',
-      key: 'localkey',
-      wsHost: config.wsHost,
-      wsPort: config.wsPort,
-      wssPort: config.wssPort,
-      wsPath: config.wsPath,
-      forceTLS: config.forceTLS,
-      disableStats: true,
-      enabledTransports: ['ws', 'wss'],
-    });
+    const bearer = getBearerTokenHeader();
+    const createEcho = (cfg: ReturnType<typeof getEchoConfig>) => {
+      // In development it's useful to see Pusher logs
+      if (import.meta.env.DEV) {
+        // @ts-ignore
+        if (typeof window !== 'undefined' && (window as any).Pusher) {
+          // enable client-side pusher logs
+          // @ts-ignore
+          (window as any).Pusher.logToConsole = true;
+        }
+      }
 
-    return echoInstance;
+      return new Echo({
+        broadcaster: 'pusher',
+        key: 'localkey',
+        cluster: import.meta.env.VITE_PUSHER_CLUSTER || 'mt1',
+        wsHost: cfg.wsHost,
+        wsPort: cfg.wsPort,
+        wssPort: cfg.wssPort,
+        forceTLS: cfg.forceTLS,
+        disableStats: true,
+        enabledTransports: ['ws', 'wss'],
+        auth: {
+          headers: {
+            ...(bearer ? { Authorization: bearer } : {}),
+          },
+        },
+      });
+    };
+
+    try {
+      echoInstance = createEcho(config);
+      return echoInstance;
+    } catch (err) {
+      // Try a conservative fallback useful for local development: ws on port 6001 without TLS
+      try {
+        const fallback = {
+          ...config,
+          wsPort: 6001,
+          wssPort: 6001,
+          forceTLS: false,
+        } as ReturnType<typeof getEchoConfig>;
+
+        echoInstance = createEcho(fallback);
+        // eslint-disable-next-line no-console
+        console.warn('Echo: initialized with fallback websocket config');
+        return echoInstance;
+      } catch (err2) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to initialize Echo', err2);
+        return null;
+      }
+    }
+
   } catch (error) {
     console.error('Failed to initialize Echo', error);
     return null;
