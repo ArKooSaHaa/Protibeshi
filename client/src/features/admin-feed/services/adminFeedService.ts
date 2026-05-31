@@ -8,6 +8,12 @@ type AdminFeedApiPayload = {
   message?: string;
   posts?: AdminFeedPost[];
   post?: AdminFeedPost;
+  gemini_review?: {
+    allow?: boolean;
+    reason?: string | null;
+    model?: string | null;
+    provider?: string | null;
+  };
 };
 
 export type AdminFeedQuery = {
@@ -110,7 +116,7 @@ export const deleteAdminFeedPost = async (postId: string): Promise<AdminFeedPost
   }
 };
 
-export const reviewAdminFeedPostWithGemini = async (postId: string): Promise<AdminFeedPost> => {
+export const reviewAdminFeedPostWithGemini = async (postId: string): Promise<AdminFeedApiPayload> => {
   try {
     const response = await apiClient.post<AdminFeedApiPayload>(`/admin/posts/${postId}/gemini-review`);
 
@@ -118,7 +124,7 @@ export const reviewAdminFeedPostWithGemini = async (postId: string): Promise<Adm
       throw new Error('Updated post payload was not returned.');
     }
 
-    return response.data.post;
+    return response.data;
   } catch (error) {
     throw new Error(extractErrorMessage(error, 'Could not review post with Gemini.'));
   }

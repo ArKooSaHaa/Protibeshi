@@ -121,6 +121,13 @@ class GeminiPostModerationService
             'rape',
             'bomb',
             'terror',
+            'hate speech',
+            'hate',
+            'threat',
+            'threaten',
+            'threatening',
+            'harass',
+            'harassment',
             'drugs',
             'porn',
             'scam',
@@ -336,7 +343,7 @@ class GeminiPostModerationService
                         'messages' => [
                             [
                                 'role' => 'system',
-                                'content' => 'You are moderating neighborhood community posts. Return JSON only with this shape: {"allow":true|false,"reason":"short professional reason"}. Allow normal neighborhood/community updates, events, help requests, safety notices, or harmless announcements. Reject spam, scam, hate, harassment, violence, sexual content, illegal activity, personal data exposure, unrelated promotion, or otherwise inappropriate content.',
+                                'content' => 'You are moderating neighborhood community posts. Return JSON only with this shape: {"allow":true|false,"reason":"short professional reason"}. Allow normal neighborhood/community updates, events, help requests, safety notices, or harmless announcements. Reject spam, scam, fraud, hate speech, harassment, threats, violence, sexual content, illegal activity, personal data exposure, unrelated promotion, or otherwise inappropriate content.',
                             ],
                             [
                                 'role' => 'user',
@@ -399,7 +406,7 @@ Return JSON only with this shape:
 {"allow":true|false,"reason":"short professional reason"}
 
 Allow posts that are normal neighborhood/community updates, events, help requests, safety notices, or harmless announcements.
-Reject posts that are spam, scam, hate, harassment, violence, sexual content, illegal activity, personal data exposure, unrelated promotion, or otherwise inappropriate for a community feed.
+Reject posts that are spam, scam, fraud, hate speech, harassment, threats, violence, sexual content, illegal activity, personal data exposure, unrelated promotion, or otherwise inappropriate for a community feed.
 
 Submission details:
 Title: {$title}

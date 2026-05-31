@@ -133,12 +133,15 @@ class AdminPostModerationController extends Controller
             $post->moderation_source = $review['provider'] ?? 'gemini';
         }
         $post->moderation_status = $review['allow'] ? 'verified' : 'pending';
+        $adminNote = $review['allow']
+            ? 'All good: no scam, hate, or threat speech detected.'
+            : 'Flagged: possible scam, hate, or threat speech detected.';
         if (!empty($review['allow'])) {
             $post->is_active = true;
         }
         $post->moderated_by_admin_id = null;
         $post->moderated_at = now();
-        $post->moderation_note = $review['reason'] ?? null;
+        $post->moderation_note = $adminNote . (!empty($review['reason']) ? (' ' . $review['reason']) : '');
         $post->save();
 
         $post->refresh();
@@ -148,8 +151,8 @@ class AdminPostModerationController extends Controller
         return response()->json([
             'success' => true,
             'message' => $review['allow']
-                ? 'Gemini approved the post and it is now visible in the feed.'
-                : 'Gemini kept the post in manual review.',
+                ? 'All good: Gemini did not detect scam, hate, or threat speech.'
+                : 'Gemini flagged the post for possible scam, hate, or threat speech.',
             'post' => $this->formatModerationPost($post),
             'gemini_review' => [
                 'allow' => (bool) $review['allow'],
