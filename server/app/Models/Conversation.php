@@ -23,6 +23,11 @@ class Conversation extends Model
         return $this->hasMany(Message::class);
     }
 
+    public function callSessions(): HasMany
+    {
+        return $this->hasMany(ConversationCallSession::class);
+    }
+
     public function userOne(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_one_id');

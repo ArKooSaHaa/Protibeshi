@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { motion, type Variants } from 'framer-motion';
 import {
@@ -33,6 +34,9 @@ const navigation: NavigationItem[] = [
   { id: 'relief', label: 'Relief', icon: Heart, path: ROUTES.RELIEF },
   { id: 'messages', label: 'Messages', icon: MessageSquare, path: ROUTES.MESSAGES },
 ];
+
+const INCOMING_CALL_STORAGE_KEY = 'protibeshi.incomingCallSession';
+const INCOMING_CALL_EVENT = 'protibeshi-incoming-call-changed';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0, x: -20 },
@@ -75,6 +79,32 @@ const navItemVariants: Variants = {
 };
 
 export const Sidebar = () => {
+  const [hasIncomingCall, setHasIncomingCall] = useState(false);
+
+  useEffect(() => {
+    const readIncomingCallState = () => {
+      if (typeof window === 'undefined') {
+        return false;
+      }
+
+      return Boolean(window.localStorage.getItem(INCOMING_CALL_STORAGE_KEY));
+    };
+
+    setHasIncomingCall(readIncomingCallState());
+
+    const handleChange = () => {
+      setHasIncomingCall(readIncomingCallState());
+    };
+
+    window.addEventListener('storage', handleChange);
+    window.addEventListener(INCOMING_CALL_EVENT, handleChange as EventListener);
+
+    return () => {
+      window.removeEventListener('storage', handleChange);
+      window.removeEventListener(INCOMING_CALL_EVENT, handleChange as EventListener);
+    };
+  }, []);
+
   return (
     <motion.aside className={styles.sidebar} variants={containerVariants} initial="hidden" animate="visible">
       <div className={styles.logoSection}>
@@ -91,8 +121,7 @@ export const Sidebar = () => {
       <nav className={styles.navigation}>
         {navigation.map((item) => {
           const Icon = item.icon;
-          const linkClass = ({ isActive }: { isActive: boolean }) =>
-            `${styles.navItem} ${isActive ? styles.navItemActive : ''}`;
+          const isMessagesItem = item.id === 'messages';
 
           return (
             <motion.div key={item.id} variants={itemVariants} className={styles.navWrapper}>
@@ -104,13 +133,19 @@ export const Sidebar = () => {
                   whileHover="hover"
                   whileTap="tap"
                 >
-                  <NavLink to={item.path} className={linkClass}>
+                  <NavLink
+                    to={item.path}
+                    className={({ isActive }) =>
+                      `${styles.navItem} ${isActive ? styles.navItemActive : ''} ${isMessagesItem && hasIncomingCall ? styles.navItemIncoming : ''}`
+                    }
+                  >
                     {({ isActive }) => (
                       <>
                         <div className={`${styles.navIcon} ${isActive ? styles.navIconActive : ''}`}>
                           <Icon size={20} />
                         </div>
                         <span className={styles.navLabel}>{item.label}</span>
+                        {isMessagesItem && hasIncomingCall ? <span className={styles.navBlinkDot} aria-hidden="true" /> : null}
                       </>
                     )}
                   </NavLink>

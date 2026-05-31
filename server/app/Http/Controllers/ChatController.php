@@ -3,7 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Events\MessageSent;
+use App\Events\CallStarted;
+use App\Events\CallAccepted;
+use App\Events\CallEnded;
+use App\Events\CallSignal;
 use App\Models\Conversation;
+use App\Models\ConversationCallSession;
 use App\Models\Message;
 use App\Services\AdminInboxService;
 use App\Services\GeminiInboxService;
@@ -11,6 +16,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ChatController extends Controller
 {
@@ -310,10 +316,283 @@ class ChatController extends Controller
         ], 200);
     }
 
+    public function startAudioCall(Request $request)
+    {
+        $validated = $request->validate([
+            'conversation_id' => 'required|integer|exists:conversations,id',
+        ]);
+
+        $authId = (int) Auth::id();
+
+        try {
+            $conversation = Conversation::with(['userOne', 'userTwo'])->findOrFail($validated['conversation_id']);
+        } catch (ModelNotFoundException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Conversation not found',
+            ], 404);
+        }
+
+        if (!$this->isConversationParticipant($conversation, $authId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to start calls in this conversation',
+            ], 403);
+        }
+
+        if ($this->adminInboxService->isAdminInboxConversation($conversation)
+            && !$this->adminInboxService->isInboxUserId($authId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Calls are not available in the admin inbox',
+            ], 422);
+        }
+
+        if ($this->geminiInboxService->isGeminiInboxConversation($conversation)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Calls are not available in the Gemini inbox',
+            ], 422);
+        }
+
+        $roomName = sprintf('protibeshi-%d-%s', (int) $conversation->id, Str::lower(Str::random(12)));
+        $joinUrl = sprintf('webrtc://%s', $roomName);
+
+        $callSession = ConversationCallSession::create([
+            'conversation_id' => (int) $conversation->id,
+            'initiator_id' => $authId,
+            'call_type' => 'audio',
+            'status' => 'active',
+            'room_name' => $roomName,
+            'jitsi_join_url' => $joinUrl,
+            'started_at' => now(),
+            'accepted_at' => null,
+            'duration_seconds' => 0,
+        ])->load('initiator');
+
+        $recipientId = (int) ($conversation->user_one_id === $authId ? $conversation->user_two_id : $conversation->user_one_id);
+        broadcast(new CallStarted($callSession, $recipientId))->toOthers();
+
+        return response()->json([
+            'success' => true,
+            'call_session' => $this->formatCallSession($callSession),
+        ], 201);
+    }
+
+    public function getConversationCalls($id)
+    {
+        $authId = (int) Auth::id();
+
+        try {
+            $conversation = Conversation::findOrFail($id);
+        } catch (ModelNotFoundException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Conversation not found',
+            ], 404);
+        }
+
+        if (!$this->isConversationParticipant($conversation, $authId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to view these call logs',
+            ], 403);
+        }
+
+        $callSessions = ConversationCallSession::with('initiator')
+            ->where('conversation_id', (int) $id)
+            ->orderByDesc('started_at')
+            ->get()
+            ->map(function (ConversationCallSession $callSession) {
+                return $this->formatCallSession($callSession);
+            })
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'call_sessions' => $callSessions,
+        ], 200);
+    }
+
+    public function getCallSession($id)
+    {
+        $authId = (int) Auth::id();
+
+        try {
+            $callSession = ConversationCallSession::with(['initiator', 'conversation.userOne', 'conversation.userTwo'])
+                ->findOrFail($id);
+        } catch (ModelNotFoundException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Call session not found',
+            ], 404);
+        }
+
+        if (!$this->isConversationParticipant($callSession->conversation, $authId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to view this call session',
+            ], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'call_session' => $this->formatCallSession($callSession),
+        ], 200);
+    }
+
+    public function getActiveIncomingCall()
+    {
+        $authId = (int) Auth::id();
+
+        $callSession = ConversationCallSession::with(['initiator', 'conversation.userOne', 'conversation.userTwo'])
+            ->where('status', 'active')
+            ->whereNull('ended_at')
+            ->whereHas('conversation', function ($query) use ($authId) {
+                $query->where(function ($nested) use ($authId) {
+                    $nested->where('user_one_id', $authId)
+                        ->orWhere('user_two_id', $authId);
+                });
+            })
+            ->where('initiator_id', '!=', $authId)
+            ->latest('started_at')
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'call_session' => $callSession ? $this->formatCallSession($callSession) : null,
+        ], 200);
+    }
+
+    public function endCallSession(Request $request, $id)
+    {
+        $authId = (int) Auth::id();
+
+        try {
+            $callSession = ConversationCallSession::with('conversation')->findOrFail($id);
+        } catch (ModelNotFoundException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Call session not found',
+            ], 404);
+        }
+
+        if (!$this->isConversationParticipant($callSession->conversation, $authId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to update this call session',
+            ], 403);
+        }
+
+        if ($callSession->ended_at === null) {
+            $endedAt = now();
+            $callSession->ended_at = $endedAt;
+            $callSession->status = 'ended';
+            $callSession->duration_seconds = max(0, $callSession->started_at?->diffInSeconds($endedAt) ?? 0);
+            $callSession->save();
+            $recipientId = (int) ($callSession->conversation->user_one_id === $authId
+                ? $callSession->conversation->user_two_id
+                : $callSession->conversation->user_one_id);
+
+            broadcast(new CallEnded($callSession, $recipientId))->toOthers();
+        }
+
+        return response()->json([
+            'success' => true,
+            'call_session' => $this->formatCallSession($callSession->load('initiator')),
+        ], 200);
+    }
+
+    public function acceptCallSession(Request $request, $id)
+    {
+        $authId = (int) Auth::id();
+
+        try {
+            $callSession = ConversationCallSession::with('conversation')->findOrFail($id);
+        } catch (ModelNotFoundException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Call session not found',
+            ], 404);
+        }
+
+        if (!$this->isConversationParticipant($callSession->conversation, $authId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to accept this call',
+            ], 403);
+        }
+
+        if ($callSession->status !== 'active') {
+            // if already accepted/ended, just return current state
+            return response()->json([
+                'success' => true,
+                'call_session' => $this->formatCallSession($callSession->load('initiator')),
+            ], 200);
+        }
+
+        $callSession->status = 'accepted';
+        $callSession->accepted_at = $callSession->accepted_at ?? now();
+        $callSession->save();
+
+        $recipientId = (int) ($callSession->conversation->user_one_id === $authId
+            ? $callSession->conversation->user_two_id
+            : $callSession->conversation->user_one_id);
+
+        broadcast(new CallAccepted($callSession, $recipientId))->toOthers();
+
+        return response()->json([
+            'success' => true,
+            'call_session' => $this->formatCallSession($callSession->load('initiator')),
+        ], 200);
+    }
+
+    public function sendCallSignal(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'signal_type' => 'required|string|in:offer,answer,ice-candidate,leave',
+            'signal_payload' => 'required|array',
+        ]);
+
+        $authId = (int) Auth::id();
+
+        try {
+            $callSession = ConversationCallSession::with('conversation')->findOrFail($id);
+        } catch (ModelNotFoundException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Call session not found',
+            ], 404);
+        }
+
+        if (!$this->isConversationParticipant($callSession->conversation, $authId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to send signaling messages for this call',
+            ], 403);
+        }
+
+        $recipientId = $this->getOtherParticipantId($callSession->conversation, $authId);
+
+        broadcast(new CallSignal($callSession, $authId, $validated['signal_type'], $validated['signal_payload']))->toOthers();
+
+        return response()->json([
+            'success' => true,
+            'recipient_id' => $recipientId,
+        ], 200);
+    }
+
     private function isConversationParticipant(Conversation $conversation, int $authId): bool
     {
         return (int) $conversation->user_one_id === $authId
             || (int) $conversation->user_two_id === $authId;
+    }
+
+    private function getOtherParticipantId(Conversation $conversation, int $authId): int
+    {
+        return (int) ($conversation->user_one_id === $authId
+            ? $conversation->user_two_id
+            : $conversation->user_one_id);
     }
 
     private function formatConversation(Conversation $conversation, int $authId): array
@@ -365,6 +644,31 @@ class ChatController extends Controller
                 'last_name' => $message->sender->last_name,
                 'username' => $message->sender->username,
                 'profile_picture' => $this->resolveProfilePictureUrl($message->sender->profile_picture),
+            ] : null,
+        ];
+    }
+
+    private function formatCallSession(ConversationCallSession $callSession): array
+    {
+        return [
+            'id' => $callSession->id,
+            'conversation_id' => $callSession->conversation_id,
+            'initiator_id' => $callSession->initiator_id,
+            'call_type' => $callSession->call_type,
+            'status' => $callSession->status,
+            'room_name' => $callSession->room_name,
+            'jitsi_join_url' => $callSession->jitsi_join_url,
+            'started_at' => $callSession->started_at,
+            'accepted_at' => $callSession->accepted_at,
+            'ended_at' => $callSession->ended_at,
+            'duration_seconds' => (int) $callSession->duration_seconds,
+            'initiator' => $callSession->initiator ? [
+                'id' => $callSession->initiator->id,
+                'name' => trim(($callSession->initiator->first_name ?? '') . ' ' . ($callSession->initiator->last_name ?? '')) ?: ($callSession->initiator->username ?? null),
+                'first_name' => $callSession->initiator->first_name,
+                'last_name' => $callSession->initiator->last_name,
+                'username' => $callSession->initiator->username,
+                'profile_picture' => $this->resolveProfilePictureUrl($callSession->initiator->profile_picture),
             ] : null,
         ];
     }

@@ -4,13 +4,21 @@ import { getPosts } from '@/api/feedApi';
 import {
   ChatConversation,
   ChatMessage,
+  ConversationCallSession,
+  endCallSession,
+  getActiveIncomingCallSession,
+  getConversationCallSessions,
   getConversations,
   getMessages,
   markAsRead,
+  startAudioCall,
+  acceptCallSession,
   saveGeminiReply,
   sendMessage,
 } from '@/api/chatApi';
 import { GeminiConversationTurn, generateGeminiReply } from '@/api/geminiChatApi';
+import { AudioCallDialog } from '@/components/chat/AudioCallDialog';
+import { IncomingCallModal } from '@/components/chat/IncomingCallModal';
 import { getReliefs } from '@/api/relief';
 import { ConversationList } from '@/components/chat/ConversationList';
 import { ChatWindow } from '@/components/chat/ChatWindow';
@@ -26,6 +34,8 @@ const ADMIN_INBOX_FALLBACK_USERNAME = 'admin_inbox_system';
 const GEMINI_INBOX_USERNAME = 'gemini_ai';
 const TODAY_CONTEXT_TTL_MS = 2 * 60 * 1000;
 const TODAY_ITEMS_LIMIT_PER_CATEGORY = 4;
+const INCOMING_CALL_STORAGE_KEY = 'protibeshi.incomingCallSession';
+const INCOMING_CALL_EVENT = 'protibeshi-incoming-call-changed';
 
 type TodaySnapshotCache = {
   dayKey: string;
@@ -164,6 +174,37 @@ const extractStoredUserId = (): number | null => {
   return null;
 };
 
+const writeIncomingCallState = (callSession: ConversationCallSession | null) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (callSession) {
+    window.localStorage.setItem(INCOMING_CALL_STORAGE_KEY, JSON.stringify(callSession));
+  } else {
+    window.localStorage.removeItem(INCOMING_CALL_STORAGE_KEY);
+  }
+
+  window.dispatchEvent(new Event(INCOMING_CALL_EVENT));
+};
+
+const readIncomingCallState = (): ConversationCallSession | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const raw = window.localStorage.getItem(INCOMING_CALL_STORAGE_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw) as ConversationCallSession;
+  } catch {
+    return null;
+  }
+};
+
 export const Messages = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -180,6 +221,17 @@ export const Messages = () => {
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isStartingCall, setIsStartingCall] = useState(false);
+  const [isEndingCall, setIsEndingCall] = useState(false);
+  const [activeCallSession, setActiveCallSession] = useState<ConversationCallSession | null>(null);
+  const [isCallDialogOpen, setIsCallDialogOpen] = useState(false);
+  const [incomingCallSession, setIncomingCallSession] = useState<ConversationCallSession | null>(null);
+  const [isIncomingOpen, setIsIncomingOpen] = useState(false);
+  const [callSessions, setCallSessions] = useState<ConversationCallSession[]>([]);
+  const ringtoneRef = useRef<{ stop: () => void } | null>(null);
+  const incomingTimeoutRef = useRef<number | null>(null);
+  const activeCallSessionRef = useRef<ConversationCallSession | null>(null);
+  const incomingCallSessionRef = useRef<ConversationCallSession | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const appendMessageWithoutDuplicates = (nextMessage: ChatMessage) => {
@@ -192,6 +244,14 @@ export const Messages = () => {
       return [...previous, nextMessage];
     });
   };
+
+  useEffect(() => {
+    activeCallSessionRef.current = activeCallSession;
+  }, [activeCallSession]);
+
+  useEffect(() => {
+    incomingCallSessionRef.current = incomingCallSession;
+  }, [incomingCallSession]);
 
   const filteredConversations = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -328,6 +388,38 @@ export const Messages = () => {
   }, [activeConversationId]);
 
   useEffect(() => {
+    if (!activeConversationId || isGeminiConversation) {
+      setCallSessions([]);
+      return;
+    }
+
+    let alive = true;
+
+    const loadCallHistory = async () => {
+      try {
+        const sessions = await getConversationCallSessions(activeConversationId);
+        if (!alive) {
+          return;
+        }
+
+        setCallSessions(sessions);
+      } catch {
+        if (!alive) {
+          return;
+        }
+
+        setCallSessions([]);
+      }
+    };
+
+    void loadCallHistory();
+
+    return () => {
+      alive = false;
+    };
+  }, [activeConversationId, isGeminiConversation, isCallDialogOpen]);
+
+  useEffect(() => {
     bottomAnchorRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [displayedMessages]);
 
@@ -345,6 +437,56 @@ export const Messages = () => {
 
     echo
       .channel(channelName)
+      .listen('.call.started', (event: { call_session?: ConversationCallSession }) => {
+        const cs = event?.call_session;
+        if (!cs) {
+          return;
+        }
+
+        setActiveCallSession((previous) => (
+          previous && String(previous.id) === String(cs.id) ? cs : previous
+        ));
+      })
+      .listen('.call.ended', (event: { call_session?: ConversationCallSession }) => {
+        const cs = event?.call_session;
+        if (!cs) {
+          return;
+        }
+
+        const activeCall = activeCallSessionRef.current;
+        const incomingCall = incomingCallSessionRef.current;
+
+        if (activeCall && String(activeCall.id) === String(cs.id)) {
+          setActiveCallSession(null);
+          setIsCallDialogOpen(false);
+        }
+
+        if (incomingCall && String(incomingCall.id) === String(cs.id)) {
+          setIncomingCallSession(null);
+          setIsIncomingOpen(false);
+          window.clearTimeout(incomingTimeoutRef.current ?? 0);
+          incomingTimeoutRef.current = null;
+          ringtoneRef.current?.stop();
+          writeIncomingCallState(null);
+        }
+
+        setIsCallDialogOpen(false);
+        void loadConversationList();
+      })
+      .listen('.call.accepted', (event: { call_session?: ConversationCallSession }) => {
+        const cs = event?.call_session;
+        if (!cs) {
+          return;
+        }
+
+        setActiveCallSession((previous) => {
+          if (previous && String(previous.id) === String(cs.id)) {
+            return cs;
+          }
+
+          return previous;
+        });
+      })
       .listen('.message.sent', (event: { message?: ChatMessage }) => {
         const incoming = event?.message;
         if (!incoming) {
@@ -375,6 +517,140 @@ export const Messages = () => {
       echo.leave(channelName);
     };
   }, [activeConversationId, currentUserId, isGeminiConversation]);
+
+  useEffect(() => {
+    const stored = readIncomingCallState();
+    if (stored) {
+      setIncomingCallSession(stored);
+      setIsIncomingOpen(true);
+    }
+
+    if (!currentUserId) {
+      return;
+    }
+
+    const echo = getEcho();
+    if (!echo) {
+      return;
+    }
+
+    const publicName = `user.${currentUserId}`;
+    const privateName = `App.Models.User.${currentUserId}`;
+
+    const handleStarted = (event: { call_session?: ConversationCallSession }) => {
+      const cs = event?.call_session;
+      if (!cs) {
+        return;
+      }
+
+      setIncomingCallSession(cs);
+      setIsIncomingOpen(true);
+      writeIncomingCallState(cs);
+    };
+
+    const handleEnded = (event: { call_session?: ConversationCallSession }) => {
+      const cs = event?.call_session;
+      if (!cs) {
+        return;
+      }
+
+      const activeCall = activeCallSessionRef.current;
+      const incomingCall = incomingCallSessionRef.current;
+
+      if (activeCall && String(activeCall.id) === String(cs.id)) {
+        setActiveCallSession(null);
+        setIsCallDialogOpen(false);
+      }
+
+      if (incomingCall && String(incomingCall.id) === String(cs.id)) {
+        setIncomingCallSession(null);
+        setIsIncomingOpen(false);
+        window.clearTimeout(incomingTimeoutRef.current ?? 0);
+        incomingTimeoutRef.current = null;
+        ringtoneRef.current?.stop();
+        writeIncomingCallState(null);
+      }
+
+      if (activeCall || incomingCall) {
+        void loadConversationList();
+      }
+    };
+
+    const handleAccepted = (_event: { call_session?: ConversationCallSession }) => {
+      // currently no-op; placeholder for future UI changes
+    };
+
+    try {
+      const publicChannel = echo.channel(publicName);
+      publicChannel.listen('.call.started', handleStarted);
+      publicChannel.listen('.call.ended', handleEnded);
+      publicChannel.listen('.call.accepted', handleAccepted);
+    } catch (e) {
+      // ignore subscribe errors for public channel
+    }
+
+    try {
+      const privateChannel = echo.private(privateName);
+      privateChannel.listen('.call.started', handleStarted);
+      privateChannel.listen('.call.ended', handleEnded);
+      privateChannel.listen('.call.accepted', handleAccepted);
+    } catch (e) {
+      // ignore subscribe errors for private channel (auth may not be available in some setups)
+    }
+
+    return () => {
+      try {
+        echo.leave(publicName);
+      } catch (e) {
+        // ignore
+      }
+
+      try {
+        echo.leave(`private-${privateName}`);
+      } catch (e) {
+        // ignore
+      }
+    };
+  }, [currentUserId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const syncActiveIncomingCall = async () => {
+      try {
+        const response = await getActiveIncomingCallSession();
+        if (cancelled) {
+          return;
+        }
+
+        const callSession = response.call_session;
+        if (callSession) {
+          setIncomingCallSession(callSession);
+          setIsIncomingOpen(true);
+          writeIncomingCallState(callSession);
+          return;
+        }
+
+        if (!incomingCallSession) {
+          writeIncomingCallState(null);
+        }
+      } catch {
+        // Keep this silent. Live websocket delivery is still the primary path.
+      }
+    };
+
+    void syncActiveIncomingCall();
+
+    const intervalId = window.setInterval(() => {
+      void syncActiveIncomingCall();
+    }, 4000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId, incomingCallSession?.id]);
 
   useEffect(() => {
     if (!activeConversationId || isGeminiConversation) {
@@ -416,6 +692,149 @@ export const Messages = () => {
     setActiveConversationId(conversationId);
     navigate(`${ROUTES.MESSAGES}?conversation=${conversationId}`, { replace: true });
   };
+
+  const handleStartAudioCall = async () => {
+    if (!activeConversationId) {
+      return;
+    }
+
+    if (isGeminiConversation || isAdminInboxConversation) {
+      setError('Audio calls are not available in this conversation.');
+      return;
+    }
+
+    try {
+      setError(null);
+      setIsStartingCall(true);
+      const response = await startAudioCall(activeConversationId);
+      setActiveCallSession(response.call_session);
+      setIsCallDialogOpen(true);
+    } catch (requestError) {
+      const message = requestError instanceof Error ? requestError.message : 'Failed to start audio call';
+      setError(message);
+    } finally {
+      setIsStartingCall(false);
+    }
+  };
+
+  const endActiveCall = useCallback(async () => {
+    if (!activeCallSession || isEndingCall) {
+      setIsCallDialogOpen(false);
+      setActiveCallSession(null);
+      return;
+    }
+
+    try {
+      setIsEndingCall(true);
+      const response = await endCallSession(activeCallSession.id);
+      setActiveCallSession(response.call_session);
+    } catch (requestError) {
+      const message = requestError instanceof Error ? requestError.message : 'Failed to end audio call';
+      setError(message);
+    } finally {
+      setIsEndingCall(false);
+      setIsCallDialogOpen(false);
+      setActiveCallSession(null);
+    }
+  }, [activeCallSession, isEndingCall]);
+
+  const handleCallDialogOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      setIsCallDialogOpen(true);
+      return;
+    }
+
+    void endActiveCall();
+  };
+
+  const handleIncomingAccept = async (callSession: ConversationCallSession) => {
+    try {
+      const resp = await acceptCallSession(callSession.id);
+      const cs = resp.call_session;
+      setActiveCallSession(cs);
+      setIncomingCallSession(null);
+      setIsIncomingOpen(false);
+      window.clearTimeout(incomingTimeoutRef.current ?? 0);
+      incomingTimeoutRef.current = null;
+      ringtoneRef.current?.stop();
+      writeIncomingCallState(null);
+      setIsCallDialogOpen(true);
+      void loadConversationList();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to accept call');
+    }
+  };
+
+  const handleIncomingDecline = async (callSession: ConversationCallSession) => {
+    try {
+      await endCallSession(callSession.id);
+    } catch {
+      // ignore
+    }
+
+    setIncomingCallSession(null);
+    setIsIncomingOpen(false);
+    window.clearTimeout(incomingTimeoutRef.current ?? 0);
+    incomingTimeoutRef.current = null;
+    ringtoneRef.current?.stop();
+    writeIncomingCallState(null);
+    void loadConversationList();
+  };
+
+  // Ringtone + auto-timeout for incoming calls
+  useEffect(() => {
+    if (!isIncomingOpen || !incomingCallSession) {
+      return;
+    }
+
+    // start a simple continuous tone using WebAudio
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 480;
+    gain.gain.value = 0.0001;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+
+    // ramp up volume slightly to avoid abrupt pop
+    gain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 0.2);
+
+    ringtoneRef.current = {
+      stop: () => {
+        try {
+          gain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
+          osc.stop(ctx.currentTime + 0.15);
+          ctx.close();
+        } catch (e) {
+          // ignore
+        }
+      },
+    };
+
+    // auto-decline after 30s
+    incomingTimeoutRef.current = window.setTimeout(async () => {
+      try {
+        await endCallSession(incomingCallSession.id);
+      } catch {
+        // ignore
+      }
+      setIncomingCallSession(null);
+      setIsIncomingOpen(false);
+      ringtoneRef.current?.stop();
+      incomingTimeoutRef.current = null;
+      writeIncomingCallState(null);
+    }, 30000);
+
+    return () => {
+      window.clearTimeout(incomingTimeoutRef.current ?? 0);
+      incomingTimeoutRef.current = null;
+      ringtoneRef.current?.stop();
+      ringtoneRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isIncomingOpen, incomingCallSession]);
 
   const buildTodaySnapshotContext = useCallback(async (): Promise<string | null> => {
     const now = new Date();
@@ -798,14 +1217,39 @@ export const Messages = () => {
           currentUserId={currentUserId}
           draft={draft}
           isSending={isSending}
+          isStartingCall={isStartingCall}
           isReadOnly={!isGeminiConversation && isAdminInboxConversation}
           readOnlyMessage={!isGeminiConversation ? adminInboxReadOnlyMessage : null}
+          callSessions={callSessions}
           onDraftChange={setDraft}
           onSend={handleSend}
+          onStartAudioCall={handleStartAudioCall}
           bottomAnchorRef={bottomAnchorRef}
           emptyLabel="Select a conversation to start chatting"
         />
       </div>
+
+      <AudioCallDialog
+        open={isCallDialogOpen}
+        callSession={activeCallSession}
+        conversation={activeConversation}
+        currentUserId={currentUserId}
+        onOpenChange={handleCallDialogOpenChange}
+        onEndCall={() => {
+          void endActiveCall();
+        }}
+        onRemoteHangup={() => {
+          setIsCallDialogOpen(false);
+          setActiveCallSession(null);
+        }}
+      />
+
+      <IncomingCallModal
+        open={isIncomingOpen}
+        callSession={incomingCallSession}
+        onAccept={handleIncomingAccept}
+        onDecline={handleIncomingDecline}
+      />
 
       {loadingConversations || loadingMessages ? (
         <div style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }} aria-hidden="true">

@@ -1,0 +1,136 @@
+.adminHeader {
+  display: grid;
+  gap: 6px;
+  margin: 18px 16px 10px;
+}
+
+.adminBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(10, 125, 255, 0.12);
+  color: #0a60cc;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  width: fit-content;
+}
+
+.adminTitle {
+  margin: 0;
+  font-size: 1rem;
+  color: #12213a;
+}
+
+.adminSubtitle {
+  margin: 0;
+  color: #5b7394;
+  font-size: 0.8rem;
+}
+
+.sectionLabel {
+  margin: 4px 16px 8px;
+  color: #6a809f;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.searchResults {
+  margin: 0 16px 12px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(213, 225, 243, 0.95);
+  background: rgba(255, 255, 255, 0.92);
+  display: grid;
+  gap: 10px;
+}
+
+.searchResultsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.76rem;
+  color: #557099;
+}
+
+.searchResultItem {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  border: 1px solid #d6e3f7;
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.searchResultItem:hover {
+  transform: translateY(-1px);
+  border-color: #9ac3ff;
+  box-shadow: 0 10px 20px -16px rgba(16, 42, 84, 0.5);
+}
+
+.searchResultMeta {
+  min-width: 0;
+}
+
+.searchResultMeta strong {
+  display: block;
+  color: #12213a;
+  font-size: 0.9rem;
+}
+
+.searchResultMeta span {
+  display: block;
+  color: #5d7698;
+  font-size: 0.76rem;
+  margin-top: 2px;
+}
+
+.searchResultAction {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #0a60cc;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.searchEmpty {
+  margin: 0;
+  color: #60799d;
+  font-size: 0.8rem;
+}
+
+.helperText {
+  margin: 0 16px 12px;
+  color: #6a7f9c;
+  font-size: 0.78rem;
+}
+
+.errorBanner {
+  margin: 0 0 12px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.18);
+  background: rgba(239, 68, 68, 0.08);
+  color: #b42318;
+  font-size: 0.85rem;
+}
+
+.loadingBadge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #375b8a;
+  background: rgba(10, 125, 255, 0.12);
+  padding: 4px 8px;
+  border-radius: 999px;
+}

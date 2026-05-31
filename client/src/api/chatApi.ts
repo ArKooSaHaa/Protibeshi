@@ -35,6 +35,24 @@ export type ChatMessage = {
   sender: ChatUser | null;
 };
 
+export type ConversationCallSession = {
+  id: number;
+  conversation_id: number;
+  initiator_id: number;
+  call_type: string;
+  status: string;
+  room_name: string;
+  jitsi_join_url: string;
+  started_at: string;
+  ended_at: string | null;
+  duration_seconds: number;
+  initiator: ChatUser | null;
+};
+
+export type CallSignalType = 'offer' | 'answer' | 'ice-candidate' | 'leave';
+
+export type CallSignalPayload = Record<string, unknown>;
+
 type JsonRecord = Record<string, unknown>;
 
 const getApiBaseUrl = () => {
@@ -174,6 +192,144 @@ export const sendMessage = async (
   return {
     success: Boolean(payload.success),
     message: payload.message as ChatMessage,
+  };
+};
+
+export const startAudioCall = async (
+  conversation_id: number,
+): Promise<{ success: boolean; call_session: ConversationCallSession }> => {
+  const response = await fetch(`${getApiBaseUrl()}/calls`, {
+    method: 'POST',
+    headers: getAuthHeaders(true),
+    body: JSON.stringify({ conversation_id }),
+  });
+
+  const data = await parseJsonSafely(response);
+  throwIfNotOk(response, data, 'Failed to start audio call');
+  throwIfJsonMissing(data);
+  const payload = (data ?? {}) as JsonRecord;
+
+  return {
+    success: Boolean(payload.success),
+    call_session: payload.call_session as ConversationCallSession,
+  };
+};
+
+export const getConversationCallSessions = async (
+  conversationId: number | string,
+): Promise<ConversationCallSession[]> => {
+  const response = await fetch(`${getApiBaseUrl()}/conversations/${conversationId}/calls`, {
+    method: 'GET',
+    headers: getAuthHeaders(false),
+  });
+
+  const data = await parseJsonSafely(response);
+  throwIfNotOk(response, data, 'Failed to load call logs');
+  throwIfJsonMissing(data);
+  const payload = (data ?? {}) as JsonRecord;
+
+  if (Array.isArray(payload.call_sessions)) {
+    return payload.call_sessions as ConversationCallSession[];
+  }
+
+  return [];
+};
+
+export const getCallSession = async (
+  callSessionId: number | string,
+): Promise<{ success: boolean; call_session: ConversationCallSession }> => {
+  const response = await fetch(`${getApiBaseUrl()}/calls/${callSessionId}`, {
+    method: 'GET',
+    headers: getAuthHeaders(false),
+  });
+
+  const data = await parseJsonSafely(response);
+  throwIfNotOk(response, data, 'Failed to load call session');
+  throwIfJsonMissing(data);
+  const payload = (data ?? {}) as JsonRecord;
+
+  return {
+    success: Boolean(payload.success),
+    call_session: payload.call_session as ConversationCallSession,
+  };
+};
+
+export const getActiveIncomingCallSession = async (): Promise<{ success: boolean; call_session: ConversationCallSession | null }> => {
+  const response = await fetch(`${getApiBaseUrl()}/calls/active`, {
+    method: 'GET',
+    headers: getAuthHeaders(false),
+  });
+
+  const data = await parseJsonSafely(response);
+  throwIfNotOk(response, data, 'Failed to load active incoming call');
+  throwIfJsonMissing(data);
+  const payload = (data ?? {}) as JsonRecord;
+
+  return {
+    success: Boolean(payload.success),
+    call_session: (payload.call_session as ConversationCallSession | null) ?? null,
+  };
+};
+
+export const endCallSession = async (
+  callSessionId: number | string,
+): Promise<{ success: boolean; call_session: ConversationCallSession }> => {
+  const response = await fetch(`${getApiBaseUrl()}/calls/${callSessionId}/end`, {
+    method: 'POST',
+    headers: getAuthHeaders(true),
+    body: JSON.stringify({}),
+  });
+
+  const data = await parseJsonSafely(response);
+  throwIfNotOk(response, data, 'Failed to end call session');
+  throwIfJsonMissing(data);
+  const payload = (data ?? {}) as JsonRecord;
+
+  return {
+    success: Boolean(payload.success),
+    call_session: payload.call_session as ConversationCallSession,
+  };
+};
+
+export const acceptCallSession = async (
+  callSessionId: number | string,
+): Promise<{ success: boolean; call_session: ConversationCallSession }> => {
+  const response = await fetch(`${getApiBaseUrl()}/calls/${callSessionId}/accept`, {
+    method: 'POST',
+    headers: getAuthHeaders(true),
+    body: JSON.stringify({}),
+  });
+
+  const data = await parseJsonSafely(response);
+  throwIfNotOk(response, data, 'Failed to accept call session');
+  throwIfJsonMissing(data);
+  const payload = (data ?? {}) as JsonRecord;
+
+  return {
+    success: Boolean(payload.success),
+    call_session: payload.call_session as ConversationCallSession,
+  };
+};
+
+export const sendCallSignal = async (
+  callSessionId: number | string,
+  signal_type: CallSignalType,
+  signal_payload: CallSignalPayload,
+): Promise<{ success: boolean; recipient_id: number }> => {
+  const response = await fetch(`${getApiBaseUrl()}/calls/${callSessionId}/signal`, {
+    method: 'POST',
+    headers: getAuthHeaders(true),
+    body: JSON.stringify({ signal_type, signal_payload }),
+  });
+
+  const data = await parseJsonSafely(response);
+  throwIfNotOk(response, data, 'Failed to send call signal');
+  throwIfJsonMissing(data);
+  const payload = (data ?? {}) as JsonRecord;
+
+  return {
+    success: Boolean(payload.success),
+    recipient_id: Number(payload.recipient_id ?? 0),
   };
 };
 
