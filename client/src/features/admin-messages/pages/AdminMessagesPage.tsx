@@ -41,6 +41,7 @@ const upsertConversation = (
 
 export const AdminMessagesPage = () => {
   const bottomAnchorRef = useRef<HTMLDivElement>(null);
+  const chatListRef = useRef<HTMLDivElement | null>(null);
 
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -199,6 +200,39 @@ export const AdminMessagesPage = () => {
     setActiveConversationId(conversationId);
   };
 
+  useEffect(() => {
+    if (!activeConversationId || !chatListRef.current) {
+      return;
+    }
+
+    const selector = `[data-conversation-id="${activeConversationId}"]`;
+    const el = chatListRef.current.querySelector(selector) as HTMLElement | null;
+    if (!el) {
+      return;
+    }
+
+    const container = chatListRef.current;
+    const containerRect = container.getBoundingClientRect();
+    const itemRect = el.getBoundingClientRect();
+    const nextScrollTop =
+      container.scrollTop + (itemRect.top - containerRect.top) - container.clientHeight / 2 + itemRect.height / 2;
+
+    container.scrollTo({
+      top: Math.max(0, nextScrollTop),
+      behavior: 'smooth',
+    });
+
+    // Add a brief highlight animation to make the selected user stand out
+    el.classList.add(styles.chatItemPulse);
+    const timer = window.setTimeout(() => {
+      el.classList.remove(styles.chatItemPulse);
+    }, 1200);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [activeConversationId, filteredConversations]);
+
   const handleSelectUser = useCallback(async (user: AdminInboxUser) => {
     setIsStartingConversation(true);
     setError(null);
@@ -347,12 +381,16 @@ export const AdminMessagesPage = () => {
 
           <p className={adminStyles.sectionLabel}>Inbox conversations</p>
 
-          <div className={styles.chatList}>
+          <div className={styles.chatList} ref={chatListRef}>
             {loadingConversations ? (
               <p className={adminStyles.helperText}>Loading inbox threads...</p>
-            ) : filteredConversations.length === 0 ? (
+            ) : null}
+
+            {!loadingConversations && filteredConversations.length === 0 ? (
               <p className={adminStyles.helperText}>No admin inbox conversations yet.</p>
-            ) : (
+            ) : null}
+
+            {!loadingConversations && filteredConversations.length > 0 && (
               filteredConversations.map((conversation) => {
                 const isActive = conversation.id === activeConversationId;
                 const conversationName = conversation.user?.name || 'Unknown user';
@@ -361,10 +399,20 @@ export const AdminMessagesPage = () => {
                   <button
                     key={conversation.id}
                     type="button"
+                    id={`conversation-${conversation.id}`}
+                    data-conversation-id={conversation.id}
                     className={`${styles.chatItem} ${isActive ? styles.chatItemActive : ''}`}
                     onClick={() => handleSelectConversation(conversation.id)}
                   >
-                    <div className={styles.avatar}>{getInitials(conversationName)}</div>
+                    {conversation.user?.profile_picture ? (
+                      <img
+                        src={conversation.user.profile_picture}
+                        alt={conversationName}
+                        className={styles.profileAvatar}
+                      />
+                    ) : (
+                      <div className={styles.avatar}>{getInitials(conversationName)}</div>
+                    )}
                     <div className={styles.chatMeta}>
                       <div className={styles.chatMetaHead}>
                         <h3>{conversationName}</h3>
