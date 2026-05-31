@@ -216,11 +216,6 @@ export const useAdminFeedDashboard = () => {
       pendingPosts: posts.filter((post) => !post.is_deleted && post.status === 'pending').length,
       reportedPosts: posts.filter((post) => !post.is_deleted && post.status === 'reported').length,
       deletedPosts: posts.filter((post) => post.is_deleted).length,
-      geminiQueuePosts: posts.filter(
-        (post) => !post.is_deleted
-          && post.status === 'pending'
-          && post.moderation_source === 'gemini',
-      ).length,
     };
   }, [posts]);
 
@@ -339,7 +334,10 @@ export const useAdminFeedDashboard = () => {
   const runGeminiReview = useCallback(
     async (postId: string) => {
       try {
-        const updatedPost = await reviewAdminFeedPostWithGemini(postId);
+        const reviewResult = await reviewAdminFeedPostWithGemini(postId);
+        const updatedPost = reviewResult.post;
+        const isSafe = Boolean(reviewResult.gemini_review?.allow);
+        const verdictReason = reviewResult.gemini_review?.reason?.trim() || updatedPost.moderation_note || null;
 
         setPosts((previous) =>
           previous.map((post) => {
@@ -351,8 +349,16 @@ export const useAdminFeedDashboard = () => {
           }),
         );
 
-        pushToast('Gemini Review Complete', 'success');
-        appendActivity(`Gemini reviewed post ${postId}.`, 'info');
+        pushToast(
+          isSafe ? 'All good' : 'Admin alert',
+          isSafe ? 'success' : 'danger',
+        );
+        appendActivity(
+          isSafe
+            ? `Gemini reviewed post ${postId}: all good, no scam, hate, or threat speech detected.`
+            : `Gemini flagged post ${postId}: ${verdictReason || 'possible scam, hate, or threat speech detected.'}`,
+          isSafe ? 'success' : 'danger',
+        );
         setLastSyncedAt(new Date().toISOString());
         if (updatedPost.status === 'verified') {
           broadcastFeedRefreshSignal();

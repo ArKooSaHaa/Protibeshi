@@ -1,5 +1,5 @@
 import { animate, motion } from 'framer-motion';
-import { BarChart3, Clock3, ShieldAlert, Sparkles, Trash2, type LucideIcon } from 'lucide-react';
+import { BarChart3, Clock3, ShieldAlert, Trash2, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { AdminFeedStats } from '../types/adminFeed.types';
 
@@ -43,13 +43,6 @@ const statCards: StatMeta[] = [
     hint: 'Archived by admins',
     icon: Trash2,
     iconClass: 'afd-stat-icon-deleted',
-  },
-  {
-    key: 'geminiQueuePosts',
-    label: 'Gemini Queue',
-    hint: 'Rejected or pending Gemini reviews',
-    icon: Sparkles,
-    iconClass: 'afd-stat-icon-pending',
   },
 ];
 

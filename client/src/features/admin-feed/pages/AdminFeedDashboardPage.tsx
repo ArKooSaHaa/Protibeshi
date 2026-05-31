@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion, type Variants } from 'framer-motion';
-import { RefreshCw, ShieldCheck, Sparkles, Store } from 'lucide-react';
+import { RefreshCw, ShieldCheck, Store } from 'lucide-react';
 import { ActivityLogPanel } from '../components/ActivityLogPanel';
 import { AdminBulkActionsBar } from '../components/AdminBulkActionsBar';
 import { AdminFilterToolbar } from '../components/AdminFilterToolbar';
@@ -127,24 +127,6 @@ export const AdminFeedDashboardPage = () => {
 
         <div className="afd-hero-actions">
           <span className="afd-sync-chip">Last Sync: {syncLabel}</span>
-          <motion.button
-            type="button"
-            className={`afd-btn ${dashboard.reviewQueue === 'gemini' ? 'afd-btn-primary' : 'afd-btn-neutral'} afd-ripple-btn`}
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => {
-              if (dashboard.reviewQueue === 'gemini') {
-                dashboard.setReviewQueue('all');
-                return;
-              }
-
-              dashboard.setReviewQueue('gemini');
-              dashboard.setActiveTab('pending');
-            }}
-          >
-            <Sparkles size={14} />
-            {dashboard.reviewQueue === 'gemini' ? 'Showing Gemini Queue' : 'Open Gemini Queue'}
-          </motion.button>
           <motion.button
             type="button"
             className={`afd-btn ${dashboard.reviewQueue === 'gemini-approved' ? 'afd-btn-primary' : 'afd-btn-neutral'} afd-ripple-btn`}

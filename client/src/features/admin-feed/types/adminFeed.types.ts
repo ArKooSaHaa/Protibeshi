@@ -44,7 +44,6 @@ export interface AdminFeedStats {
   pendingPosts: number;
   reportedPosts: number;
   deletedPosts: number;
-  geminiQueuePosts: number;
 }
 
 export interface AdminActivityItem {
