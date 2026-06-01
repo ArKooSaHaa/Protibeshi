@@ -62,15 +62,20 @@ class PostController extends Controller
 
         $isGeminiApproved = (bool) ($geminiReview['allow'] ?? false);
 
-        // If AI approves, do NOT auto-publish — send for manual admin verification.
-        // If AI rejects, mark as rejected immediately.
-        if ($isGeminiApproved) {
-            $moderationStatus = 'pending';
-            $moderationNote = 'AI recommended approval: ' . ($geminiReview['reason'] ?? 'Approved. Sent for manual verification by admin.');
-            $isActive = false;
+        // Determine resolved post type once
+        $resolvedType = $this->resolvePostType($validated['label'] ?? null, $validated['post_type'] ?? null);
+
+        // Emergency posts are auto-approved and published immediately.
+        if ($resolvedType === 'emergency') {
+            $moderationStatus = 'verified';
+            $isActive = true;
+            $moderationNote = 'Auto-approved emergency post: published immediately without admin verification.';
         } else {
-            $moderationStatus = 'rejected';
-            $moderationNote = 'Rejected by AI: ' . ($geminiReview['reason'] ?? 'Content did not meet feed rules.');
+            // Keep every new non-emergency submission in the manual review queue until an admin decides.
+            $moderationStatus = 'pending';
+            $moderationNote = $isGeminiApproved
+                ? 'AI recommended approval: ' . ($geminiReview['reason'] ?? 'Approved. Sent for manual verification by admin.')
+                : 'AI review requires manual verification: ' . ($geminiReview['reason'] ?? 'Content needs admin review.');
             $isActive = false;
         }
 
@@ -81,7 +86,7 @@ class PostController extends Controller
             'content' => $validated['content'],
             'label' => $validated['label'] ?? null,
             'image' => $imagePath,
-            'post_type' => $this->resolvePostType($validated['label'] ?? null, $validated['post_type'] ?? null),
+            'post_type' => $resolvedType,
             'visibility' => $validated['visibility'] ?? 'public',
             'location' => $validated['location'] ?? null,
             'distance' => $validated['distance'] ?? null,
@@ -94,7 +99,7 @@ class PostController extends Controller
         ];
 
         if (Schema::hasColumn('posts', 'moderation_source')) {
-            $postAttributes['moderation_source'] = $geminiReview['provider'] ?? 'ai';
+            $postAttributes['moderation_source'] = $resolvedType === 'emergency' ? 'emergency' : ($geminiReview['provider'] ?? 'ai');
         }
 
         try {
@@ -111,14 +116,27 @@ class PostController extends Controller
 
         $post->load('user');
 
+        // Build response fields depending on emergency / AI result
+        $responseMessage = 'Post submitted and sent for admin verification.';
+        $requiresVerification = true;
+
+        if ($resolvedType === 'emergency') {
+            $responseMessage = 'Emergency post published immediately.';
+            $requiresVerification = false;
+        } elseif ($isGeminiApproved) {
+            $responseMessage = 'Post reviewed by AI and sent for admin verification.';
+            $requiresVerification = true;
+        } else {
+            $responseMessage = 'Post submitted and requires manual review.';
+            $requiresVerification = true;
+        }
+
         return response()->json([
             'success' => true,
-            'message' => $isGeminiApproved
-                ? 'Post reviewed by AI and sent for admin verification.'
-                : 'Post rejected by AI moderation.',
+            'message' => $responseMessage,
             'post' => $this->formatPost($post, (int) Auth::id()),
-            'requires_verification' => $isGeminiApproved,
-            'rejected_by_ai' => !$isGeminiApproved,
+            'requires_verification' => $requiresVerification,
+            'rejected_by_ai' => false,
             'gemini_review' => [
                 'allow' => $isGeminiApproved,
                 'reason' => $geminiReview['reason'] ?? null,
@@ -190,7 +208,10 @@ class PostController extends Controller
                 },
             ])
             ->where('user_id', $authId)
-            ->where('is_active', true)
+            ->where(function ($query) {
+                $query->where('is_active', true)
+                    ->orWhere('moderation_status', 'pending');
+            })
             ->latest();
 
         $postsQuery->with(['votes' => function ($query) use ($authId) {

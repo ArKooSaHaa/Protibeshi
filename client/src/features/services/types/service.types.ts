@@ -74,7 +74,6 @@ export interface OfferServiceFormValues {
     experience: string;
     serviceRadius: number;
     location: string;
-    verified: boolean;
     photo: File | null;
     portfolioImages: string[];
     certifications: string;

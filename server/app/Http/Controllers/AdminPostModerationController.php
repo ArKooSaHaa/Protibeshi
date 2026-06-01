@@ -76,7 +76,7 @@ class AdminPostModerationController extends Controller
             ->withCount('reports')
             ->find($id);
 
-        if (!$post || !$post->is_active) {
+        if (!$post || (!$post->is_active && (string) $post->moderation_status !== 'pending')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Post not found',
@@ -107,7 +107,7 @@ class AdminPostModerationController extends Controller
             ->withCount('reports')
             ->find($id);
 
-        if (!$post || !$post->is_active) {
+        if (!$post || (!$post->is_active && (string) $post->moderation_status !== 'pending')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Post not found',
@@ -169,7 +169,7 @@ class AdminPostModerationController extends Controller
             ->withCount('reports')
             ->find($id);
 
-        if (!$post || !$post->is_active) {
+        if (!$post || (!$post->is_active && (string) $post->moderation_status !== 'pending')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Post not found',
@@ -281,7 +281,7 @@ class AdminPostModerationController extends Controller
             ->withCount('reports')
             ->find($id);
 
-        if (!$post || !$post->is_active) {
+        if (!$post || (!$post->is_active && (string) $post->moderation_status !== 'pending')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Post not found',
@@ -347,7 +347,7 @@ class AdminPostModerationController extends Controller
             'status' => $status,
             'moderation_source' => Schema::hasColumn('posts', 'moderation_source') ? ($post->moderation_source ?? null) : null,
             'report_count' => $reportCount,
-            'is_deleted' => !(bool) $post->is_active,
+            'is_deleted' => !(bool) $post->is_active && $status !== 'pending',
             'reports' => $reports,
             'pinned' => (bool) $post->is_pinned,
             'moderation_note' => $post->moderation_note ?? null,
