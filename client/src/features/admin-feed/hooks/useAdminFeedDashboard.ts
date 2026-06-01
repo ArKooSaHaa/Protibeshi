@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { broadcastFeedRefreshSignal } from '@/lib/feedRefresh';
+import { broadcastFeedRefreshSignal, isFeedRefreshSignalKey } from '@/lib/feedRefresh';
 import {
   deleteAdminFeedPost,
   fetchAdminFeedPostsWithQuery,
@@ -151,6 +151,20 @@ export const useAdminFeedDashboard = () => {
 
   useEffect(() => {
     void loadPosts(true);
+  }, [loadPosts]);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (isFeedRefreshSignalKey(event.key)) {
+        void loadPosts(false);
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+    };
   }, [loadPosts]);
 
   useEffect(() => {

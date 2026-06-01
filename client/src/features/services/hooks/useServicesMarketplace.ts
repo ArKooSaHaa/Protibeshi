@@ -135,13 +135,15 @@ radius`, [filters.distance]);
     formData.append('service_radius', String(values.serviceRadius));
     formData.append('location', values.location.trim());
     formData.append('working_hours', values.workingHours.trim());
-    formData.append('verified_provider', values.verified ? '1' : '0');
 
     try {
       const response = await createService(formData, token);
       setSuccessMessage(response.message || 'Service created successfully');
       setIsOfferModalOpen(false);
-      setFilters((prev) => ({ ...prev, sortBy: 'Recently Added' }));
+      setFilters({
+        ...DEFAULT_SERVICE_FILTERS,
+        sortBy: 'Recently Added',
+      });
       await loadServices();
       return true;
     } catch (error) {

@@ -30,7 +30,6 @@ const initialForm: OfferServiceFormValues = {
   experience: '',
   serviceRadius: 350,
   location: 'Motijheel',
-  verified: false,
   photo: null,
   portfolioImages: [],
   certifications: '',
@@ -338,15 +337,6 @@ export const OfferServiceModal = ({ isOpen, onClose, onSubmit, isSubmitting = fa
                   />
                 </label>
 
-                <label className={styles.checkbox}>
-                  <input
-                    type="checkbox"
-                    checked={form.verified}
-                    onChange={(event) => updateField('verified',
-                      event.target.checked)}
-                  />
-                  <span>Mark as verified provider (if eligible)</span>
-                </label>
               </div>
 
               {submitted && !isValid && <p

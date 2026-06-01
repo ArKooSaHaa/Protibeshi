@@ -21,6 +21,7 @@ import { FoodCorner } from '@/components/food-corner/FoodCorner';
 import { fetchAccountProfile } from '@/features/account/services/accountService';
 import { resolveMediaUrl } from '@/lib/mediaUrl';
 import styles from './Feed.module.css';
+import { broadcastFeedRefreshSignal } from '@/lib/feedRefresh';
 
 type ViewPost = FeedPost & {
   liked?: boolean;
@@ -667,6 +668,8 @@ export const Feed = () => {
           setCreatePostNotice('Post submitted for admin verification. It will appear in feed after approval.');
         }
       }
+
+      broadcastFeedRefreshSignal();
 
       setCreateModalOpen(false);
       return true;

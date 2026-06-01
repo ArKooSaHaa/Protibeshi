@@ -35,7 +35,7 @@ export const ServicesHero = ({ onOfferClick, onFilterClick, y, opacity }: Servic
       <div className={styles.content}>
         <h1 className={styles.title}>Find Trusted Services Near You</h1>
         <p className={styles.subtitle}>
-          Verified neighbors offering services within walking distance
+          Local neighbors offering services within walking distance
         </p>
       </div>
       <div className={styles.heroControls}>

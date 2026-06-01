@@ -4,10 +4,10 @@ import { ServiceFilterState, ServiceItem } from
   '../types/service.types';
 
 export const DEFAULT_SERVICE_FILTERS: ServiceFilterState = {
-  distance: 350,
+  distance: 2000,
   categories: [],
   availability: [],
-  minPrice: 200,
+  minPrice: 0,
   maxPrice: 3000,
   verifiedOnly: false,
   minRating: 0,
